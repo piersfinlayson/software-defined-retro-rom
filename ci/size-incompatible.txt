@@ -1,0 +1,8 @@
+
+# Size-incompatible config+STM combinations
+# Format: config_name stm_variant1 stm_variant2 ...
+# Lines starting with # are ignored
+#
+# Add combinations here that don't fit in flash memory
+
+pet-4-40-50 f401rb

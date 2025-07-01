@@ -1,0 +1,193 @@
+# SDRR Frequently Asked Questions
+
+## What is SDRR?
+
+**Q: What exactly is Software Defined Retro ROM (SDRR)?**
+
+A: SDRR is a ROM replacement solution that uses a cheap STM32F4 microcontroller to emulate failed or missing ROMs in retro computers. It is easily reprogrammed, can store up to 16 different ROM images and switch between them using jumpers, eliminating the need for expensive EEPROM programmers or multiple physical ROM chips.
+
+**Q: Why would I use SDRR instead of buying replacement ROMs or using an EEPROM?**
+
+A: SDRR offers several advantages:
+
+- Much cheaper to program than xEPROMs ($5 programmer vs $40+ for xEPROM programmers).
+- Fits the exact footprint of original ROMs, no overhanging the socket.
+- Can be reprogrammed in-situ without removal, allowing sub-minute times to recompile and reflash firmware.
+- Stores multiple images.
+- Can support all required chip select line behaviours without any hardware changes.
+- Is faster to build and program (just `make run` vs complex xEPROM procedures).
+- Makes it easy to download and combine ROM images from various sources - no need to build combination ROM images by hand.
+
+**Q: What ROM types does SDRR support?**
+
+A: SDRR emulates 2364 (8KB), 2332 (4KB), and 2316 (2KB) ROMs commonly used in Commodore systems, disk drives, and other retro computers.
+
+The original ROMs had mask programmable chip select behaviour, which meant they could be either low or high when selected. SDRR can emulate this by configuring the chip select lines in software, allowing it to work with any system that uses these ROM types - and can support multiple images with different chip select configurations in a single firmware build.
+
+## Hardware Compatibility
+
+**Q: Which STM32 variants are supported?**
+
+A: Currently supported variants include:
+
+- STM32F401RBT6/RCT6/RET6 (84MHz max clock, 6-16 ROM images)
+- STM32F411RCT6/RET6 (100MHz max clock, 14-16 ROM images)  
+- STM32F405RGT6 (168MHz max clock, 16 ROM images)
+
+The F405 is recommended for maximum compatibility as it runs fastest and supports all target systems.
+
+See the [Supported STM32 Microcontrollers](/README.md#supported-stm32-microcontrollers) section for more details.
+
+**Q: What retro systems work with SDRR?**
+
+A: Tested systems include Commodore PETs, VIC-20s, C64s, 1541 drives, and IEEE-488 drives. The F405 variant running at 168MHz should support virtually any system using compatible ROM types, including faster 2MHz systems.
+
+**Q: How do I know which STM32 variant I need?**
+
+A: Choose based on your target system's timing requirements. PETs need 26MHz minimum, VIC-20s need 37MHz, C64 kernals need 75MHz, and C64 character ROMs need 98MHz.
+
+Use F405 if unsure - it supports everything.
+
+See the [STM32 Selection](/docs/STM32-SELECTION.md) section for more details.
+
+## Installation and Setup
+
+**Q: What do I need to get started?**
+
+A: You need:
+
+- SDRR PCB
+- a supported STM32F4 microcontroller
+- some other components (voltage regulator, LED, resistors and capacitors)
+- ARM GNU toolchain, Rust, probe-rs
+- and an SWD programmer (ST-Link, Pi Debug Probe, or programmed Pi Pico).
+
+See the [Installation Guide](INSTALL.md) for detailed setup instructions.
+
+**Q: How difficult is the PCB assembly?**
+
+A: Medium difficulty - some experience with surface mount soldering is recommended.
+
+The rev D PCB uses a combination of 0402 and 0603 components.
+
+The rev E PCB uses all 0603 components, so is easier to solder.
+
+All variants use an STM32 LQFP64 package, which requires soldering as it is close to other components.
+
+**Q: Can I use a Raspberry Pi Pico as a programmer?**
+
+A: Yes! Flash the debug probe firmware to a Pi Pico and connect CLK (GP2), DIO (GP3), GND, and optionally 5V (VBUS). This provides a $5 programming solution.
+
+See the [Pi Pico Programmer Guide](/docs/PI-PICO-PROGRAMMER.md) for detailed instructions.
+
+## Programming and Flashing
+
+**Q: How do I flash firmware to SDRR?**
+
+A: Connect your programmer's CLK, DIO, and GND lines to SDRR, then run:
+
+```bash
+STM=f411re CONFIG=config/c64.mk make run
+```
+
+This automatically downloads ROMs, generates firmware, and flashes the device.
+
+There are other pre-collated collections of ROMs available in the [`config/`](/config/) directory, such as `vic20-pal.mk`, `pet-4-40-50.mk`, and `1541.mk`. You can also create your own custom configurations.
+
+**Q: Can I reprogram SDRR while it's installed in my retro system?**
+
+A: Yes! You can flash in-situ with the system powered on. The system may crash during flashing but will work normally after completion.
+
+**Never** externally power SDRR when installed in a retro system.
+
+**Q: What if I have flashing problems?**
+
+A: Install the BOOT0 jumper and power cycle to force bootloader mode, then reflash. Alternatively, enable the `BOOTLOADER` config option to enter bootloader mode when all image select jumpers are closed.
+
+See the [Programming Guide](/docs/PROGRAMMING.md) for more details.
+
+## Configuration and Usage
+
+**Q: How do I select which ROM image to use?**
+
+A: Use the image select jumpers labeled 1, 2, 4, and 8 on the PCB bottom.  Close jumpers to form a binary number (0-15) corresponding to your desired ROM image.  A closed jumper corresponds to 1, an open jumper 0.
+
+You must reboot SDRR after changing jumpers.
+
+**Q: How many ROM images can I store?**
+
+A: Up to 16 images, limited by either flash size (smaller variants) or the physical jumper count. Each image consumes 16KB of flash regardless of actual ROM size.
+
+**Q: Can I mix different ROM types in one firmware?**
+
+A: Yes! Each ROM image can be independently configured as 2364, 2332, or 2316 with different chip select configurations. See the [config files](/config/) for examples.
+
+**Q: How do I create custom ROM configurations?**
+
+A: Define `ROM_CONFIGS` with file paths, ROM types, and chip select settings:
+
+```bash
+ROM_CONFIGS=file=kernal.rom,type=2364,cs1=0 file=basic.rom,type=2364,cs1=0
+```
+
+Or create your own [config file](/config/).
+
+## Performance and Technical
+
+**Q: Why does SDRR store all ROM images as 16KB in flash?**
+
+A: This optimization allows the main loop to use chip select states as direct address offsets, eliminating runtime calculations and achieving the required access speeds.
+
+See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information.
+
+**Q: What makes SDRR fast enough for retro systems?**
+
+A: Multiple optimizations: maximum clock speeds, highly optimised assembly main loop, preloaded ROM data in RAM, no interrupts, flash prefetch/caching, and "mangled" ROM storage that matches the PCB pin mapping.
+
+See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information.
+
+**Q: Why not use interrupts?**
+
+A: Interrupts would add latency that could cause the system to miss critical timing windows. The polling-based approach ensures consistent, predictable response times.  As SDRR does nothing other than serve flash, a tight main loop with no interrupts is sufficient **and** optimal.
+
+## Troubleshooting
+
+**Q: How do I debug SDRR issues?**
+
+A: Enable boot logging (default) to see startup information via SWD/RTT. This shows hardware info, ROM configurations, frequency settings, and which image is loaded. Boot logging adds ~1.5ms to startup time.
+
+See [Logging](/docs/LOGGING.md) for more details.
+
+**Q: My retro system doesn't boot with SDRR installed. What should I check?**
+
+A: Verify the correct ROM type and chip select configuration, ensure SDRR is fully seated in the socket, check that the STM32 variant can run fast enough for your system, and review boot logs for errors.
+
+It would be worth reprogramming SDRR with your firmware image in-situ, and viewing the logs to ensure the expected ROM image is being served.
+
+See [`BOOT_LOGGING`](/docs/LOGGING.md#boot_logging) for more details on how to interpret boot logging.
+
+**Q: Can I reduce power consumption?**
+
+A: Lower the clock frequency using the `FREQ` option, disable the status LED with `STATUS_LED=0`, or choose a lower-power STM32 variant if it meets your timing requirements.
+
+[Clock Speed Requirements](/docs/STM32-SELECTION.md#clock-speed-requirements) provides guidance on selecting the right frequency for your system, but you may need to experiment to find the best balance between performance and power consumption.
+
+## Cost and Availability
+
+**Q: How much does SDRR cost to build?**
+
+A: In small quantities, expect around $5 per device.  The STM32F4 costs around $2 depending on variant, PCB manufacturing is inexpensive (2-layer, single-side components), and the BOM is minimal.
+
+**Q: Where can I get the PCB?**
+
+A: Order the latest revision from [OSH Park](https://oshpark.com) using the provided link for your chosen revision in the [`sdrr-pcb`](/sdrr-pcb/README.md), or manufacture using the open-source design files.
+
+**Q: Is SDRR open source?**
+
+A: Yes! Software/firmware uses MIT license, hardware uses CC BY-NC-SA 4.0. You can modify, improve, and share the designs within the license terms.
+
+**Q: Is there a warranty?**
+
+A: In common with most open source projects, no warranty is provided.  See [License](/LICENSE.md) for details.  The project is provided "as is" without any guarantees of fitness for purpose or reliability.
+
+However, if you find a bug or issue, please raise an issue via GitHub.

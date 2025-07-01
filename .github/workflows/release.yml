@@ -1,0 +1,85 @@
+name: Release Build
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi make zip
+        
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Build all combinations
+      env:
+        TOOLCHAIN: /usr/bin
+      run: ci/build.sh ci
+      
+    - name: Package release
+      run: ci/build.sh release ${{ steps.version.outputs.VERSION }}
+      
+    - name: Read release notes
+      id: release_notes
+      run: |
+        if [ -f "release.md" ]; then
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_OUTPUT
+          cat release.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "RELEASE_BODY=Release ${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Extract changelog for this version
+      run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        if [ -f "CHANGELOG.md" ]; then
+          # Find the version line and extract everything after it until next ## or end of file
+          CHANGELOG_SECTION=$(awk "/^## ${VERSION}/ { found=1; next } found && /^## / { exit } found { print }" CHANGELOG.md)
+          
+          if [ -z "$CHANGELOG_SECTION" ]; then
+            CHANGELOG_SECTION="No changelog entry found for this version."
+          fi
+          
+          # Replace placeholder (escape newlines for sed)
+          printf '%s\n' "$CHANGELOG_SECTION" > /tmp/changelog.txt
+          sed -e '/\[CHANGELOG_PLACEHOLDER\]/{
+            r /tmp/changelog.txt
+            d
+          }' release.md > release.md.tmp && mv release.md.tmp release.md
+        else
+          sed -i 's/\[CHANGELOG_PLACEHOLDER\]/No CHANGELOG.md found./' release.md
+        fi
+        
+    - name: Create GitHub Release with files
+      run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        
+        # Create the release
+        gh release create ${VERSION} \
+          --title "Release ${VERSION}" \
+          --notes-file release.md \
+          --latest
+          
+        # Upload all files
+        gh release upload ${VERSION} builds/${VERSION}/firmware/*.zip
+        gh release upload ${VERSION} builds/${VERSION}/full-output/*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

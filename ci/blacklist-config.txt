@@ -1,0 +1,9 @@
+# Configs to skip building
+# Add config names here (without .mk extension), one per line
+# Lines starting with # are ignored
+
+# Skipped because it contains no images
+blank
+
+# Skipped because it contains an image with a proprietary license 
+c64

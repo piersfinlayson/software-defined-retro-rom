@@ -1,0 +1,10 @@
+# STM32 variants to build
+# Add new variants here, one per line
+# Lines starting with # are ignored
+
+f401rb
+f401rc
+f401re
+f411rc
+f411re
+f405rg

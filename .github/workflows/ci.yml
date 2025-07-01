@@ -1,0 +1,52 @@
+name: CI Build
+
+permissions:
+  contents: write
+  actions: read
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Makefile'
+      - 'ci/**'
+      - 'sdrr/**'
+      - 'sdrr-gen/**'
+      - '.github/**'
+      - '!.github/workflows/release.yml'
+      - '!**.md'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Makefile'
+      - 'ci/**'
+      - 'sdrr/**'
+      - 'sdrr-gen/**'
+      - '.github/**'
+      - '!**.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-arm-none-eabi make
+        
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Test option combinations
+      run: |
+        export TOOLCHAIN=/usr/bin
+        ci/build.sh test
+      
+    - name: Build firmware for all image configs
+      run: |
+        export TOOLCHAIN=/usr/bin
+        ci/build.sh ci

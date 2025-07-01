@@ -1,0 +1,340 @@
+// ROM types and their properties
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RomType {
+    Rom2316,
+    Rom2332,
+    Rom2364,
+}
+
+impl RomType {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "2316" => Some(RomType::Rom2316),
+            "2332" => Some(RomType::Rom2332),
+            "2364" => Some(RomType::Rom2364),
+            _ => None,
+        }
+    }
+
+    pub fn size_bytes(&self) -> usize {
+        match self {
+            RomType::Rom2316 => 2048, // 2KB
+            RomType::Rom2332 => 4096, // 4KB
+            RomType::Rom2364 => 8192, // 8KB
+        }
+    }
+
+    pub fn cs_lines_count(&self) -> usize {
+        match self {
+            RomType::Rom2316 => 3,
+            RomType::Rom2332 => 2,
+            RomType::Rom2364 => 1,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match self {
+            RomType::Rom2316 => "2316",
+            RomType::Rom2332 => "2332",
+            RomType::Rom2364 => "2364",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StmFamily {
+    F1,
+    F4,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StmProcessor {
+    F401,
+    F405,
+    F411,
+}
+
+impl StmProcessor {
+    pub fn vco_min_mhz(&self) -> u32 {
+        match self {
+            StmProcessor::F401 => 192,
+            StmProcessor::F405 => 100,
+            StmProcessor::F411 => 100,
+        }
+    }
+
+    pub fn vco_max_mhz(&self) -> u32 {
+        432
+    }
+
+    pub fn max_sysclk_mhz(&self) -> u32 {
+        match self {
+            StmProcessor::F401 => 84,
+            StmProcessor::F405 => 168,
+            StmProcessor::F411 => 100,
+        }
+    }
+
+    /// Calculate PLL values for target frequency using HSI (16 MHz)
+    /// Returns (PLLM, PLLN, PLLP, PLLQ) or None if frequency not achievable
+    pub fn calculate_pll_hsi(
+        &self,
+        target_freq_mhz: u32,
+        overlock: bool,
+    ) -> Option<(u8, u16, u8, u8)> {
+        // Validate target frequency is within limits
+        if target_freq_mhz > self.max_sysclk_mhz() && !overlock {
+            return None;
+        }
+
+        // HSI = 16 MHz, target VCO input = 2 MHz for best jitter
+        const HSI_MHZ: u32 = 16;
+        const PLLM: u8 = 8; // 16/8 = 2 MHz VCO input
+        const VCO_IN_MHZ: u32 = HSI_MHZ / PLLM as u32;
+
+        // Try PLLP values: 2, 4, 6, 8
+        for pllp in [2u8, 4, 6, 8] {
+            let vco_mhz = target_freq_mhz * pllp as u32;
+
+            // Check VCO frequency is in valid range
+            if vco_mhz >= self.vco_min_mhz() && vco_mhz <= self.vco_max_mhz() {
+                let plln = vco_mhz / VCO_IN_MHZ;
+
+                // Check PLLN is in valid range (50-432)
+                if plln >= 50 && plln <= 432 {
+                    // Calculate PLLQ for USB (48 MHz target)
+                    let pllq_raw = (vco_mhz as f32 / 48.0).round() as u8;
+                    let pllq = pllq_raw.clamp(2, 15);
+
+                    return Some((PLLM, plln as u16, pllp, pllq));
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Generate PLL #defines for target frequency
+    pub fn generate_pll_defines(&self, target_freq_mhz: u32, overclock: bool) -> Option<String> {
+        if let Some((m, n, p, q)) = self.calculate_pll_hsi(target_freq_mhz, overclock) {
+            // Calculate intermediate values for comments
+            let hsi_mhz = 16;
+            let vco_input_mhz = hsi_mhz / m as u32;
+            let fvco_mhz = vco_input_mhz * n as u32;
+            let sysclk_mhz = fvco_mhz / p as u32;
+            let usb_mhz = fvco_mhz / q as u32;
+
+            // Convert PLL_P division factor to register encoding
+            let pll_p_reg = match p {
+                2 => "0b00",
+                4 => "0b01",
+                6 => "0b10",
+                8 => "0b11",
+                _ => unreachable!("Invalid PLL_P value: {}", p),
+            };
+
+            Some(format!(
+                "//   HSI={}MHz\n//   VCO_input={}MHz\n//   fVCO={}MHz\n//   SYSCLK={}MHz\n//   USB={}MHz\n#define PLL_M    {}\n#define PLL_N    {}\n#define PLL_P    {}  // div {}\n#define PLL_Q    {}",
+                hsi_mhz, vco_input_mhz, fvco_mhz, sysclk_mhz, usb_mhz, m, n, pll_p_reg, p, q
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Check if target frequency is achievable with HSI PLL configuration
+    pub fn is_frequency_valid(&self, target_freq_mhz: u32, overclock: bool) -> bool {
+        self.calculate_pll_hsi(target_freq_mhz, overclock).is_some()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StmVariant {
+    F103R8, // STM32F103R8 (6 or 7), 64-pins, 20KB SRAM, 64KB Flash
+    F103RB, // STM32F103RB (6 or 7), 64-pins, 20KB SRAM, 128KB Flash
+    F411RC, // STM32F411RC (6 or 7), 64-pins, 128KB SRAM, 256KB Flash
+    F411RE, // STM32F411RE (6 or 7), 64-pins, 128KB SRAM, 512KB Flash
+    F405RG, // STM32F405RE (6 or 7), 64-pins, 128KB SRAM, 1024KB Flash (+ 64KB CCM RAM)
+    F401RE, // STM32F401RE (6 or 7), 64-pins, 96KB SRAM, 512KB Flash
+    F401RB, // STM32F401RB (6 or 7), 64-pins, 96KB SRAM, 128KB Flash
+    F401RC, // STM32F401RC (6 or 7), 64-pins, 96KB SRAM, 256KB Flash
+}
+
+impl StmVariant {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "f103r8" => Some(StmVariant::F103R8),
+            "f103rb" => Some(StmVariant::F103RB),
+            "f411rc" => Some(StmVariant::F411RC),
+            "f411re" => Some(StmVariant::F411RE),
+            "f405rg" => Some(StmVariant::F405RG),
+            "f401re" => Some(StmVariant::F401RE),
+            "f401rb" => Some(StmVariant::F401RB),
+            "f401rc" => Some(StmVariant::F401RC),
+            _ => None,
+        }
+    }
+
+    fn flash_storage(&self) -> usize {
+        let kb = match self {
+            StmVariant::F103R8 => 64,
+            StmVariant::F103RB => 128,
+            StmVariant::F411RC => 256,
+            StmVariant::F411RE => 512,
+            StmVariant::F405RG => 1024,
+            StmVariant::F401RE => 512,
+            StmVariant::F401RB => 128,
+            StmVariant::F401RC => 256,
+        };
+        kb * 1024 // Convert KB to bytes
+    }
+
+    pub fn define_flash_size(&self) -> String {
+        format!("#define STM_FLASH_SIZE {}", self.flash_storage())
+    }
+
+    pub fn define_var_sub_fam(&self) -> &str {
+        match self {
+            StmVariant::F103R8 | StmVariant::F103RB => "#define STM32F103      1",
+            StmVariant::F411RC | StmVariant::F411RE => "#define STM32F411      1",
+            StmVariant::F405RG => "#define STM32F405      1",
+            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => {
+                "#define STM32F401      1"
+            }
+        }
+    }
+
+    pub fn family(&self) -> StmFamily {
+        match self {
+            StmVariant::F103R8 | StmVariant::F103RB => StmFamily::F1,
+            StmVariant::F411RC
+            | StmVariant::F411RE
+            | StmVariant::F405RG
+            | StmVariant::F401RE
+            | StmVariant::F401RB
+            | StmVariant::F401RC => StmFamily::F4,
+        }
+    }
+
+    pub fn processor(&self) -> Option<StmProcessor> {
+        match self {
+            StmVariant::F103R8 | StmVariant::F103RB => None, // F1 family doesn't use PLL the same way
+            StmVariant::F411RC | StmVariant::F411RE => Some(StmProcessor::F411),
+            StmVariant::F405RG => Some(StmProcessor::F405),
+            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => {
+                Some(StmProcessor::F401)
+            }
+        }
+    }
+
+    pub fn define_var_fam(&self) -> &str {
+        match self.family() {
+            StmFamily::F1 => "#define STM32F1        1",
+            StmFamily::F4 => "#define STM32F4        1",
+        }
+    }
+
+    pub fn define_var_str(&self) -> &str {
+        match self {
+            StmVariant::F103R8 => "#define STM_VARIANT    \"F103R8\"",
+            StmVariant::F103RB => "#define STM_VARIANT    \"F103RB\"",
+            StmVariant::F411RC => "#define STM_VARIANT    \"F411RC\"",
+            StmVariant::F411RE => "#define STM_VARIANT    \"F411RE\"",
+            StmVariant::F405RG => "#define STM_VARIANT    \"F405RG\"",
+            StmVariant::F401RE => "#define STM_VARIANT    \"F401RE\"",
+            StmVariant::F401RB => "#define STM_VARIANT    \"F401RB\"",
+            StmVariant::F401RC => "#define STM_VARIANT    \"F401RC\"",
+        }
+    }
+
+    /// Generate PLL defines for target frequency (F4 variants only)
+    pub fn generate_pll_defines(&self, target_freq_mhz: u32, overclock: bool) -> Option<String> {
+        self.processor()?
+            .generate_pll_defines(target_freq_mhz, overclock)
+    }
+
+    /// Used to pass into sdrr Makefile as VARIANT
+    pub fn makefile_var(&self) -> &str {
+        match self {
+            StmVariant::F103R8 => "stm32f103r8",
+            StmVariant::F103RB => "stm32f103rb",
+            StmVariant::F411RC => "stm32f411rc",
+            StmVariant::F411RE => "stm32f411re",
+            StmVariant::F405RG => "stm32f405rg",
+            StmVariant::F401RE => "stm32f401re",
+            StmVariant::F401RB => "stm32f401rb",
+            StmVariant::F401RC => "stm32f401rc",
+        }
+    }
+
+    /// Used to pass to probe-rs
+    pub fn chip_id(&self) -> &str {
+        match self {
+            StmVariant::F103R8 => "STM32F103R8Tx",
+            StmVariant::F103RB => "STM32F103RBTx",
+            StmVariant::F411RC => "STM32F411RCTx",
+            StmVariant::F411RE => "STM32F411RETx",
+            StmVariant::F405RG => "STM32F405RGTx",
+            StmVariant::F401RE => "STM32F401RETx",
+            StmVariant::F401RB => "STM32F401RBTx",
+            StmVariant::F401RC => "STM32F401RCTx",
+        }
+    }
+
+    /// Check if target frequency is valid for this variant
+    pub fn is_frequency_valid(&self, target_freq_mhz: u32, overclock: bool) -> bool {
+        match self.processor() {
+            Some(proc) => proc.is_frequency_valid(target_freq_mhz, overclock),
+            None => false, // F1 variants don't use this PLL configuration
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HwRev {
+    A, // F103R based
+    B, // F103R based
+    C, // F103R based
+    D, // F4 based
+    E, // F4 based
+}
+
+impl HwRev {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "A" | "a" => Some(HwRev::A),
+            "B" | "b" => Some(HwRev::B),
+            "C" | "c" => Some(HwRev::C),
+            "D" | "d" => Some(HwRev::D),
+            "E" | "e" => Some(HwRev::E),
+            _ => None,
+        }
+    }
+
+    pub fn define(&self) -> &str {
+        match self {
+            HwRev::A => "#define HW_REV_A        1",
+            HwRev::B => "#define HW_REV_B        1",
+            HwRev::C => "#define HW_REV_C        1",
+            HwRev::D => "#define HW_REV_D        1",
+            HwRev::E => "#define HW_REV_E        1",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CsLogic {
+    ActiveLow,
+    ActiveHigh,
+}
+
+impl CsLogic {
+    pub fn from_u8(value: u8) -> Option<Self> {
+        match value {
+            0 => Some(CsLogic::ActiveLow),
+            1 => Some(CsLogic::ActiveHigh),
+            _ => None,
+        }
+    }
+}
