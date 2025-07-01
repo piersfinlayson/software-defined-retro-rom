@@ -582,7 +582,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
     // Also PC10-12 are duplicate CS lines so set as inputs no PU/PD.
     GPIOA_MODER &= ~0x00FCFFFF; // Clear bits 0-15 (PA0-7, 10-12 as inputs)
     GPIOA_PUPDR &= ~0x00FCFFFF; // Clear pull-up/down for PA0-7, 10-12)
-    GPIOA_OSPEEDR |= 0xFFFF;    // Set PA0-7 speed to "very high"
+    GPIOA_OSPEEDR &= ~0xFFFF;   // Clear output speed for PA0-7
+    GPIOA_OSPEEDR |= 0xAAAA;    // Set PA0-7 speed to "fast", not "high" to
+                                // ensure V(OL) is max 0.4V
 
     // Port C for address and CS lines - set all pins as inputs
     // Rev D - CS = 10, for testing purposes, not rev D, CS = 13 

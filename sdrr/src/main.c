@@ -132,7 +132,8 @@ void gpio_init(void) {
 #elif defined(STM32F4)
     uint32_t gpioa_moder = 0;
     uint32_t gpioa_pupdr = 0;
-    uint32_t gpioa_ospeedr = 0x0000ffff;  // PA0-7 very high speed
+    uint32_t gpioa_ospeedr = 0x0000AAAA;    // PA0-7 fast speed, not high
+                                            // speed, to ensure V(OL) max 0.4V
 #if defined(SWD)
     gpioa_moder |= 0x28000000; // Set 13/14 as AF
     gpioa_pupdr |= 0x24000000; // Set pull-up on PA13, down on PA14

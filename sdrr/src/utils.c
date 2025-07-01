@@ -515,7 +515,7 @@ void setup_status_led(void) {
     
     GPIOB_MODER &= ~(0x3 << (15 * 2));  // Clear bits for PB15
     GPIOB_MODER |= (0x1 << (15 * 2));   // Set as output
-    GPIOB_OSPEEDR |= (0x3 << (15 * 2)); // Set speed to very high speed
+    GPIOB_OSPEEDR |= (0x3 << (15 * 2)); // Set speed to high speed
     GPIOB_OTYPER &= ~(0x1 << 15);       // Set as push-pull
     GPIOB_PUPDR &= ~(0x3 << (15 * 2));  // No pull-up/down
     

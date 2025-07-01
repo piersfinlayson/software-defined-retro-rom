@@ -2,6 +2,12 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.1.1 - TBC
+
+Fixed
+
+- Moved to fast speed outputs for data lines, instead of high speed, to ensure VOL is 0.4V, within the 6502's 0.8V requirement.  With high speed outputs, the VOL can be as high as 1.3V, which is beyond the 6502's 0.8V requirement.
+
 ## v0.1.0 - 29-06-2025
 
 First release of SDRR.
