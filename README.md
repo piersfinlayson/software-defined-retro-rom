@@ -19,6 +19,12 @@ Emulates 2364, 2332 and 2316 ROMs using the STM32F4 family of microcontrollers. 
 - 🎯 Supports multiple **STM32F4xxR** variants: F401, F411, F405 (others can be added).
 - 🔓 **Open source** software and hardware - see [License](LICENSE.md)
 
+## Introduction
+
+The video below provides an introduction to the Software Defined Retro ROM:
+
+[![Video Title](https://img.youtube.com/vi/Jhe4LF5LrZ8/maxresdefault.jpg)](https://youtu.be/Jhe4LF5LrZ8)
+
 ## Hardware
 
 These images are of hardware revision E.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
