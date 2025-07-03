@@ -1,0 +1,26 @@
+### Footprint positions - created on 2025-07-03T09:05:14+0100 ###
+### Printed by KiCad version 8.0.5
+## Unit = mm, Angle = deg.
+## Side : top
+# Ref     Val                  Package                                                 PosX       PosY       Rot  Side
+C1        1uF                  C_0603_1608Metric                                   106.4260   -37.2364  180.0000  top
+C2        1uF                  C_0603_1608Metric                                   111.3028   -39.9034   90.0000  top
+C3        4.7uF                C_0603_1608Metric                                   112.8014   -39.9034   90.0000  top
+C4        0.1uF                C_0603_1608Metric                                   104.1654   -54.9148  -90.0000  top
+C5        0.1uF                C_0603_1608Metric                                   105.6640   -39.9034   90.0000  top
+C6        0.1uF                C_0603_1608Metric                                   114.2746   -54.8894  -90.0000  top
+C7        0.1uF                C_0603_1608Metric                                   104.1654   -41.2242   90.0000  top
+C8        0.1uF                C_0603_1608Metric                                   114.3000   -41.2242   90.0000  top
+C9        4.7uF_or_DNP         C_0603_1608Metric                                   106.5530   -55.6006    0.0000  top
+D1        LED                  LED_0603_1608Metric                                 109.2200   -57.1246    0.0000  top
+J1        Conn_01x05_Pin       PinHeader_1x05_P2.54mm_Vertical                     104.1400   -59.6900   90.0000  top
+J2        Conn_02x05_Odd_Even  PinHeader_2x05_P2.54mm_Vertical_custom_silkscreen   114.3000   -31.7500  -90.0000  top
+R1        4K7                  R_0603_1608Metric                                   110.5154   -36.8808    0.0000  top
+R2        4K7                  R_0603_1608Metric                                   113.5126   -36.8808    0.0000  top
+R3        470R                 R_0603_1608Metric                                   112.2172   -57.1246  180.0000  top
+RC4       0R_or_2.2uF          C_0603_1608Metric                                   111.8870   -55.6006    0.0000  top
+RC5       0R_or_2.2uF          C_0603_1608Metric                                   106.2482   -57.1500  180.0000  top
+U1        STM32F4xx            LQFP-64_10x10mm_P0.5mm                              109.2200   -48.1330  -90.0000  top
+U2        2332/2364_SOCKET     2x12_dip_pin_output_600mil_centres_no_ss            101.6000   -31.7500    0.0000  top
+U3        RT9013               SOT-23-5                                            108.4889   -39.7104    0.0000  top
+## End
