@@ -2,6 +2,8 @@
 
 This revision has been verified to support the STM32F401 and STM32F411 variants.
 
+Note that the gerbers are currently untested - the design has been verified via [OSH Park](#ordering-bare-pcbs).
+
 ## Contents
 
 - [Schematic](sdrr-rev-d-schematic.pdf)

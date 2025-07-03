@@ -1,6 +1,13 @@
 # Rev E
 
+**Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
+
 This revision supports the STM32F401, STM32F411, STM32F405 and STM32F415 variants.
+
+This revision has two key improvements over rev D:
+
+- STM32F405 and STM32F415 variants are now supported - note there are some BOM differences between the F401/F411 and F405/F415 variants.
+- No 0402 passives are used - all passives are 0603, which is easier to hand solder.  The PCB footprint remains the same.
 
 <div style="text-align: center;">
   <a href="/sdrr-pcb/unverified/rev-e/sdrr-rev-e.png">
@@ -8,10 +15,26 @@ This revision supports the STM32F401, STM32F411, STM32F405 and STM32F415 variant
   </a>
 </div>
 
-## Files
+## Contents
 
 - [Schematic](sdrr-rev-e-schematic.pdf)
 - [Fab Notes](sdrr-rev-e-fab-notes.pdf)
+- [Gerbers](gerbers/) - unverified
+- [Ordering Bare PCBs](#ordering-bare-pcbs)
+- [Errata](#errata)
+- [Notes](#notes)
+- [Changelog](#changelog)
+- [BOM](#bom)
+
+## Ordering Bare PCBs
+
+[![Order from OSH Park](https://oshpark.com/assets/badge-5b7ec47045b78aef6eb9d83b3bac6b1920de805e9a0c227658eac6e19a045b9c.png)](https://oshpark.com/shared_projects/9TJoAirm)
+
+## Errata
+
+All corrections have been reflected in the BOM below, but not the schematic or gerbers.
+
+- **U3** recommend using AP2112K-3.3 in place of the RT9013, to reduce switching noise, which can cause failure to boot on some systems.
 
 ## Notes
 
@@ -27,3 +50,24 @@ This revision supports the STM32F401, STM32F411, STM32F405 and STM32F415 variant
 - Power LED replaced with status LED driven by PB15.
 - Added 4th image select jumper (PB7), allowing up to 16 images to be selected.
 - Limited silk-screen markings are provided.
+
+## BOM
+
+See notes for STM32F405/F415 BOM differences.
+
+| Reference | Component Type | Value | Package | Quantity | Notes |
+|-----------|----------------|-------|---------|----------|-------|
+| C1, C2 | Capacitor | 1uF | 0603 | 2 | |
+| C3 | Capacitor | 4.7uF| 0603 | 1 | |
+| C4, C5, C6, C7, C8 | Capacitor | 100nF | 0603 | 5 | |
+| C9 | Capacitor | 4.7uF| 0603 | 1 | **F405/F411 - DNP** |
+| D1 | LED | - | 0603 | 1 | Optional, colour as desired |
+| J1 | Pin header | 1x5 | - | 1 | 2.54mm (0.1") pin pitch |
+| J3 | Pin header | 2x4 | - | 1 | 2.54mm (0.1") pin pitch |
+| R1, R2 | Resistor | 4k7 | 0603 | 2 | |
+| R3 | Resistor | 470R | 0603 | 1 | Optional, modify value to suit chosen LED |
+| RC4, RC5 | Resistor | 0R | 0603 | 2 | **F405/F411 - use 2.2uF 0603 capacitor** |
+| TP1 | Test point (DNP) | - | - | 1 | Exposes MCO1, configurable via software |
+| U1 | Microcontroller | STM32F401RxT STM32F411RxT STM32F405RxT STM32F411RxT | - | 1 | |
+| U2 | Pin header | 1x12 | - | 2 | 2.54mm (0.1") pin pitch |
+| U3 | Voltage regulator | AP2112K-3.3 | SOT-23-5 | 1 | |
