@@ -7,6 +7,7 @@ All notables changes between versions are documented in this file.
 Changes
 
 - Updated Vic-20 PAL config to use VIC-20 dead-test v1.1.01
+- PCB rev E gerbers provided (as yet unverified).
 
 Fixed
 
