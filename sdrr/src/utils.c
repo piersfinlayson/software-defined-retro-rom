@@ -314,6 +314,8 @@ void set_flash_ws(void) {
     wait_states = 4;
 #elif TARGET_FREQ_MHZ <= 180
     wait_states = 5;
+#elif TARGET_FREQ_MHZ <= 210
+    wait_states = 6;
 #else
 #error "Unsupported frequency for STM32F4"
 #endif // TARGET_FREQ_MHZ

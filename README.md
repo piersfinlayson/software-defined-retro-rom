@@ -16,7 +16,7 @@ Emulates 2364, 2332 and 2316 ROMs using the STM32F4 family of microcontrollers. 
 - 💾 Stores up to **16 ROM images** of different sizes and chip select configurations.  Image selectable via jumpers.
 - 🧩 **Images combined automatically** - no need to manually build up your own larger PROM image containing multiple retro ROMs.
 - 🏭 **Two layer PCB**, component on single-side, limited BOM for low manufacturing cost/complexity.
-- 🎯 Supports multiple **STM32F4xxR** variants: F401, F411, F405 (others can be added).
+- 🎯 Supports multiple **STM32F4xxR** variants: F401, F411, F405, F446 (others can be added).
 - 🔓 **Open source** software and hardware - see [License](LICENSE.md)
 
 ## Introduction
@@ -86,8 +86,9 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 - [Image Selection](docs/IMAGE-SELECTION.md) - How to tell SDRR which of the installed ROM images to serve.
 - [Configuration](docs/CONFIGURATION.md) - SDRR configuration options.
 - [Logging](docs/LOGGING.md) - How to enable and use logging in SDRR.
-- [Build System](docs/BUILD-SYSTEM.md) - How the SDRR build system works.
+- [Technical Summary](docs/TECHNICAL-SUMMARY.md) - Overview of the SDRR architecture, operation and design decisions.
 - [Technical Details](docs/TECHNICAL-DETAILS.md) - Technical details of the SDRR firmware and hardware.
+- [Build System](docs/BUILD-SYSTEM.md) - How the SDRR build system works.
 - [Voltage Levels](docs/VOLTAGE-LEVELS.md) - How the SDRR supports the required logic voltage levels.
 - [Pi Pico Programmer](docs/PI-PICO-PROGRAMMER.md) - How to use a $5 Raspberry Pi Pico as a programmer for SDRR.
 - [License](LICENSE.md) - SDRR software and hardware licenses.
@@ -104,8 +105,12 @@ Most STM32F4xxR (LQFP-64) variants will work, but the following are supported ou
 | STM32F411RCT6 | 14 | f411rc |
 | STM32F411RET6 | 16 | f411re |
 | STM32F405RGT6 | 16 | f405rg |
+| STM32F446RCT6 | 16 | f446rc |
+| STM32F446RETx | 16 | f446re |
 
-The highest performance supported variant is the STM32F405RGT6, primarily becaue it has the fastest max clock speed by a significant margin (168MHz vs 100MHz for the F411 and 84MHz for the F401).  This means it will support the widest range of retro systems.  However, it costs more, and will draw more power and generate more heat.  It is also only supported from PCB rev E onwards.
+The highest performance supported variant is the STM32F446RET6, primarily because it has the fastest max clock speed (180MHz vs 168MHz for the F405, 100MHz for the F411 and 84MHz for the F401).  This means it will support the widest range of retro systems.  However, it costs more, and will draw more power and generate more heat.
+
+The largest flash capacity is the STM32F405RGT6, but this extra space if currently unused, and the F405 is also only supported from PCB rev E onwards.
 
 For more details about selecting the appropriate STM32 variant for your application, see [docs/STM32-SELECTION.md](docs/STM32-SELECTION.md).
 

@@ -20,17 +20,20 @@ void system_init(void) {
 #endif // STM32F1/4
 #endif // MCO
 
-#if defined(STM32F411)
+#if defined(STM32F411) || defined(STM32F446)
 #if TARGET_FREQ_MHZ > 84
     // Set power scale 1 mode, as clock speed is 100MHz (> 84MHz, <= 100MHz)
     // Scale defaults to 1 on STM32F405, and not required on STM32F401
     // Must be done before enabling PLL
+    if (!(PWR_CR & PWR_CSR_VOSRDY_MASK)) {
+        LOG("!!! VOS not ready - proceeding anyway");
+    }
     LOG("Set VOS to scale 1");
     RCC_APB1ENR |= (1 << 28);   // PWREN bit
     PWR_CR &= ~PWR_VOS_MASK;    // Clear VOS bits
     PWR_CR |= PWR_VOS_SCALE_1;  // Set VOS bits to scale 1
 #endif // TARGET_FREQ_MHZ > 84
-#endif // STM32F411
+#endif // STM32F411/446
 
     // Always use PLL - note when using HSI, HSI/2 is fed to PLL.  When using
     // HSE, HSE itself is fed to PLL.
@@ -70,6 +73,19 @@ void system_init(void) {
     setup_pll_src(pll_src);
     enable_pll();
     DEBUG("PLL started");
+
+#if defined(STM32F466) && TARGET_FREQ_MHZ > 168
+    // Need to set overdrive mode
+    if !(PWR_CR & PWR_CSR_ODRDY_MASK) {
+        LOG("!!! OD not ready - proceeding anyway");
+    }
+    LOG("Set overdrive mode");
+    PWR_CR |= PWR_CR_ODEN;       // Set ODEN bit
+    while (!(PWR_CSR & PWR_CSR_ODRDY_MASK)); // Wait for OD to be ready
+    PWR_CR |= PWR_CR_ODSWEN;     // Set ODSWEN
+    while (!(PWR_CSR & PWR_CSR_ODSWRDY_MASK)); // Wait for ODSW to be ready
+    DEBUG("Overdrive mode set");
+#endif // STM32F466 && TARGET_FREQ_MHZ > 168
 
 #if defined(STM32F4) && defined(MCO)
     //setup_mco(RCC_CFGR_MCO1_PLL);

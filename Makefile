@@ -26,6 +26,8 @@ CONFIG ?= configs/blank.mk
 #
 
 # STM types
+# f446rc - F446 256KB flash version
+# f446re - F446 512KB flash version
 # f411rc - F411 256KB flash version
 # f411re - F411 512KB flash version
 # f405rg - F405 1024KB flash version
@@ -35,6 +37,8 @@ CONFIG ?= configs/blank.mk
 # f103r8 - F103 64KB flash version (no longer supported)
 # f103rb - F103 128KB flash version (no longer supported)
 
+# STM ?= f446rc
+# STM ?= f446re
 # STM ?= f411rc
 # STM ?= f411re
 # STM ?= f405rg
@@ -195,6 +199,7 @@ OSC ?= HSI
 # - F401: 84MHz
 # - F411: 100MHz
 # - F405: 168MHz
+# - F446: 180MHz
 #
 # Some guidance on speeds required to run stably:
 # - PET 4032 character ROM >= 26MHz

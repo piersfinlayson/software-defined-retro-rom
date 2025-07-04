@@ -53,6 +53,7 @@ pub enum StmProcessor {
     F401,
     F405,
     F411,
+    F446,
 }
 
 impl StmProcessor {
@@ -61,6 +62,7 @@ impl StmProcessor {
             StmProcessor::F401 => 192,
             StmProcessor::F405 => 100,
             StmProcessor::F411 => 100,
+            StmProcessor::F446 => 100,
         }
     }
 
@@ -73,6 +75,7 @@ impl StmProcessor {
             StmProcessor::F401 => 84,
             StmProcessor::F405 => 168,
             StmProcessor::F411 => 100,
+            StmProcessor::F446 => 180,
         }
     }
 
@@ -153,6 +156,8 @@ impl StmProcessor {
 pub enum StmVariant {
     F103R8, // STM32F103R8 (6 or 7), 64-pins, 20KB SRAM, 64KB Flash
     F103RB, // STM32F103RB (6 or 7), 64-pins, 20KB SRAM, 128KB Flash
+    F446RC, // STM32F446RC (6 or 7), 64-pins, 128KB SRAM, 256KB Flash
+    F446RE, // STM32F446RE (6 or 7), 64-pins, 128KB SRAM, 512KB Flash
     F411RC, // STM32F411RC (6 or 7), 64-pins, 128KB SRAM, 256KB Flash
     F411RE, // STM32F411RE (6 or 7), 64-pins, 128KB SRAM, 512KB Flash
     F405RG, // STM32F405RE (6 or 7), 64-pins, 128KB SRAM, 1024KB Flash (+ 64KB CCM RAM)
@@ -166,6 +171,8 @@ impl StmVariant {
         match s.to_lowercase().as_str() {
             "f103r8" => Some(StmVariant::F103R8),
             "f103rb" => Some(StmVariant::F103RB),
+            "f446rc" => Some(StmVariant::F446RC),
+            "f446re" => Some(StmVariant::F446RE),
             "f411rc" => Some(StmVariant::F411RC),
             "f411re" => Some(StmVariant::F411RE),
             "f405rg" => Some(StmVariant::F405RG),
@@ -180,6 +187,8 @@ impl StmVariant {
         let kb = match self {
             StmVariant::F103R8 => 64,
             StmVariant::F103RB => 128,
+            StmVariant::F446RC => 256,
+            StmVariant::F446RE => 512,
             StmVariant::F411RC => 256,
             StmVariant::F411RE => 512,
             StmVariant::F405RG => 1024,
@@ -197,6 +206,7 @@ impl StmVariant {
     pub fn define_var_sub_fam(&self) -> &str {
         match self {
             StmVariant::F103R8 | StmVariant::F103RB => "#define STM32F103      1",
+            StmVariant::F446RC | StmVariant::F446RE => "#define STM32F446      1",
             StmVariant::F411RC | StmVariant::F411RE => "#define STM32F411      1",
             StmVariant::F405RG => "#define STM32F405      1",
             StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => {
@@ -208,7 +218,9 @@ impl StmVariant {
     pub fn family(&self) -> StmFamily {
         match self {
             StmVariant::F103R8 | StmVariant::F103RB => StmFamily::F1,
-            StmVariant::F411RC
+            StmVariant::F446RC 
+            | StmVariant::F446RE
+            | StmVariant::F411RC
             | StmVariant::F411RE
             | StmVariant::F405RG
             | StmVariant::F401RE
@@ -220,6 +232,7 @@ impl StmVariant {
     pub fn processor(&self) -> Option<StmProcessor> {
         match self {
             StmVariant::F103R8 | StmVariant::F103RB => None, // F1 family doesn't use PLL the same way
+            StmVariant::F446RC | StmVariant::F446RE => Some(StmProcessor::F446),
             StmVariant::F411RC | StmVariant::F411RE => Some(StmProcessor::F411),
             StmVariant::F405RG => Some(StmProcessor::F405),
             StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => {
@@ -239,6 +252,8 @@ impl StmVariant {
         match self {
             StmVariant::F103R8 => "#define STM_VARIANT    \"F103R8\"",
             StmVariant::F103RB => "#define STM_VARIANT    \"F103RB\"",
+            StmVariant::F446RC => "#define STM_VARIANT    \"F446RC\"",
+            StmVariant::F446RE => "#define STM_VARIANT    \"F446RE\"",
             StmVariant::F411RC => "#define STM_VARIANT    \"F411RC\"",
             StmVariant::F411RE => "#define STM_VARIANT    \"F411RE\"",
             StmVariant::F405RG => "#define STM_VARIANT    \"F405RG\"",
@@ -259,6 +274,8 @@ impl StmVariant {
         match self {
             StmVariant::F103R8 => "stm32f103r8",
             StmVariant::F103RB => "stm32f103rb",
+            StmVariant::F446RC => "stm32f446rc",
+            StmVariant::F446RE => "stm32f446re",
             StmVariant::F411RC => "stm32f411rc",
             StmVariant::F411RE => "stm32f411re",
             StmVariant::F405RG => "stm32f405rg",
@@ -273,6 +290,8 @@ impl StmVariant {
         match self {
             StmVariant::F103R8 => "STM32F103R8Tx",
             StmVariant::F103RB => "STM32F103RBTx",
+            StmVariant::F446RC => "STM32F446RCTx",
+            StmVariant::F446RE => "STM32F446RETx",
             StmVariant::F411RC => "STM32F411RCTx",
             StmVariant::F411RE => "STM32F411RETx",
             StmVariant::F405RG => "STM32F405RGTx",

@@ -72,6 +72,10 @@ else ifeq ($(VARIANT),stm32f401rc)
 	LDSCRIPT := stm32f401xc.ld
 else ifeq ($(VARIANT),stm32f405rg)
 	LDSCRIPT := stm32f405xg.ld
+else ifeq ($(VARIANT),stm32f446rc)
+	LDSCRIPT := stm32f446xc.ld
+else ifeq ($(VARIANT),stm32f446re)
+	LDSCRIPT := stm32f446xe.ld
 else
 $(error Unsupported variant: $(VARIANT))
 endif

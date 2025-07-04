@@ -13,7 +13,7 @@ This is a "bare metal" project, and doesn't require any external HALs, LLs or ID
 
 The firmware uses a number of techniques to reach the required performance:
 
-- The microcontroller is clocked via the internal oscillator, to the maximum supported speed (84MHz for the STM32F401, 100MHz for the STM32F411 and 168MHz for the STM32F405).
+- The microcontroller is clocked via the internal oscillator, to the maximum supported speed (84MHz for the STM32F401, 100MHz for the STM32F411, 168MHz for the STM32F405 and 180MHz for the STM32F446).
 - Interrupts are not used, as they would slow down the main loop.
 - The main loop function operates from flash, and leverages the STM32F4's fairly advanced flash prefetch and instruction caching capabilities.  This is faster than loading from RAM.
 - The selected ROM image is pre-copied to RAM on boot, so the data is loaded very quickly based on the address pin state.
@@ -48,7 +48,7 @@ The STM32F4 microcontroller was chosen for a number of key reasons:
 - Surface mount components are used throughout, to reduce the PCB size.  Through-hole passives would not be viable in the desired footprint.
 - 0603 passives are used, which are the smallest size that can be easily hand soldered.  Small pads were chosen to reduce the space, and allow the components to fit, rather than the large (Kicad "handsoldering") pads.  This may require the use of a small soldering iron tip and microscope if hand-soldering depending on the assembler's skill level and eye-sight.
 - This designed provides the recommended number and value of bypass capacitors for the STM32F4xxR from the datasheet and application notes.
-- Although the F405 and F415 pin-out varies slightly from the F401, F411 and other F4 variants, the PCB design supports all of these variants, with different resistor and capacitor placement and values.
+- Although the F405 and F415 pin-out varies slightly from the F401, F411, F446 and other F4 variants, the PCB design supports all of these variants, with different resistor and capacitor placement and values.
 - An LQFP64 STM32F104RX**T** package is used, which just fits between the pins of the 2332/2364 socket.  A TBGA64 STM32F104RX**Y** package would be smaller, but is less common, much harder to hand solder so this was avoided, and makes it harder to examine the solder joints.  Due to the space constraints, care must be taken when soldering the STM32 to avoid briding the IC pins to the ROM socket pins, or other components.  If hand-soldering, it is recommended to tin the LQFP64 pads first, then use flux and hot-air to solder the STM32F4xxR to the PCB, and then more flux and solder to ensure all the pins are well-soldered.
 - The STM32F4's internal oscillator is used to reduce component count.  This reduces the accuracy of the clock, but clock accuracy is not vital in this application.
 

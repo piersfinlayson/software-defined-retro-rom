@@ -28,7 +28,7 @@ struct Args {
     #[clap(long, required = true)]
     rom: Vec<String>,
 
-    /// STM32 variant (f103r8, f103rb, f411rc, f411re, f405rg, f401re, f401rb, f401rc)
+    /// STM32 variant (f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc)
     #[clap(long, value_parser = parse_stm_variant)]
     stm: StmVariant,
 
@@ -103,7 +103,7 @@ struct Args {
 
 fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
     StmVariant::from_str(s)
-        .ok_or_else(|| format!("Invalid STM32 variant: {}. Valid values are: f103r8, f103rb, f411rc, f411re, f405rg, f401re, f401rb, f401rc", s))
+        .ok_or_else(|| format!("Invalid STM32 variant: {}. Valid values are: f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc", s))
 }
 
 fn parse_hw_rev(s: &str) -> Result<HwRev, String> {

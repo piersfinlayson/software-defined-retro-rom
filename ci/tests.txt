@@ -12,16 +12,20 @@ no-config-f401rc:STM=f401rc
 no-config-f411rc:STM=f411rc
 no-config-f411re:STM=f411re
 no-config-f405rg:STM=f405rg
+no-config-f405rg:STM=f446rc
+no-config-f446re:STM=f446re
 
 # Use test config, one of each STM32F4 variant
 basic-f401rb:STM=f401rb,CONFIG=config/test-sdrr-0.mk
 basic-f411re:STM=f411re,CONFIG=config/test-sdrr-0.mk
 basic-f405rg:STM=f405rg,CONFIG=config/test-sdrr-0.mk
+basic-f446re:STM=f446re,CONFIG=config/test-sdrr-0.mk
 
 # Enable MCO, one of each STM32F4 variant
 mco-f401rb:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 mco-f411re:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 mco-f405rg:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+mco-f446re:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Disable BOOT_LOGGGING
 no-boot-logging-f401rb:BOOT_LOGGING=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
@@ -49,8 +53,10 @@ disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=e,STM=f401rb,CONFIG=config
 freq-50hz-f401rb:FREQ=50,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 freq-92hz-f411re:FREQ=92,STM=f411re,CONFIG=config/test-sdrr-0.mk
 freq-130hz-f405rg:FREQ=130,STM=f405rg,CONFIG=config/test-sdrr-0.mk
+freq-170hz-f446re:FREQ=160,STM=f446re,CONFIG=config/test-sdrr-0.mk
 
 # Overclocking
 overclock-f401rb:OVERCLOCK=1,FREQ=100,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 overclock-f411re:OVERCLOCK=1,FREQ=110,STM=f411re,CONFIG=config/test-sdrr-0.mk
 overclock-f405rg:OVERCLOCK=1,FREQ=180,STM=f405rg,CONFIG=config/test-sdrr-0.mk
+overclock-f446re:OVERCLOCK=1,FREQ=200,STM=f446re,CONFIG=config/test-sdrr-0.mk

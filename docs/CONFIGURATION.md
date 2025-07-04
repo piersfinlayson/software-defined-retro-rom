@@ -21,7 +21,7 @@ STM=f405rg CONFIG=config/c64.mk make run
 Defines your STM32 variant, for example:
 
 ```bash
-STM=f411re
+STM=f446re
 ```
 
 See [Supported STM32 Microcontrollers](/README.md#supported-stm32-microcontrollers) for the list of supported variants.

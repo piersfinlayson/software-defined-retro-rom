@@ -6,8 +6,9 @@ All notables changes between versions are documented in this file.
 
 Changes
 
-- Updated Vic-20 PAL config to use VIC-20 dead-test v1.1.01
+- Updated VIC-20 PAL config to use VIC-20 dead-test v1.1.01.
 - PCB rev E gerbers provided (as yet unverified).
+- Added support for F446 STM32F4xxR C/E variants - max clock speed 180 MHz (in excess of the F405's 168 MHz).  Currently untested.
 
 Fixed
 

@@ -33,8 +33,9 @@ A: Currently supported variants include:
 - STM32F401RBT6/RCT6/RET6 (84MHz max clock, 6-16 ROM images)
 - STM32F411RCT6/RET6 (100MHz max clock, 14-16 ROM images)  
 - STM32F405RGT6 (168MHz max clock, 16 ROM images)
+- STM32F446RCT6/RETx (180MHz max clock, 16 ROM images)
 
-The F405 is recommended for maximum compatibility as it runs fastest and supports all target systems.
+The F405/F446 are recommended for maximum compatibility as they runs fastest and supports the maximum number of target systems.
 
 See the [Supported STM32 Microcontrollers](/README.md#supported-stm32-microcontrollers) section for more details.
 
@@ -46,9 +47,21 @@ A: Tested systems include Commodore PETs, VIC-20s, C64s, 1541 drives, and IEEE-4
 
 A: Choose based on your target system's timing requirements. PETs need 26MHz minimum, VIC-20s need 37MHz, C64 kernals need 75MHz, and C64 character ROMs need 98MHz.
 
-Use F405 if unsure - it supports everything.
+Use F405 or F446 if unsure - they supports all target systems.
 
 See the [STM32 Selection](/docs/STM32-SELECTION.md) section for more details.
+
+**Q: Why didn't you use a Raspberry Pi Pico/RP2040 or other microcontroller?**
+
+A: The one sentence answer to this is that no other microcontroller had all of the required performance, 5V tolerant GPIOs and low cost.
+
+In the case of the Raspberry Pi Pico/RP2040, its GPIOs are not 5V tolerant, and it would have required level shifters.  It also does not have internal flash (although a subsequent RP2350 model does).  This would have significantly increased the cost and complexity of the design, and almost certainly led to either 4 layer PCBs, or a larger PCB footprint, or both.  This is sad, because otherwise the RP2040/RP2350 would be a great fit for this project - it has a high clock speed, dual cores, enough RAM and a sufficient number of GPIOs.  Its PIO capability could probably have been put to great use.
+
+There is a more detailed explanation of the STM32 choice in [Hardware Selection](/docs/TECHNICAL-DETAILS.md#hardware-selection).
+
+**Q: Why are you using the STM32's internal oscillator - doesn't that make it unstable?**
+
+A: An internal oscillator was one of the microcontroller selection criteria, in order to simplify the design, and reduce the PCB footprint and BOM cost.  The STM32F4 runs stably off its internal oscillator, although its accuracy is not as good as from an external crystal.  A precisely accurate clock is not required for this application - it primarily requires raw speed.
 
 ## Installation and Setup
 
@@ -149,6 +162,31 @@ See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information.
 **Q: Why not use interrupts?**
 
 A: Interrupts would add latency that could cause the system to miss critical timing windows. The polling-based approach ensures consistent, predictable response times.  As SDRR does nothing other than serve flash, a tight main loop with no interrupts is sufficient **and** optimal.
+
+**Q: Isn't the STM32 a 3.3V device? How does it work in 5V systems?**
+
+A: Most of the GPIO pins on the STM32F4xx are 5V tolerant, and the maximum and minimum input and output voltage levels are compatible with the main target retro driving ICs (such as the 6502, VIC and VIC-II) chips.  Care is taken to ensure that only 5V tolerant GPIOs are used, including setting the drive strength on the STM32 to stay within the required output levels.
+
+There's a detailed analysis in [Voltage Levels](/docs/VOLTAGE-LEVELS.md).
+
+**Q: What languages are used in SDRR?**
+
+A: The main [`sdrr`](/sdrr/) firmware is written in a combination of C and assembly.  Assembly is used for the main loop to achieve the required performance, while C is used for the startup-up logic.
+
+C was chosen above other lanuages in order to stay as close as possible to the hardware, for performance reasons.  The C code is fully bare-metal - no hardware abstraction layer or other libraries are used, except [SEGGER-RTT](https://github.com/piersfinlayson/segger-rtt) for logging.
+
+The [`sdrr-gen`](/sdrr-gen/) tool, which generates the ROM images and other code to embed in the main firmware is written in Rust.
+
+**Q: What does the build pipeline look like.**
+
+```ascii
+User Input → Top-level Make → sdrr-gen → sdrr Make → probe-rs → STM32
+    ↓              ↓            ↓          ↓            ↓         ↓
+Config Files  ROM Download    Code Gen    Compile     Flash     Running
+ROM Images    & Validation    & Mangle    & Link                Firmware
+```
+
+See [Build System](/docs/BUILD-SYSTEM.md) for more details on how the build system works.
 
 ## Troubleshooting
 

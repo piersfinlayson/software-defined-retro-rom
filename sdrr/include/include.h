@@ -151,10 +151,14 @@
 #if TARGET_FREQ_MHZ > 100
 #error "Target frequency for STM32F411 must be 100MHz or less"
 #endif // TARGET_FREQ_MHZ > 100
-#elif defined(STM32F404)
+#elif defined(STM32F405)
 #if TARGET_FREQ_MHZ > 168
-#error "Target frequency for STM32F404 must be 168MHz or less"
+#error "Target frequency for STM32F405 must be 168MHz or less"
 #endif // TARGET_FREQ_MHZ > 168
+#elif defined(STM32F446)
+#if TARGET_FREQ_MHZ > 180
+#error "Target frequency for STM32F446 must be 180MHz or less"
+#endif // TARGET_FREQ_MHZ > 180
 #endif // STM32F4xx
 #endif // !OVERCLOCK
 
