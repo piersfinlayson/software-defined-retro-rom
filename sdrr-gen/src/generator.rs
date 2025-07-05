@@ -94,7 +94,6 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
     writeln!(file, "#define SDRR_ROMS_H")?;
     writeln!(file)?;
     writeln!(file, "#include <stdint.h>")?;
-    writeln!(file, "#include \"sdrr_config.h\"")?;
     writeln!(file)?;
     writeln!(file, "// Number of ROM images")?;
     writeln!(file, "#define SDRR_NUM_IMAGES {}", rom_images.len())?;
@@ -108,8 +107,8 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
     let family = config.stm_variant.family();
     for (i, rom_config) in config.roms.iter().enumerate() {
         let size = match family {
-            StmFamily::F1 => rom_config.rom_type.size_bytes(),
-            StmFamily::F4 => 16384,
+            StmFamily::F1 => format!("{}", rom_config.rom_type.size_bytes()),
+            StmFamily::F4 => "ROM_IMAGE_SIZE".to_string(),
         };
         writeln!(
             file,
@@ -119,48 +118,6 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
             rom_config.rom_type.name()
         )?;
     }
-    writeln!(file)?;
-
-    // ROM type enumeration
-    writeln!(file, "// ROM type enumeration")?;
-    writeln!(file, "typedef enum {{")?;
-    writeln!(file, "    ROM_TYPE_2316,")?;
-    writeln!(file, "    ROM_TYPE_2332,")?;
-    writeln!(file, "    ROM_TYPE_2364")?;
-    writeln!(file, "}} sdrr_rom_type_t;")?;
-    writeln!(file)?;
-
-    // CS state enumeration
-    writeln!(file, "// CS state enumeration")?;
-    writeln!(file, "typedef enum {{")?;
-    writeln!(file, "    CS_ACTIVE_LOW,")?;
-    writeln!(file, "    CS_ACTIVE_HIGH,")?;
-    writeln!(file, "    CS_NOT_USED")?;
-    writeln!(file, "}} sdrr_cs_state_t;")?;
-    writeln!(file)?;
-
-    // ROM information structure
-    writeln!(file, "// ROM information structure")?;
-    writeln!(file, "typedef struct {{")?;
-    writeln!(
-        file,
-        "    const uint8_t* data;           // Pointer to ROM data"
-    )?;
-    writeln!(
-        file,
-        "    uint16_t size;                 // Actual ROM size (varies by type on F1, always 16384 on F4)"
-    )?;
-    writeln!(file, "    sdrr_rom_type_t rom_type;      // ROM type")?;
-    writeln!(file, "    sdrr_cs_state_t cs1_state;     // CS1 state")?;
-    writeln!(file, "    sdrr_cs_state_t cs2_state;     // CS2 state")?;
-    writeln!(file, "    sdrr_cs_state_t cs3_state;     // CS3 state")?;
-    writeln!(file, "#if defined(BOOT_LOGGING)")?;
-    writeln!(
-        file,
-        "    const char* filename;          // Source filename (BOOT_LOGGING only)"
-    )?;
-    writeln!(file, "#endif // BOOT_LOGGING")?;
-    writeln!(file, "}} sdrr_rom_info_t;")?;
     writeln!(file)?;
 
     // ROM information array
@@ -192,6 +149,8 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     const FILENAME: &str = "roms.c";
     let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
 
+    writeln!(file, "#include \"sdrr_config.h\"")?;
+    writeln!(file, "#include \"config_base.h\"")?;
     writeln!(file, "#include \"roms.h\"")?;
     writeln!(file)?;
 
@@ -260,8 +219,9 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
         writeln!(file, "        .cs2_state = {},", cs2_state)?;
         writeln!(file, "        .cs3_state = {},", cs3_state)?;
         writeln!(file, "#if defined(BOOT_LOGGING)")?;
-        writeln!(file, "        .filename = sdrr_rom_{}_filename", i)?;
+        writeln!(file, "        .filename = sdrr_rom_{}_filename,", i)?;
         writeln!(file, "#endif // BOOT_LOGGING")?;
+        writeln!(file, "        .serve = SERVE_ORIG,")?;
         if i == config.roms.len() - 1 {
             writeln!(file, "    }}")?;
         } else {
@@ -381,24 +341,6 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
     } else {
         writeln!(file, "// PLL configuration not applicable for this variant")?;
     }
-
-    writeln!(file)?;
-    writeln!(file, "//")?;
-    writeln!(file, "// ROM configuration")?;
-    writeln!(file, "//")?;
-
-    // ROM image sizes by type
-    writeln!(file)?;
-    writeln!(file, "// ROM image sizes by type (F1 family)")?;
-    writeln!(file, "#define ROM_IMAGE_SIZE_2316 2048")?;
-    writeln!(file, "#define ROM_IMAGE_SIZE_2332 4096")?;
-    writeln!(file, "#define ROM_IMAGE_SIZE_2364 8192")?;
-    writeln!(file)?;
-    writeln!(
-        file,
-        "// Maximum ROM image size (F4 family uses a single size for all ROM types)"
-    )?;
-    writeln!(file, "#define MAX_ROM_IMAGE_SIZE 16384")?;
 
     writeln!(file)?;
     writeln!(file, "//")?;
