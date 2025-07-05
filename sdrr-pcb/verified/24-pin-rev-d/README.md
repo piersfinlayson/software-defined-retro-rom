@@ -1,6 +1,11 @@
-# Rev D
+# 24 Pin Rev D
 
-This revision has been verified to support the STM32F401 and STM32F411 variants.
+23xx (24 pin) ROM replacement SDRR PCB.
+
+This revision has been verified to support
+
+- the STM32F401 and STM32F411 variants
+- acting as 2364 and 2332 ROM replacements in the Commodore PET, VIC-20 and C64 (50Hz/PAL).
 
 Note that the gerbers are currently untested - the design has been verified via [OSH Park](#ordering-bare-pcbs).
 

@@ -4,4 +4,4 @@ This folder contains design and manufacturing files for unverified revisions of 
 
 Revisions:
 
-- [Rev E](./rev-e/README.md) - Supports STM32F401, STM32F411, STM32F405 and STM32F415 variants.
+- [Rev E](./24-pin-rev-e/README.md) - Supports STM32F401, STM32F411, STM32F405 and STM32F415 variants.

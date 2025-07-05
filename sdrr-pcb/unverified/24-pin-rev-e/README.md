@@ -1,8 +1,8 @@
-# Rev E
+# 24 Pin Rev E
 
 **Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
 
-This revision supports the STM32F401, STM32F411, STM32F405 and STM32F415 variants.
+23xx (24 pin) ROM replacement SDRR PCB.
 
 This revision has two key improvements over rev D:
 
@@ -63,7 +63,7 @@ See notes for STM32F405/F415 BOM differences.
 | C9 | Capacitor | 4.7uF| 0603 | 1 | **F405/F411 - DNP** |
 | D1 | LED | - | 0603 | 1 | Optional, colour as desired |
 | J1 | Pin header | 1x5 | - | 1 | 2.54mm (0.1") pin pitch |
-| J3 | Pin header | 2x4 | - | 1 | 2.54mm (0.1") pin pitch |
+| J2 | Pin header | 2x4 | - | 1 | 2.54mm (0.1") pin pitch |
 | R1, R2 | Resistor | 4k7 | 0603 | 2 | |
 | R3 | Resistor | 470R | 0603 | 1 | Optional, modify value to suit chosen LED |
 | RC4, RC5 | Resistor | 0R | 0603 | 2 | **F405/F411 - use 2.2uF 0603 capacitor** |

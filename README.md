@@ -27,14 +27,11 @@ The video below provides an introduction to the Software Defined Retro ROM:
 
 ## Hardware
 
-These images are of hardware revision E.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
+This is the 24-pin version, hardware revison F.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
 
 <div style="display: flex; justify-content: center; gap: 20px;">
-  <a href="docs/images/sdrr-rev-e-top.png">
-    <img src="docs/images/sdrr-rev-e-top.png" alt="SDRR rev E top" width="200">
-  </a>
-  <a href="docs/images/sdrr-rev-e-bot.png">
-    <img src="docs/images/sdrr-rev-e-bot.png" alt="SDRR rev E bottom" width="200">
+  <a href="docs/images/sdrr-24-pin-side.png">
+    <img src="docs/images/sdrr-24-pin-side.png" alt="SDRR 24 pin side on" width="400">
   </a>
 </div>
 
