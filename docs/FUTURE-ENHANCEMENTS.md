@@ -17,7 +17,10 @@ Hardware [revision F](/sdrr-pcb/unverified/24-pin-rev-f/README.md) includes supp
 
 This is fairly straightforward to implement in firmware for 2364s.  We just need a single 64KB image, with the X1/X2 pins addressing the appropriate segment of the image to use for each ROM.
 
-However, this is more complex for 2332s, as they have 2 CS lines.  On machines where the 2332 only has a single active CS line (because the other is permanently tied to ground/high), the same approach works.
+However, this is more complex for 2332s, as they have 2 CS lines.
+
+- On machines where the 2332 only has a single active CS line (because the other is permanently tied to ground/high), the same approach works.
+- In some cases multiple 2332s share one of the CS line - for example in the 2040/3040/404 disk drives, CS2 is shared and used to carry Phi2 to the ROMs.  Therefore it should be possible to use one of the main CS pins to select any of the 2332s, and the other CS pin + X1/X2 to select the appropriate segment of the image.
 
 ## 23128 Support - prototyping
 
