@@ -1,12 +1,8 @@
-# 28 Pin Revision A
+# WiFi Programmer Revision A
 
 **Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
 
-23xxx (28 pin) ROM replacement SDRR PCB.
-
-This PCB is designed to replace 23128s, and possibly 23256/23512s, in the later C64s, 1541C, 1541-II, etc, that use this 16KB+, 28 pin ROMs.
-
-This was dervied from the 24-pin SDRR rev E PCB.
+This PCB is designed to be used as a daughtboard for the (24 or 28 pin) SDRR to program is via WiFi (and/or possibly via WiFi).  It is currently in the prototyping stage.
 
 <div style="text-align: center;">
   <a href="/sdrr-pcb/unverified/wifi-prog-rev-a/wifi-rev-a-side.png">
