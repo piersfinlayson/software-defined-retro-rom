@@ -11,12 +11,15 @@
 #include <stdint.h>
 
 // ROM image sizes by type (F1 family)
-#define ROM_IMAGE_SIZE_2316 2048
-#define ROM_IMAGE_SIZE_2332 4096
-#define ROM_IMAGE_SIZE_2364 8192
+#define ROM_IMAGE_SIZE_2316  2048
+#define ROM_IMAGE_SIZE_2332  4096
+#define ROM_IMAGE_SIZE_2364  8192
 
 // Maximum ROM image size (F4 family uses a single size for all ROM types)
-#define ROM_IMAGE_SIZE 16384
+#define ROM_IMAGE_SIZE  16384
+
+// ROM image size for sets of more than 1 ROM image
+#define ROM_SET_IMAGE_SIZE  65536
 
 // ROM type enumeration
 typedef enum {
@@ -37,10 +40,19 @@ typedef enum {
     SERVE_ORIG,  // Original ROM serving algorithm
 } sdrr_serve_t;
 
+typedef enum {
+    PIN_NONE,
+    PIN_18,     // This is 23xx pin 18, so CS2 on 2316
+    PIN_20,     // This is 23xx pin 20, so CS1 on 2364, 2332 and 2316
+    PIN_21,     // This is 23xx pin 21, so CS3 on 2316, CS2 on 2332
+#if defined(HW_REV_F)
+    PIN_X1,     // This is pin X1 on SDRR, aka STM32F4 PC14 in hw rev f
+    PIN_X2,     // This is pin X2 on SDRR, aka STM32F4 PC15 in hw rev f
+#endif // HW_REV_F
+} sdrr_cs_pin_t;
+
 // ROM information structure
 typedef struct {
-    const uint8_t* data;        // Pointer to ROM data
-    uint16_t size;              // Actual ROM size (varies by type on F1, always 16384 on F4)
     sdrr_rom_type_t rom_type;   // ROM type
     sdrr_cs_state_t cs1_state;  // CS1 state
     sdrr_cs_state_t cs2_state;  // CS2 state
@@ -49,6 +61,29 @@ typedef struct {
     const char* filename;       // Source filename (BOOT_LOGGING only)
 #endif // BOOT_LOGGING
     sdrr_serve_t serve;         // ROM serving algorithm
+    sdrr_cs_pin_t cs1_line;     // CS1 pin (rom_type=*)
+    sdrr_cs_pin_t cs2_line;     // CS2 pin (rom_type = 2316 or 2332)
+    sdrr_cs_pin_t cs3_line;     // CS3 pin (rom_type = 2316)
 } sdrr_rom_info_t;
+
+// ROM set information structure
+//
+// SDRR can serve sets of ROM images, which are addressed using the entirety
+// of the STM32F4 port C.  This is done in order to emulate multuple ROMs
+// simultaneously, as the additional ROM select lines must be attached to
+// SDRR via X1 and X2.
+//
+// If the multiple ROM image support is not used, there will be a 1:1 mapping
+// between set and image - i.e. `rom_count` below will be 1.
+typedef struct {
+    const uint8_t* data;            // Pointer to ROM data
+    const uint32_t size;            // Actual data ROM size
+                                    // - ROM_IMAGE_SIZE for a single ROM set
+                                    // - ROM_SET_IMAGE_SIZE otherwise
+    const sdrr_rom_info_t** roms;         // Pointer to array of pointers to ROMs
+                                    // for this set
+    const uint8_t rom_count;        // Number of ROMs in this set
+
+} sdrr_rom_set_t;
 
 #endif // CONFIG_BASE_H

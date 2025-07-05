@@ -95,8 +95,9 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
     writeln!(file)?;
     writeln!(file, "#include <stdint.h>")?;
     writeln!(file)?;
-    writeln!(file, "// Number of ROM images")?;
-    writeln!(file, "#define SDRR_NUM_IMAGES {}", rom_images.len())?;
+    writeln!(file, "// Number of ROM images and sets")?;
+    writeln!(file, "#define SDRR_NUM_IMAGES  {}", rom_images.len())?;
+    writeln!(file, "#define SDRR_NUM_SETS    SDRR_NUM_IMAGES  // Currently 1:1 mapping")?;
     writeln!(file)?;
 
     // Generate individual ROM size defines
@@ -112,7 +113,7 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
         };
         writeln!(
             file,
-            "#define ROM_{}_SIZE {}   // {} type",
+            "#define ROM_{}_SIZE  {}  // {} type",
             i,
             size,
             rom_config.rom_type.name()
@@ -120,23 +121,12 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
     }
     writeln!(file)?;
 
-    // ROM information array
-    writeln!(file, "// ROM information array")?;
+    // ROM set array
+    writeln!(file, "// ROM set array")?;
     writeln!(
         file,
-        "extern const sdrr_rom_info_t sdrr_rom_info[SDRR_NUM_IMAGES];"
+        "extern const sdrr_rom_set_t rom_set[SDRR_NUM_SETS];"
     )?;
-    writeln!(file)?;
-
-    // Individual ROM data arrays
-    writeln!(file, "// Individual ROM data arrays")?;
-    for i in 0..config.roms.len() {
-        writeln!(
-            file,
-            "extern const uint8_t sdrr_rom_{}_data[ROM_{}_SIZE];",
-            i, i
-        )?;
-    }
     writeln!(file)?;
 
     writeln!(file, "#endif // SDRR_ROMS_H")?;
@@ -177,12 +167,15 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "#endif // BOOT_LOGGING")?;
     writeln!(file)?;
 
+    writeln!(file, "// All objects are static, except for the rom_set array.  This is the only")?;
+    writeln!(file, "// object which should be directly accessed by the rest of the code.")?;
+    writeln!(file)?;
+
     // Generate ROM information array
-    writeln!(file, "// ROM information array")?;
-    writeln!(
-        file,
-        "const sdrr_rom_info_t sdrr_rom_info[SDRR_NUM_IMAGES] = {{"
-    )?;
+    writeln!(file, "//")?;
+    writeln!(file, "// ROM info")?;
+    writeln!(file, "//")?;
+    writeln!(file)?;
 
     // Helper function to convert CsLogic to enum string
     let cs_logic_to_enum = |cs_logic: CsLogic| -> &'static str {
@@ -192,11 +185,20 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
         }
     };
 
-    for (i, rom_config) in config.roms.iter().enumerate() {
-        let rom_type_enum = match rom_config.rom_type {
-            crate::rom_types::RomType::Rom2316 => "ROM_TYPE_2316",
-            crate::rom_types::RomType::Rom2332 => "ROM_TYPE_2332",
-            crate::rom_types::RomType::Rom2364 => "ROM_TYPE_2364",
+    for (ii, rom_config) in config.roms.iter().enumerate() {
+        writeln!(file, "// ROM {}", ii)?;
+
+        writeln!(
+            file,
+            "static const sdrr_rom_info_t rom_{}_info = {{",
+            ii
+        )?;
+
+        let (rom_type_enum, cs1_pin, cs2_pin, cs3_pin) = match rom_config.rom_type {
+            crate::rom_types::RomType::Rom2316 => 
+                ("ROM_TYPE_2316", "PIN_20","PIN_NONE", "PIN_NONE"),
+            crate::rom_types::RomType::Rom2332 => ("ROM_TYPE_2332", "PIN_20", "PIN_21", "PIN_NONE"),
+            crate::rom_types::RomType::Rom2364 => ("ROM_TYPE_2364", "PIN_20", "PIN_18", "PIN_21"),
         };
 
         let cs1_state = cs_logic_to_enum(rom_config.cs_config.cs1);
@@ -211,22 +213,55 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
             .map(cs_logic_to_enum)
             .unwrap_or("CS_NOT_USED");
 
-        writeln!(file, "    {{")?;
-        writeln!(file, "        .data = sdrr_rom_{}_data,", i)?;
-        writeln!(file, "        .size = ROM_{}_SIZE,", i)?;
-        writeln!(file, "        .rom_type = {},", rom_type_enum)?;
-        writeln!(file, "        .cs1_state = {},", cs1_state)?;
-        writeln!(file, "        .cs2_state = {},", cs2_state)?;
-        writeln!(file, "        .cs3_state = {},", cs3_state)?;
+        writeln!(file, "    .rom_type = {},", rom_type_enum)?;
+        writeln!(file, "    .cs1_state = {},", cs1_state)?;
+        writeln!(file, "    .cs2_state = {},", cs2_state)?;
+        writeln!(file, "    .cs3_state = {},", cs3_state)?;
         writeln!(file, "#if defined(BOOT_LOGGING)")?;
-        writeln!(file, "        .filename = sdrr_rom_{}_filename,", i)?;
+        writeln!(file, "    .filename = sdrr_rom_{}_filename,", ii)?;
         writeln!(file, "#endif // BOOT_LOGGING")?;
-        writeln!(file, "        .serve = SERVE_ORIG,")?;
-        if i == config.roms.len() - 1 {
-            writeln!(file, "    }}")?;
-        } else {
-            writeln!(file, "    }},")?;
-        }
+        writeln!(file, "    .serve = SERVE_ORIG,")?;
+        writeln!(file, "    .cs1_line = {},", cs1_pin)?;
+        writeln!(file, "    .cs2_line = {},", cs2_pin)?;
+        writeln!(file, "    .cs3_line = {},", cs3_pin)?;
+        writeln!(file, "}};")?;
+        writeln!(file)?;
+    }
+
+    // Add array of pointers for each ROM set, where there is a 1:1 mapping
+    // between the ROMs and rom sets
+    writeln!(file, "//")?;
+    writeln!(file, "// ROM set definitions")?;
+    writeln!(file, "//")?;
+    writeln!(file)?;
+
+    for (ii, _rom_config) in config.roms.iter().enumerate() {
+        writeln!(file, "// ROM set {}", ii)?;
+        writeln!(file, "#define ROM_SET_{}_ROM_COUNT  {}", ii, 1)?;
+        writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_{}_SIZE", ii, ii)?;
+        writeln!(file, "static const uint8_t rom_set_{}_data[];  // Forward declaration", ii)?;
+        writeln!(file, "static const sdrr_rom_info_t *rom_set_{}_roms[] = {{", ii)?;
+        writeln!(file, "    &rom_{}_info,", ii)?;
+        writeln!(file, "}};")?;
+        writeln!(file)?;
+    }
+
+    // Create the ROM sets
+    writeln!(file, "//")?;
+    writeln!(file, "// ROM set array")?;
+    writeln!(file, "//")?;
+    writeln!(
+        file,
+        "const sdrr_rom_set_t rom_set[SDRR_NUM_SETS] = {{"
+    )?;
+
+    for (ii, _rom_config) in config.roms.iter().enumerate() {
+        writeln!(file, "    {{")?;
+        writeln!(file, "        .data = rom_set_{}_data,", ii)?;
+        writeln!(file, "        .size = ROM_SET_{}_DATA_SIZE,", ii)?;
+        writeln!(file, "        .roms = rom_set_{}_roms,", ii)?;
+        writeln!(file, "        .rom_count = ROM_SET_{}_ROM_COUNT,", ii)?;
+        writeln!(file, "    }},")?;
     }
 
     writeln!(file, "}};")?;
@@ -237,7 +272,7 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
         writeln!(file, "// ROM image {} ({})", i, rom_config.rom_type.name())?;
         writeln!(
             file,
-            "const uint8_t sdrr_rom_{}_data[ROM_{}_SIZE] = {{",
+            "static const uint8_t rom_set_{}_data[ROM_{}_SIZE] = {{",
             i, i
         )?;
 

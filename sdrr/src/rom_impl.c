@@ -458,16 +458,22 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 #define R_CS_TEST           "r10"
 
 // Pins
-#if defined(HW_REV_D) || defined(HW_REV_E)
+#if defined(HW_REV_D) || defined(HW_REV_E) || defined(HW_REV_F)
 #define PIN_CS              "10"
 #define PIN_CS_INT           10
 #define PIN_CS2             "12"
 #define PIN_CS2_INT          12
 #define PIN_CS3             "9"
 #define PIN_CS3_INT          9
-#else // !(HW_REV_D || HW_REV_E)
+#else // !(HW_REV_D || HW_REV_E || HW_REV_F)
 #error "Only HW_REV_D and HW_REV_E are supported for STM32F4"
-#endif // HW_REV_D || HW_REV_E
+#endif // HW_REV_D || HW_REV_E || HW_REV_F
+#if defined(HW_REV_F)
+#define PIN_X1              "14"
+#define PIN_X1_INT          14
+#define PIN_X2              "15"
+#define PIN_X2_INT          15
+#endif // HW_REV_F
 
 // Assembly code macros
 
@@ -510,9 +516,12 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 #endif // MAIN_LOOP_LOGGING
 #define LABEL(X)        #X ": \n"
 
-void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_t *rom) {
+void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t *set) {
     uint32_t cs_invert_mask = 0;
     uint32_t cs_check_mask;
+
+    // Currently only support one ROM per set
+    const sdrr_rom_info_t *rom = set->roms[0];
 
     ROM_IMPL_DEBUG("Serve ROM: %s", rom->filename);
 
@@ -615,7 +624,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
         ROM_IMPL_LOG("Waiting for CS to go active");
 #if defined(STATUS_LED)
         GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-#endif // HW_REV_E
+#endif // STATUS_LED
 #endif // MAIN_LOOP_LOGGING
     // The targets (from the MOS 2364 data sheet Feburary 1980) are:
     // - tCO - set data line as outputs after CS activates - 200ns
@@ -790,7 +799,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 #if defined(MAIN_LOOP_LOGGING)
 #if defined(STATUS_LED)
         GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
-#endif // HW_REV_E
+#endif // STATUS_LED
         ROM_IMPL_LOG("Address/CS: 0x%08X Byte: 0x%08X", addr_cs, byte);
     }
 #endif // MAIN_LOOP_LOGGING
@@ -801,7 +810,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 // Get the index of the selected ROM by reading the select jumpers
 //
 // Returns the index
-uint8_t get_rom_index(void) {
+uint8_t get_rom_set_index(void) {
     uint8_t rom_sel, rom_index;
 
     // Read image selection pins - these are set up in gpio_init().
@@ -819,26 +828,26 @@ uint8_t get_rom_index(void) {
     // Calculate the ROM image index based on the selection bits and number of
     // images installed in this firmware.  For example, if image 4 was selected
     // but there are only 3 images, it will select image 1.
-    rom_index = rom_sel % SDRR_NUM_IMAGES;
+    rom_index = rom_sel % SDRR_NUM_SETS;
 
     LOG("ROM sel/index %d/%d", rom_sel, rom_index);
 
     return rom_index;
 }
 
-void preload_rom_image(const sdrr_rom_info_t *rom) {
-    uint32_t *rom_src, *rom_dst;
-    uint16_t rom_size;
+void preload_rom_image(const sdrr_rom_set_t *set) {
+    uint32_t *img_src, *img_dst;
+    uint16_t img_size;
 
     // Find the start of this ROM image in the flash memory
-    rom_size = rom->size;
-    rom_src = (uint32_t *)(rom->data);
-    rom_dst = _ram_rom_image_start;
+    img_size = set->size;
+    img_src = (uint32_t *)(set->data);
+    img_dst = _ram_rom_image_start;
 
 #if defined(BOOT_LOGGING)
-    DEBUG("ROM filename: %s", rom->filename);
+    DEBUG("ROM filename: %s", set->roms[0]->filename);
 #endif // BOOT_LOGGING
-    switch (rom->rom_type) {
+    switch (set->roms[0]->rom_type) {
         case ROM_TYPE_2364:
             DEBUG("%s 2364", rom_type);
             break;
@@ -889,10 +898,10 @@ void preload_rom_image(const sdrr_rom_info_t *rom) {
     // and data line mappings have been done by sdrr-gen before building
     // the mapped image into the firmware.  Hence we can just copy the
     // image.
-    memcpy(rom_dst, rom_src, rom_size);
+    memcpy(img_dst, img_src, img_size);
 #endif // STM32F1/4
 
-    LOG("ROM %s preloaded to RAM 0x%08X", rom->filename, (uint32_t)_ram_rom_image_start);
+    LOG("ROM %s preloaded to RAM 0x%08X", set->roms[0]->filename, (uint32_t)_ram_rom_image_start);
 }
 
 #endif // !TIMER_TEST/TOGGLE_PA4

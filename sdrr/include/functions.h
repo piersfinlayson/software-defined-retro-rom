@@ -49,9 +49,9 @@ extern void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats);
 
 // rom_impl.c
 #if !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
-extern void main_loop(const sdrr_rom_info_t *rom);
-extern uint8_t get_rom_index(void);
-extern void preload_rom_image(const sdrr_rom_info_t *rom);
+extern void main_loop(const sdrr_rom_set_t *set);
+extern uint8_t get_rom_set_index(void);
+extern void preload_rom_image(const sdrr_rom_set_t *set);
 #endif // !TIMER_TEST && !TOGGLE_PA4
 
 // test function prototypes

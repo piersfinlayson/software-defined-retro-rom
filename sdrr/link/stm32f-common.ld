@@ -55,7 +55,7 @@ SECTIONS
     {
         . = ALIGN(4);
         _ram_rom_image_start = .;
-        . = . + 0x4000;  /* 16KB for 2 x max ROM image size */
+        . = . + 0x10000;  /* 64KB for max 4 16KB images for a set */
         . = ALIGN(4);
         _ram_rom_image_end = .;
     } >RAM

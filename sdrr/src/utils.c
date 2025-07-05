@@ -373,6 +373,8 @@ void log_init(void) {
     hw_rev = 'D';
 #elif defined(HW_REV_E)
     hw_rev = 'E';
+#elif defined(HW_REV_E)
+    hw_rev = 'F';
 #else
 #error "Unknown hardware revision"
 #endif // HW_REV_A/B/C/D/E
@@ -436,10 +438,11 @@ void log_init(void) {
 
     LOG("%s", log_divider);
     LOG("Firmware info ...");
-    LOG("# of ROM images: %d", SDRR_NUM_IMAGES);
-    for (uint8_t ii = 0; ii < SDRR_NUM_IMAGES; ii++) {
+    LOG("# of ROM sets: %d", SDRR_NUM_SETS);
+    for (uint8_t ii = 0; ii < SDRR_NUM_SETS; ii++) {
         const char *rom_type_str;
-        switch (sdrr_rom_info[ii].rom_type) {
+        const sdrr_rom_info_t *rom = rom_set[ii].roms[0];
+        switch (rom->rom_type) {
             case ROM_TYPE_2364:
                 rom_type_str = r2364;
                 break;
@@ -454,14 +457,14 @@ void log_init(void) {
                 break;
         }
 
-        const char *cs1_state_str = get_cs_str(sdrr_rom_info[ii].cs1_state);
-        const char *cs2_state_str = get_cs_str(sdrr_rom_info[ii].cs2_state); 
-        const char *cs3_state_str = get_cs_str(sdrr_rom_info[ii].cs3_state);
+        const char *cs1_state_str = get_cs_str(rom->cs1_state);
+        const char *cs2_state_str = get_cs_str(rom->cs2_state); 
+        const char *cs3_state_str = get_cs_str(rom->cs3_state);
 
 #if !defined(DEBUG_LOGGING)
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", ii, sdrr_rom_info[ii].filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
+        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
 #else // DEBUG_LOGGING
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s, size: %d bytes", ii, sdrr_rom_info[ii].filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str, sdrr_rom_info[ii].size);
+        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s, size: %d bytes", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str, sdrr_rom_info[ii].size);
 #endif // DEBUG_LOGGING
     }
 

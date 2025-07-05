@@ -244,9 +244,9 @@ void check_enter_bootloader(void) {
     GPIOB_MODER &= ~0x0000C03F;  // Set PB0, PB1, PB2 (& PB7) as inputs
     GPIOB_PUPDR &= ~0x0000C03F;  // Clear pull-up/down on PB0, PB1, PB2 (& PB7)
     GPIOB_PUPDR |= 0x0000002A;   // Set pull-down on PB0, PB1, PB2
-#if defined(HW_REV_E)
+#if defined(HW_REV_E) || defined(HW_REV_F)
     GPIOB_PUPDR |= 0x00008000;   // Set pull-down on PB7
-#endif // HW_REV_E
+#endif // HW_REV_E || HW_REV_F
 #endif // STM32F1/4
 
     // Add short delay to allow GPIOB to become available - or it may be to
@@ -309,11 +309,11 @@ int main(void) {
     system_init();
     gpio_init();
 
-    uint8_t rom_index = get_rom_index();
-    const sdrr_rom_info_t *rom = sdrr_rom_info + rom_index;
+    uint8_t set_index = get_rom_set_index();
+    const sdrr_rom_set_t *set = rom_set + set_index;
 #if defined(PRELOAD_TO_RAM) && !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
     // Only bother to preload the ROM image if we are not running a test
-    preload_rom_image(rom);
+    preload_rom_image(set);
 #endif // !TIMER_TEST && !TOGGLE_PA4
 
 #if defined(MCO) && defined(STM32F4)
@@ -333,7 +333,7 @@ int main(void) {
     LOG("Start main loop - logging ends");
 #endif // !MAIN_LOOP_LOGGING
 #if !defined(EXECUTE_FROM_RAM)
-    main_loop(rom);
+    main_loop(set);
 #else // EXECUTE_FROM_RAM
     // The main loop function was copied to RAM in the ResetHandler
     extern uint32_t _ram_func_start;    // Start of .ram_func section in RAM
