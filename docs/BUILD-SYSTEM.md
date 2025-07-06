@@ -63,6 +63,7 @@ ROM_CONFIGS=file=kernel.rom,type=2364,cs1=0 file=basic.rom,type=2364,cs1=0
 - "Mangle" ROM data to match PCB pin mapping
 - Generate C source files with embedded ROM data
 - Create Makefile fragments with build settings
+- Create linker scripts for STM32 variant
 - Handle license acceptance for ROM images
 
 **ROM Processing Pipeline**:
@@ -82,6 +83,7 @@ Original ROM → Size Validation → Pin Mapping → Flash Layout → C Arrays
 - `roms.c` - ROM data as C arrays
 - `roms.h` - ROM declarations and types  
 - `generated.mk` - Makefile fragment with STM32 variant information
+- `linker.ld` - Linker script for the STM32 variant
 
 ### 3. sdrr Makefile ([`/sdrr/Makefile`](/sdrr/Makefile))
 
@@ -92,7 +94,6 @@ Original ROM → Size Validation → Pin Mapping → Flash Layout → C Arrays
 - Compile C source files for target STM32 variant
 - Link with SEGGER RTT library for logging output via RTT over SWD
 - Include auto-generated ROM data from sdrr-gen
-- Select appropriate linker script for flash/RAM layout
 - Generate ELF, binary, and disassembly files
 
 **Toolchain Setup**:
@@ -107,10 +108,11 @@ OBJCOPY := $(TOOLCHAIN)/bin/arm-none-eabi-objcopy
 
 - `/sdrr/src/*.c` - Main firmware source
 - `/sdrr/include/*.h` - Header files
-- `/sdrr/link/*.ld` - Linker scripts for different STM32 variants
+- `/sdrr/link/stm32-common.ld` - Common linker script for all STM32 variants
 - `/output/roms.c` - Generated ROM data
 - `/output/roms.h` - Generated ROM data
 - `/output/sdrr_config.h` - Generated SDRR configuration
+- `/output/linker.ld` - Generated linker script for specific STM32 variant
 - `/sdrr/segger-rtt/RTT/*.c` - Debug logging library (downloaded automatically by build process)
 
 ### 4. probe-rs Integration
