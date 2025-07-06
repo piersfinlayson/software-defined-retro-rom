@@ -72,7 +72,7 @@ struct Args {
     #[clap(long, conflicts_with = "hsi")]
     hse: bool,
 
-    /// Hardware revision (a, b, c, d, e)
+    /// Hardware revision (a, b, c, d, e, f)
     #[clap(long, value_parser = parse_hw_rev)]
     hw_rev: Option<HwRev>,
 
@@ -109,7 +109,7 @@ fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
 fn parse_hw_rev(s: &str) -> Result<HwRev, String> {
     HwRev::from_str(s).ok_or_else(|| {
         format!(
-            "Invalid hardware revision: {}. Valid values are: a, b, c, d, e",
+            "Invalid hardware revision: {}. Valid values are: a, b, c, d, e, f",
             s
         )
     })

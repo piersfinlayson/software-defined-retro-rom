@@ -373,11 +373,11 @@ void log_init(void) {
     hw_rev = 'D';
 #elif defined(HW_REV_E)
     hw_rev = 'E';
-#elif defined(HW_REV_E)
+#elif defined(HW_REV_F)
     hw_rev = 'F';
 #else
 #error "Unknown hardware revision"
-#endif // HW_REV_A/B/C/D/E
+#endif // HW_REV_A/B/C/D/E/F
     LOG("PCB rev %c", hw_rev);
     uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
     uint32_t flash_kb = flash_bytes / 1024;
@@ -464,7 +464,7 @@ void log_init(void) {
 #if !defined(DEBUG_LOGGING)
         LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
 #else // DEBUG_LOGGING
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s, size: %d bytes", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str, sdrr_rom_info[ii].size);
+        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s, size: %d bytes", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str, rom_set[ii].size);
 #endif // DEBUG_LOGGING
     }
 

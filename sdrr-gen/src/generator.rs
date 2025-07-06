@@ -220,7 +220,6 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
         writeln!(file, "#if defined(BOOT_LOGGING)")?;
         writeln!(file, "    .filename = sdrr_rom_{}_filename,", ii)?;
         writeln!(file, "#endif // BOOT_LOGGING")?;
-        writeln!(file, "    .serve = SERVE_ORIG,")?;
         writeln!(file, "    .cs1_line = {},", cs1_pin)?;
         writeln!(file, "    .cs2_line = {},", cs2_pin)?;
         writeln!(file, "    .cs3_line = {},", cs3_pin)?;
@@ -261,6 +260,7 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
         writeln!(file, "        .size = ROM_SET_{}_DATA_SIZE,", ii)?;
         writeln!(file, "        .roms = rom_set_{}_roms,", ii)?;
         writeln!(file, "        .rom_count = ROM_SET_{}_ROM_COUNT,", ii)?;
+        writeln!(file, "        .serve = SERVE_TWO_CS_ONE_ADDR,")?;
         writeln!(file, "    }},")?;
     }
 

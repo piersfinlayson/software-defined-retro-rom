@@ -456,6 +456,16 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 #define R_CS_INVERT_MASK    "r8"
 #define R_CS_CHECK_MASK     "r9"
 #define R_CS_TEST           "r10"
+#define ASM_INPUTS \
+    "r" (rom_table), \
+    "r" (cs_invert_mask_reg), \
+    "r" (cs_check_mask_reg), \
+    "r" (gpioc_idr), \
+    "r" (gpioa_odr), \
+    "r" (gpioa_moder), \
+    "r" (data_output_mask), \
+    "r" (data_input_mask)
+#define ASM_CLOBBERS R_ADDR_CS, R_DATA, R_CS_TEST, "cc", "memory"
 
 // Pins
 #if defined(HW_REV_D) || defined(HW_REV_E) || defined(HW_REV_F)
@@ -598,14 +608,42 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     // Port C for address and CS lines - set all pins as inputs
     // Rev D - CS = 10, for testing purposes, not rev D, CS = 13 
     GPIOC_MODER = 0;  // Set all pins as inputs
-    GPIOC_PUPDR |= 0xA0000000;  // Set pull-downs on PC14/15 only, so RAM
-                                // lookup only takes 16KB (due to CS line(s)
-                                // in the middle of address lines), not 64KB
-                                // if we had to deal with PC14/15 possibly
-                                // being high.
+    if (set->rom_count == 1) {
+        // Set pull-downs on PC14/15 only, so RAM lookup only takes 16KB
+        GPIOC_PUPDR = 0xA0000000;
+    }
+#if defined(HW_REV_F)
+    // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
+    // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
+    else if (set->rom_count == 2) {
+        // Set pull-down on PC15, as PC14 used to select the second ROM image
+        GPIOC_PUPDR = 0x80000000;
+    } else if (set->rom_count == 3) {
+        // No pull-downs - PC14/PC15 used to select second and third ROM images
+        GPIOC_PUPDR = 0;
+    }
+#endif // HW_REV_F
+    else {
+        // Handle gracefully by assuming one ROM image 
+        ROM_IMPL_LOG("!!! Unsupported ROM count: %d", set->rom_count);
+        GPIOC_PUPDR = 0xA0000000;
+    }
 
+#if defined(HW_REV_F)
+    // Warn if serve mode is incorrectly set for multiple ROM images
+    if ((set->rom_count > 1) || (set->serve == SERVE_TWO_CS_ONE_ADDR)) {
+        ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set");
+    }
+#endif // HW_REV_F
+
+    // Preload registers with their values
     register uint32_t cs_invert_mask_reg asm(R_CS_INVERT_MASK) = cs_invert_mask;
     register uint32_t cs_check_mask_reg asm(R_CS_CHECK_MASK) = cs_check_mask;
+    register uint32_t gpioc_idr asm(R_GPIO_ADDR_CS_IDR) = VAL_GPIOC_IDR; 
+    register uint32_t gpioa_odr asm(R_GPIO_DATA_ODR) = VAL_GPIOA_ODR;
+    register uint32_t gpioa_moder asm(R_GPIO_DATA_MODER) = VAL_GPIOA_MODER;
+    register uint32_t data_output_mask asm(R_DATA_OUT_MASK) = DATA_OUTPUT_MASK;
+    register uint32_t data_input_mask asm(R_DATA_IN_MASK) = DATA_INPUT_MASK;
 
 #if defined(PRELOAD_TO_RAM)
     register uint32_t rom_table asm(R_ROM_TABLE) = (uint32_t)&_ram_rom_image_start;
@@ -626,176 +664,208 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
 #endif // STATUS_LED
 #endif // MAIN_LOOP_LOGGING
-    // The targets (from the MOS 2364 data sheet Feburary 1980) are:
-    // - tCO - set data line as outputs after CS activates - 200ns
-    // - tDF - set data line as inputs after CS deactivates - 175ns
-    // - tOH - data lines remain valid after address lines change - 40ns
-    // - tACC - maximum time from address to data valid - 450ns
-    //
-    // tACC and tCO are the most important - together they mean:
-    // - we have 450ns from the address lines being set to there being valid
-    //   data on the data lines (and therefore them being outputs)
-    // - we also have 200ns from CS activating to the data lines being set as
-    //   outputs and having valid data on them
-    //
-    // They are not cumulative - that is, we cannot assume address lines will
-    // be valid for tACC-tCO = 250ns before CS activates.  However, we can rely
-    // on both timings - that is that we will get at least 450ns from address
-    // lines being set AND 200ns from CS activating.
-    //
-    // Together these timings mean we have around twice as long to get the data
-    // lines loaded with the byte indicated by the address lines as we do to
-    // get the data lines set as outputs (450ns vs 200ns).  Hence we need to be
-    // checking the cs line around twice as often as we are checking the
-    // address lines.  This is reflected in the code below.
-    //
-    // They also mean we have to keep checking the address lines and updating
-    // the data lines while chip select is active. 
-    //
-    // We also have to get the data lines back to inputs quickly enough after
-    // CS deactivates - this is tDF, which is 175ns.  This is actually slightly
-    // tighter than tCO, but the processing between both CS inactive and active
-    // cases are very similar we are looking at a worse case of around 150ns
-    // with the code below on a 100MHz STM32F411.
-    //
-    // Finally, we have to make sure we don't change the data lines until at
-    // least tOH (40ns) after the address lines change.  This is fine, because
-    // loading the byte from RAM and applying it to the data lines will always
-    // take longer than this.
-    //
-    // Macros are used to make the code below more readable. 
-    __asm volatile (
-        // Load GPIO addresses and constants into registers before we start
-        // the main loop
-        "movw   " R_DATA_OUT_MASK ",    #:lower16:%[data_output_mask]   \n"
-        "movt   " R_DATA_OUT_MASK ",    #:upper16:%[data_output_mask]   \n"
-        "movw   " R_GPIO_ADDR_CS_IDR ", #:lower16:%[gpioc_idr]          \n"
-        "movt   " R_GPIO_ADDR_CS_IDR ", #:upper16:%[gpioc_idr]          \n"
-        "movw   " R_GPIO_DATA_ODR ",    #:lower16:%[gpioa_odr]          \n"
-        "movt   " R_GPIO_DATA_ODR ",    #:upper16:%[gpioa_odr]          \n"
-        "movw   " R_DATA_IN_MASK ",     #:lower16:%[data_input_mask]    \n"
-        "movt   " R_DATA_IN_MASK ",     #:upper16:%[data_input_mask]    \n"
-        "movw   " R_GPIO_DATA_MODER ",  #:lower16:%[gpioa_moder]        \n"
-        "movt   " R_GPIO_DATA_MODER ",  #:upper16:%[gpioa_moder]        \n"
+    switch (set->serve)
+    {
+        // Default case - test CS twice as often as loading the byte from RAM
+        default:
+        case SERVE_TWO_CS_ONE_ADDR:
+            // The targets (from the MOS 2364 data sheet Feburary 1980) are:
+            // - tCO - set data line as outputs after CS activates - 200ns
+            // - tDF - set data line as inputs after CS deactivates - 175ns
+            // - tOH - data lines remain valid after address lines change - 40ns
+            // - tACC - maximum time from address to data valid - 450ns
+            //
+            // tACC and tCO are the most important - together they mean:
+            // - we have 450ns from the address lines being set to there being
+            //   valid data on the data lines (and therefore them being
+            //   outputs)
+            // - we also have 200ns from CS activating to the data lines being
+            //   set as outputs and having valid data on them
+            //
+            // They are not cumulative - that is, we cannot assume address
+            //  lines will be valid for tACC-tCO = 250ns before CS activates.
+            // However, we can rely on both timings - that is that we will get
+            // at least 450ns from addresslines being set AND 200ns from CS
+            // activating.
+            //
+            // Together these timings mean we have around twice as long to get
+            // the data lines loaded with the byte indicated by the address
+            // lines as we do to get the data lines set as outputs (450ns vs
+            // 200ns).  Hence we need to be checking the cs line around twice
+            // as often as we are checking the address lines.  This is
+            // reflected in the code below.
+            //
+            // They also mean we have to keep checking the address lines and
+            // updating the data lines while chip select is active. 
+            //
+            // We also have to get the data lines back to inputs quickly enough
+            // after CS deactivates - this is tDF, which is 175ns.  This is
+            // actually slightly tighter than tCO, but the processing between
+            // both CS inactive and active cases are very similar we are
+            // looking at a worse case of around 150ns with the code below on a
+            // 100MHz STM32F411.
+            //
+            // Finally, we have to make sure we don't change the data lines
+            // until at least tOH (40ns) after the address lines change.  This
+            // is fine, because loading the byte from RAM and applying it to
+            // the data lines will always take longer than this.
+            //
+            // Macros are used to make the code below more readable. 
+            __asm volatile (
+                // Start with a branch to the main loop - this is necessary
+                // so that while running and CS goes from active to inactive,
+                // the code can run straight into the main loop without a
+                // branch, speeding up the golden path.
+                BRANCH(LOOP)
 
-#if 0
-        // Seems unecessary
+                // Chip select went active - immediately set data lines as
+                // outputs
+            LABEL(CS_ACTIVE)
+                SET_DATA_OUT
 
-        // Don't start processing until CS is inactive
-        LABEL(START)
-        LOAD_ADDR_CS
-        TEST_CS
-        BEQ(START)
-#endif // 0
-        BRANCH(LOOP)
+                // By definition we just loaded and tested the address/CS
+                // lines, so we have a valid address - so let's load the byte
+                // from RAM and apply it, in amongst testing whether CS gone
+                // inactive again.
+            LABEL(CS_ACTIVE_DATA_ACTIVE)
+                LOAD_FROM_RAM
+                LOAD_ADDR_CS
+                TEST_CS
+                BNE(CS_INACTIVE_BYTE)
+            LABEL(CS_ACTIVE_DATA_ACTIVE_BYTE)
+                STORE_TO_DATA
+                LOAD_ADDR_CS
+                TEST_CS
+                BNE(CS_INACTIVE_NO_BYTE)
+                LOAD_FROM_RAM
+                LOAD_ADDR_CS
+                TEST_CS
+                BEQ(CS_ACTIVE_DATA_ACTIVE_BYTE)
+                // Fall through to CS_INACTIVE_BYTE if NE
 
-        // Chip select went active - immediately set data lines as outputs
-    LABEL(CS_ACTIVE)
-        SET_DATA_OUT
-
-        // By definition we just loaded and tested the address/CS lines, so we
-        // have a valid address - so let's load the byte from RAM and apply it,
-        // in amongst testing whether CS gone inactive again.
-    LABEL(CS_ACTIVE_DATA_ACTIVE)
-        LOAD_FROM_RAM
-        LOAD_ADDR_CS
-        TEST_CS
-        BNE(CS_INACTIVE_BYTE)
-    LABEL(CS_ACTIVE_DATA_ACTIVE_BYTE)
-        STORE_TO_DATA
-        LOAD_ADDR_CS
-        TEST_CS
-        BNE(CS_INACTIVE_NO_BYTE)
-        LOAD_FROM_RAM
-        LOAD_ADDR_CS
-        TEST_CS
-        BEQ(CS_ACTIVE_DATA_ACTIVE_BYTE)
-        // Fall through to CS_INACTIVE_BYTE if NE
-
-#if 0
-        // Wait for CS to go inactive, and also keep reading address lines
-        // and updating data as required
-        LABEL(WAIT_INACTIVE)
-        LOAD_ADDR_CS
-        TEST_CS
-        BNE(CS_INACTIVE_NO_BYTE)
-        LOAD_FROM_RAM
-        LOAD_ADDR_CS
-        TEST_CS
-        BNE(CS_INACTIVE_BYTE)
-        STORE_TO_DATA
-        BRANCH(WAIT_INACTIVE)
-#endif
-
-        // CS went inactive.  We need to set the data lines as inputs, but
-        // also want to update the data using the address lines we have in
-        // our hands.
-    LABEL(CS_INACTIVE_BYTE)
-        SET_DATA_IN
-        STORE_TO_DATA
+                // CS went inactive.  We need to set the data lines as inputs,
+                // but also want to update the data using the address lines we
+                // have in our hands.
+            LABEL(CS_INACTIVE_BYTE)
+                SET_DATA_IN
+                STORE_TO_DATA
 #if defined(MAIN_LOOP_LOGGING)
-        BRANCH(END_LOOP)
+                BRANCH(END_LOOP)
 #endif // MAIN_LOOP_LOGGING
 
-        // Start of main processing loop.  Load the data byte which constantly
-        // checking if CS has gone active
-    LABEL(LOOP)
-        LOAD_ADDR_CS
-        TEST_CS
-        BEQ(CS_ACTIVE)
-        LOAD_FROM_RAM
-        LOAD_ADDR_CS
-        STORE_TO_DATA
-        TEST_CS
-        BEQ(CS_ACTIVE)
+                // Start of main processing loop.  Load the data byte while
+                // constantly checking if CS has gone active
+            LABEL(LOOP)
+                LOAD_ADDR_CS
+                TEST_CS
+                BEQ(CS_ACTIVE)
+                LOAD_FROM_RAM
+                LOAD_ADDR_CS
+                STORE_TO_DATA
+                TEST_CS
+                BEQ(CS_ACTIVE)
 
-        // Start again
-        BRANCH(LOOP)
+                // Start again
+                BRANCH(LOOP)
 
-        // CS went inactive, but we don't have a new byte to load.
-    LABEL(CS_INACTIVE_NO_BYTE)
-        SET_DATA_IN
+                // CS went inactive, but we don't have a new byte to load.
+            LABEL(CS_INACTIVE_NO_BYTE)
+                SET_DATA_IN
 #if defined(MAIN_LOOP_LOGGING)
-        BRANCH(END_LOOP)
+                BRANCH(END_LOOP)
 #endif // MAIN_LOOP_LOGGING
 
-        // Copy of main processing loop - to avoid a branch in this or the
-        // CS_INACTIVE_BYTE case
-        LOAD_ADDR_CS
-        TEST_CS
-        BEQ(CS_ACTIVE)
-        LOAD_FROM_RAM
-        LOAD_ADDR_CS
-        STORE_TO_DATA
-        TEST_CS
-        BEQ(CS_ACTIVE)
+                // Copy of main processing loop - to avoid a branch in this or the
+                // CS_INACTIVE_BYTE case
+                LOAD_ADDR_CS
+                TEST_CS
+                BEQ(CS_ACTIVE)
+                LOAD_FROM_RAM
+                LOAD_ADDR_CS
+                STORE_TO_DATA
+                TEST_CS
+                BEQ(CS_ACTIVE)
 
-        // Start again - and might as well branch to the start of the first
-        // loop as opposed to this copy.
-        BRANCH(LOOP)
+                // Start again - and might as well branch to the start of the first
+                // loop as opposed to this copy.
+                BRANCH(LOOP)
 
 #if defined(MAIN_LOOP_LOGGING)
-    LABEL(END_LOOP)
-        "mov %0, " R_ADDR_CS "\n"
-        "mov %1, " R_DATA "\n"
+            LABEL(END_LOOP)
+                "mov %0, " R_ADDR_CS "\n"
+                "mov %1, " R_DATA "\n"
 #endif // MAIN_LOOP_LOGGING
 
 #if defined(MAIN_LOOP_LOGGING)
-        : "=r" (addr_cs),
-          "=r" (byte)
+                : "=r" (addr_cs),
+                "=r" (byte)
 #else // !MAIN_LOOP_LOGGING
-        :
+                :
 #endif // MAIN_LOOP_LOGGING
-        : [gpioc_idr]        "i" (VAL_GPIOC_IDR),
-          [gpioa_odr]        "i" (VAL_GPIOA_ODR),
-          [gpioa_moder]      "i" (VAL_GPIOA_MODER),
-          [data_output_mask] "i" (DATA_OUTPUT_MASK),
-          [data_input_mask]  "i" (DATA_INPUT_MASK),
-          "r" (rom_table),
-          "r" (cs_invert_mask_reg),
-          "r" (cs_check_mask_reg)
-        : "r0", "r1", "r3", "r4", "r5", "r6", "r7", "r10", "cc", "memory"
-    );
+                : ASM_INPUTS
+                : ASM_CLOBBERS
+            );
+            break;
+
+        // Serve data byte once CS has gone active.  Simpler code, but may not
+        // work as well as slower clock speeds as the default algorithm.
+        case SERVE_ADDR_ON_CS:
+            __asm volatile (
+                // Start with a branch to the main loop - this is necessary to,
+                // in the usual case, fall through into the main loop when
+                // the chip select(s) go inactive.
+                BRANCH(ALG2_LOOP)
+
+                // Chip select went active - immediately set data lines as
+                // outputs
+            LABEL(ALG2_CS_ACTIVE)
+                SET_DATA_OUT
+
+                // By definition we just loaded and tested the address/CS
+                // lines, immediately load the byte from RAM and apply it
+            LABEL(ALG2_CS_ACTIVE_DATA_ACTIVE)
+                LOAD_FROM_RAM
+                STORE_TO_DATA
+
+                // Now test if CS has gone inactive again
+                LOAD_ADDR_CS
+                TEST_CS
+
+                // If still active, load byte from address again in case the
+                // address lines changed.  Going backwards here is what the
+                // CPU will have predicted so saves a cycle.
+                BEQ(ALG2_CS_ACTIVE_DATA_ACTIVE)
+
+                // CS went inactive.  We need to set the data lines as inputs.  Fall through into this code, so no branch penalty.
+            LABEL(ALG2_CS_INACTIVE)
+                SET_DATA_IN
+#if defined(MAIN_LOOP_LOGGING)
+                BRANCH(ALG2_END_LOOP)
+#endif // MAIN_LOOP_LOGGING
+
+            LABEL(ALG2_LOOP)
+                LOAD_ADDR_CS
+                TEST_CS
+                BEQ(ALG2_CS_ACTIVE)
+
+#if defined(MAIN_LOOP_LOGGING)
+            LABEL(ALG2_END_LOOP)
+                "mov %0, " R_ADDR_CS "\n"
+                "mov %1, " R_DATA "\n"
+#endif // MAIN_LOOP_LOGGING
+
+#if defined(MAIN_LOOP_LOGGING)
+                : "=r" (addr_cs),
+                "=r" (byte)
+#else // !MAIN_LOOP_LOGGING
+                :
+#endif // MAIN_LOOP_LOGGING
+                : ASM_INPUTS
+                : ASM_CLOBBERS
+            );
+            break;
+    }
+
 #if defined(MAIN_LOOP_LOGGING)
 #if defined(STATUS_LED)
         GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
@@ -858,9 +928,10 @@ void preload_rom_image(const sdrr_rom_set_t *set) {
             DEBUG("%s 2316", rom_type);
             break;
         default:
-            DEBUG("%s %d %s", rom_type, rom->rom_type, unknown);
+            DEBUG("%s %d %s", rom_type, set->roms[0]->rom_type, unknown);
+            break;
     }
-    DEBUG("ROM size %d bytes", rom_size);
+    DEBUG("ROM size %d bytes", img_size);
 
     // Copy the ROM image to RAM
 #if defined(STM32F1)

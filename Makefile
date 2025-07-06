@@ -50,13 +50,14 @@ STM ?= f411re
 # HW revision
 #
 # F103 boards - a, b, c 
-# F4xx boards - d, e
+# F4xx boards - d, e, f
 
 # HW_REV ?= a (no longer supported)
 # HW_REV ?= b (no longer supported)
 # HW_REV ?= c (no longer supported)
 # HW_REV ?= d
 # HW_REV ?= e
+# HW_REV ?= f
 HW_REV ?= d
 
 # ROM configurations - each ROM can have its own type and CS settings

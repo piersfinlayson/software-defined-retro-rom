@@ -37,7 +37,16 @@ typedef enum {
 
 // ROM serving algorithm
 typedef enum {
-    SERVE_ORIG,  // Original ROM serving algorithm
+    // Original ROM serving algorithm - tests the chip select state(s) twice
+    // as often as it loads the ROM data given the address lines state.  This
+    // is the default algorithm, and is used for all single ROM sets.
+    SERVE_TWO_CS_ONE_ADDR,
+
+    // Serves the byte from RAM only once chip select line(s) active.  Used for
+    // sets with multiple ROM images, where we don't know the full address
+    // (i.e. the image to lookup from) until the chip select line(s) are
+    // active.
+    SERVE_ADDR_ON_CS,
 } sdrr_serve_t;
 
 typedef enum {
@@ -60,7 +69,6 @@ typedef struct {
 #if defined(BOOT_LOGGING)
     const char* filename;       // Source filename (BOOT_LOGGING only)
 #endif // BOOT_LOGGING
-    sdrr_serve_t serve;         // ROM serving algorithm
     sdrr_cs_pin_t cs1_line;     // CS1 pin (rom_type=*)
     sdrr_cs_pin_t cs2_line;     // CS2 pin (rom_type = 2316 or 2332)
     sdrr_cs_pin_t cs3_line;     // CS3 pin (rom_type = 2316)
@@ -70,20 +78,31 @@ typedef struct {
 //
 // SDRR can serve sets of ROM images, which are addressed using the entirety
 // of the STM32F4 port C.  This is done in order to emulate multuple ROMs
-// simultaneously, as the additional ROM select lines must be attached to
-// SDRR via X1 and X2.
+// simultaneously, with  the additional ROM select lines attached to SDRR via
+// X1 and X2.
 //
-// If the multiple ROM image support is not used, there will be a 1:1 mapping
-// between set and image - i.e. `rom_count` below will be 1.
+// If the multiple ROM image support is not used, there is be a 1:1 mapping
+// between set and image - i.e. `rom_count` is be 1.
 typedef struct {
-    const uint8_t* data;            // Pointer to ROM data
-    const uint32_t size;            // Actual data ROM size
-                                    // - ROM_IMAGE_SIZE for a single ROM set
-                                    // - ROM_SET_IMAGE_SIZE otherwise
-    const sdrr_rom_info_t** roms;         // Pointer to array of pointers to ROMs
-                                    // for this set
-    const uint8_t rom_count;        // Number of ROMs in this set
+    // Pointer to the data for the ROM image(s) in this set.  Copied to RAM at
+    // startup.
+    const uint8_t* data;
 
+    // Size of the data for the ROM image(s) in this set.  Used to copy the
+    // ROM data to RAM at startup.  This is either:
+    // - ROM_IMAGE_SIZE for a single ROM image
+    // - ROM_SET_IMAGE_SIZE for a set of multiple ROM images
+    const uint32_t size;
+
+    // Pointer to array of pointers to ROMs in this set.
+    const sdrr_rom_info_t** roms;
+
+    // The number of unique ROM images in this set.  Used to index the above
+    // array.
+    const uint8_t rom_count;
+
+    // Which ROM serving algorithm to use for this set.
+    const sdrr_serve_t serve;         // ROM serving algorithm
 } sdrr_rom_set_t;
 
 #endif // CONFIG_BASE_H

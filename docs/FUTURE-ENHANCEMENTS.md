@@ -42,6 +42,16 @@ This approach requires a different main loop ("serving") alogrithm - as it canno
 
 A data structure model is required to handle sets, and the algorithm to be used.  This is done with a new sdrr_rom_set_t structure, which points to an array of pointers to sdrr_rom_set_t structures, which are the ROMs in the set.  Many of the sdrr_rom_set_t fields move over to the set, although image specific information like filename remain.  The set get a new algorithm field, which is used to determine how to serve the ROMs in the set and identifies a function containing the specific code to use.
 
+As well as the new `shared` option for the CS line, `ignore` is added.  This is useful when a CS line is permanently tied to ground or high, and there is no need to test it.  This allows a set of mixed rom types to be implemented like so:
+
+```bash
+# Define a complete replacement ROM set for the C64
+ROM_CONFIGS ?= \
+    set=0,file=images/set0/kernal.rom,type=2364,cs1=1 \
+    set=0,file=images/set0/basic.rom,type=2364,cs1=1 \
+    set=0,file=images/set1/char.rom,type=2332,cs1=1, cs2=ignore
+```
+
 ## 23128 Support - prototyping
 
 Newer C64s, 1541Cs, 1541-IIs, 1571s, and other systems used larger 16KB 23128 ROMs, which has a 28-pin DIP package.  This enhancement adds support for 23128 ROMs and _possibly_ 23256/23512 ROMs.

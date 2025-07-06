@@ -317,6 +317,7 @@ pub enum HwRev {
     C, // F103R based
     D, // F4 based
     E, // F4 based
+    F, // F4 based
 }
 
 impl HwRev {
@@ -327,6 +328,7 @@ impl HwRev {
             "C" | "c" => Some(HwRev::C),
             "D" | "d" => Some(HwRev::D),
             "E" | "e" => Some(HwRev::E),
+            "F" | "f" => Some(HwRev::F),
             _ => None,
         }
     }
@@ -338,6 +340,7 @@ impl HwRev {
             HwRev::C => "#define HW_REV_C        1",
             HwRev::D => "#define HW_REV_D        1",
             HwRev::E => "#define HW_REV_E        1",
+            HwRev::F => "#define HW_REV_F        1",
         }
     }
 }

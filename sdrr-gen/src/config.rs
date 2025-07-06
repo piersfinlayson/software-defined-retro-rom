@@ -133,9 +133,9 @@ impl Config {
                         );
                     }
                 }
-                HwRev::D | HwRev::E => {
+                HwRev::D | HwRev::E | HwRev::F => {
                     if self.stm_variant.family() != StmFamily::F4 {
-                        return Err("Hardware revision D only supports STM32F4 family".to_string());
+                        return Err("Hardware revision D, E, and F only supports STM32F4 family".to_string());
                     }
                 }
             }
