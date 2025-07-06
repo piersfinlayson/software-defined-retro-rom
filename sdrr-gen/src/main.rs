@@ -221,11 +221,20 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
     let mut cs2 = None;
     let mut cs3 = None;
     let mut size_handling = SizeHandling::None;
+    let mut set = None;
 
     for pair in s.split(',') {
         let parts: Vec<&str> = pair.split('=').collect();
 
         match parts[0] {
+            "set" => {
+                if parts.len() != 2 {
+                    return Err("Invalid 'set' parameter format - must include set number".to_string());
+                }
+                let set_num: usize = parts[1].parse()
+                    .map_err(|_| format!("Invalid set number: {}", parts[1]))?;
+                set = Some(set_num);
+            }
             "file" => {
                 let original_source = parts[1].to_string();
                 if parts[1].starts_with("http://") || parts[1].starts_with("https://") {
@@ -266,54 +275,36 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
             }
             "cs1" => {
                 if parts.len() != 2 {
-                    return Err(
-                        "Invalid 'cs1' parameter format - must include cs1 value".to_string()
-                    );
+                    return Err("Invalid 'cs1' parameter format - must include cs1 value".to_string());
                 }
                 if cs1.is_some() {
                     return Err("cs1 specified multiple times".to_string());
                 }
-                cs1 = CsLogic::from_u8(
-                    parts[1]
-                        .parse()
-                        .map_err(|_| format!("Invalid cs1 value: {}", parts[1]))?,
-                )
-                .map(Some)
-                .ok_or_else(|| format!("Invalid cs1 value: {}", parts[1]))?
+                cs1 = CsLogic::from_str(parts[1])
+                    .map(Some)
+                    .ok_or_else(|| format!("Invalid cs1 value: {} (use 0, 1, or ignore)", parts[1]))?
             }
             "cs2" => {
                 if parts.len() != 2 {
-                    return Err(
-                        "Invalid 'cs2' parameter format - must include cs2 value".to_string()
-                    );
+                    return Err("Invalid 'cs2' parameter format - must include cs2 value".to_string());
                 }
                 if cs2.is_some() {
                     return Err("cs2 specified multiple times".to_string());
                 }
-                cs2 = CsLogic::from_u8(
-                    parts[1]
-                        .parse()
-                        .map_err(|_| format!("Invalid cs2 value: {}", parts[1]))?,
-                )
-                .map(Some)
-                .ok_or_else(|| format!("Invalid cs2 value: {}", parts[1]))?
+                cs2 = CsLogic::from_str(parts[1])
+                    .map(Some)
+                    .ok_or_else(|| format!("Invalid cs2 value: {} (use 0, 1, or ignore)", parts[1]))?
             }
             "cs3" => {
                 if parts.len() != 2 {
-                    return Err(
-                        "Invalid 'cs3' parameter format - must include cs3 value".to_string()
-                    );
+                    return Err("Invalid 'cs3' parameter format - must include cs3 value".to_string());
                 }
                 if cs3.is_some() {
                     return Err("cs3 specified multiple times".to_string());
                 }
-                cs3 = CsLogic::from_u8(
-                    parts[1]
-                        .parse()
-                        .map_err(|_| format!("Invalid cs3 value: {}", parts[1]))?,
-                )
-                .map(Some)
-                .ok_or_else(|| format!("Invalid cs3 value: {}", parts[1]))?
+                cs3 = CsLogic::from_str(parts[1])
+                    .map(Some)
+                    .ok_or_else(|| format!("Invalid cs3 value: {} (use 0, 1, or ignore)", parts[1]))?
             }
             "dup" => {
                 if parts.len() != 1 {
@@ -365,6 +356,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
             rom_type,
             cs_config: CsConfig::new(cs1, cs2, cs3),
             size_handling,
+            set,
         },
         temp_handles,
     ))
@@ -435,11 +427,9 @@ fn main() -> Result<()> {
     }
 
     // Set the frequency based on the STM32 variant or user input
-    let freq = args.freq.unwrap_or_else(|| {
-        args.stm
-            .processor()
-            .max_sysclk_mhz()
-    });
+    let freq = args
+        .freq
+        .unwrap_or_else(|| args.stm.processor().max_sysclk_mhz());
 
     // Create configuration
     let mut config = Config {
@@ -463,14 +453,14 @@ fn main() -> Result<()> {
         auto_yes: args.yes,
     };
 
-    // Validate configuration
+    // Validate it
     config
         .validate()
         .map_err(|e| anyhow::anyhow!("Configuration error: {}", e))?;
 
     // Validate output directory
     if !config.overwrite && config.output_dir.exists() {
-        for file_name in &["roms.h", "roms.c", "sdrr_config.h"] {
+        for file_name in &["roms.h", "roms.c", "sdrr_config.h", "linker.ld"] {
             let file_path = config.output_dir.join(file_name);
             if file_path.exists() {
                 return Err(anyhow::anyhow!(
@@ -484,7 +474,7 @@ fn main() -> Result<()> {
     // Check and confirm licences before proceeding
     confirm_licences(&config)?;
 
-    // Load and validate ROM files
+    // Load ROM files
     let mut rom_images = Vec::new();
     for (_, rom_config) in config.roms.iter().enumerate() {
         let rom_image = RomImage::load_from_file(
@@ -501,10 +491,15 @@ fn main() -> Result<()> {
         rom_images.push(rom_image);
     }
 
-    println!("Successfully loaded {} ROM file(s)", rom_images.len());
+    // Create ROM sets (no additional validation needed)
+    let rom_sets = config
+        .create_rom_sets(&rom_images)
+        .map_err(|e| anyhow::anyhow!("ROM set creation error: {}", e))?;
+
+    println!("Successfully loaded {} ROM file(s) in {} set(s)", rom_images.len(), rom_sets.len());
 
     // Generate output files
-    generate_files(&config, &rom_images).with_context(|| "Failed to generate output files")?;
+    generate_files(&config, &rom_sets).with_context(|| "Failed to generate output files")?;
 
     println!(
         "Successfully transformed ROM images and generated output files in {}",

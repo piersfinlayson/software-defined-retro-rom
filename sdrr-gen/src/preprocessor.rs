@@ -1,5 +1,5 @@
-use crate::config::SizeHandling;
-use crate::rom_types::{RomType, StmFamily};
+use crate::config::{SizeHandling, RomInSet};
+use crate::rom_types::{RomType, StmFamily, HwRev, CsLogic};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
@@ -296,5 +296,115 @@ impl RomImage {
         // Now transform the byte, as the physical data lines are not in the
         // expected order (0-7).
         self.transform_byte(byte, &family)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RomSet {
+    pub id: usize,
+    pub roms: Vec<RomInSet>,
+}
+
+impl RomSet {
+    pub fn get_byte(&self, address: usize, family: &StmFamily, hw_rev: HwRev) -> u8 {
+        // Backward compatibility: single ROM uses existing behavior
+        if self.roms.len() == 1 {
+            return self.roms[0].image.get_byte(address, family, &self.roms[0].config.rom_type);
+        }
+        
+        // Multiple ROMs: check CS line states to select responding ROM
+        for (index, rom_in_set) in self.roms.iter().enumerate() {
+            // Get the CS pin that controls this ROM's selection
+            let cs_pin = hw_rev.cs_pin_for_rom_in_set(index);
+            let cs_active = (address & (1 << cs_pin)) == 0;  // Active low
+            
+            if cs_active {
+                // Check if this ROM's CS2/CS3 requirements are met
+                if self.check_rom_cs_requirements(rom_in_set, address, hw_rev) {
+                    // This ROM responds - mask out CS selection bits and get data
+                    // let masked_address = self.mask_cs_selection_bits(address, &rom_in_set.config.rom_type, hw_rev);
+                    // return rom_in_set.image.get_byte(masked_address, family, &rom_in_set.config.rom_type);
+                    return rom_in_set.image.get_byte(address, family, &rom_in_set.config.rom_type);
+                }
+            }
+        }
+        
+        0xAA // No ROM selected
+    }
+
+    fn check_rom_cs_requirements(&self, rom_in_set: &RomInSet, address: usize, hw_rev: HwRev) -> bool {
+        let cs_config = &rom_in_set.config.cs_config;
+        let rom_type = &rom_in_set.config.rom_type;
+        
+        // Check CS2 if specified
+        if let Some(cs2_logic) = cs_config.cs2 {
+            match cs2_logic {
+                CsLogic::Ignore => {
+                    // CS2 state doesn't matter
+                },
+                CsLogic::ActiveLow => {
+                    let cs2_pin = hw_rev.pin_cs2(rom_type);
+                    let cs2_active = (address & (1 << cs2_pin)) == 0;
+                    if !cs2_active { return false; }
+                },
+                CsLogic::ActiveHigh => {
+                    let cs2_pin = hw_rev.pin_cs2(rom_type);
+                    let cs2_active = (address & (1 << cs2_pin)) == 1;
+                    if cs2_active { return false; }
+                },
+            }
+        }
+        
+        // Check CS3 if specified
+        if let Some(cs3_logic) = cs_config.cs3 {
+            match cs3_logic {
+                CsLogic::Ignore => {
+                    // CS3 state doesn't matter
+                },
+                CsLogic::ActiveLow => {
+                    let cs3_pin = hw_rev.pin_cs3(rom_type);
+                    let cs3_active = (address & (1 << cs3_pin)) == 0;
+                    if !cs3_active { return false; }
+                },
+                CsLogic::ActiveHigh => {
+                    let cs3_pin = hw_rev.pin_cs3(rom_type);
+                    let cs3_active = (address & (1 << cs3_pin)) == 1;
+                    if cs3_active { return false; }
+                },
+            }
+        }
+        
+        true
+    }
+
+    #[allow(dead_code)]
+    fn mask_cs_selection_bits(&self, address: usize, rom_type: &RomType, hw_rev: HwRev) -> usize {
+        let mut masked_address = address;
+        
+        // Remove the CS selection bits - only mask bits that exist on this hardware
+        masked_address &= !(1 << hw_rev.pin_cs1());
+        
+        // Only mask X1/X2 on hardware that has them (revision F)
+        if matches!(hw_rev, HwRev::F) {
+            masked_address &= !(1 << hw_rev.pin_x1());
+            masked_address &= !(1 << hw_rev.pin_x2());
+        }
+        
+        // Remove CS2/CS3 bits based on ROM type
+        match rom_type {
+            RomType::Rom2332 => {
+                masked_address &= !(1 << hw_rev.pin_cs2(rom_type));
+            },
+            RomType::Rom2316 => {
+                masked_address &= !(1 << hw_rev.pin_cs2(rom_type));
+                masked_address &= !(1 << hw_rev.pin_cs3(rom_type));
+            },
+            RomType::Rom2364 => {
+                // 2364 only uses CS1, no additional bits to remove
+            },
+        }
+        
+        // Ensure address fits within ROM size
+        masked_address & ((1 << 13) - 1) // Mask to 13 bits max (8KB)
     }
 }

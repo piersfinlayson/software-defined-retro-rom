@@ -443,7 +443,7 @@ endef
 ROM_ARGS = $(foreach config,$(ROM_CONFIGS),--rom $(strip $(call process_rom_config,$(config))))
 $(info ROM_ARGS = $(ROM_ARGS))
 
-.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen firmware run
+.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen firmware run test
 
 all: firmware
 
@@ -461,6 +461,10 @@ firmware: gen
 # Call make run-actual - this causes a new instance of make to be invoked and generated.mk exists, so it can load PROBE_RS_CHIP_ID
 run: firmware
 	make run-actual
+
+test: firmware
+	+cd test && make
+	ROM_CONFIGS="$(ROM_CONFIGS)" test/build/image-test
 
 -include $(GEN_OUTPUT_DIR)/generated.mk
 

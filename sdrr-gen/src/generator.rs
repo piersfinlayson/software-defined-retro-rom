@@ -1,14 +1,14 @@
 // src/generator.rs
 use crate::config::Config;
-use crate::preprocessor::RomImage;
 use crate::rom_types::{CsLogic, StmFamily};
+use crate::preprocessor::RomSet;
 use anyhow::{Context, Result};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
 // Generate all output files
-pub fn generate_files(config: &Config, rom_images: &[RomImage]) -> Result<()> {
+pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
     // Create output directory if it doesn't exist
     if !config.output_dir.exists() {
         fs::create_dir_all(&config.output_dir).with_context(|| {
@@ -19,11 +19,16 @@ pub fn generate_files(config: &Config, rom_images: &[RomImage]) -> Result<()> {
         })?;
     }
 
+    let family = config.stm_variant.family();
+    if family == StmFamily::F1 {
+        return Err(anyhow::anyhow!("F1 family is no longer supported"));
+    }
+
     // Generate roms.h
-    generate_roms_header_file(config, rom_images)?;
+    generate_roms_header_file(config, rom_sets)?;
 
     // Generate roms.c
-    generate_roms_implementation_file(config, rom_images)?;
+    generate_roms_implementation_file(config, rom_sets)?;
 
     // Generate sdrr_config.h
     generate_sdrr_config_header(config)?;
@@ -98,7 +103,7 @@ fn write_header(name: &str, file: &mut fs::File, filetype: FileType) -> Result<(
 }
 
 // Generate roms.h header file
-fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result<()> {
+fn generate_roms_header_file(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
     const FILENAME: &str = "roms.h";
     let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
 
@@ -108,32 +113,8 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
     writeln!(file, "#include <stdint.h>")?;
     writeln!(file)?;
     writeln!(file, "// Number of ROM images and sets")?;
-    writeln!(file, "#define SDRR_NUM_IMAGES  {}", rom_images.len())?;
-    writeln!(
-        file,
-        "#define SDRR_NUM_SETS    SDRR_NUM_IMAGES  // Currently 1:1 mapping"
-    )?;
-    writeln!(file)?;
-
-    // Generate individual ROM size defines
-    writeln!(
-        file,
-        "// Individual ROM sizes (generated based on actual ROM types)"
-    )?;
-    let family = config.stm_variant.family();
-    for (i, rom_config) in config.roms.iter().enumerate() {
-        let size = match family {
-            StmFamily::F1 => format!("{}", rom_config.rom_type.size_bytes()),
-            StmFamily::F4 => "ROM_IMAGE_SIZE".to_string(),
-        };
-        writeln!(
-            file,
-            "#define ROM_{}_SIZE  {}  // {} type",
-            i,
-            size,
-            rom_config.rom_type.name()
-        )?;
-    }
+    writeln!(file, "#define SDRR_NUM_IMAGES  {}", config.roms.len())?;
+    writeln!(file, "#define SDRR_NUM_SETS    {}", rom_sets.len())?;
     writeln!(file)?;
 
     // ROM set array
@@ -147,7 +128,7 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
 }
 
 // Generate roms.c implementation file
-fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -> Result<()> {
+fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
     const FILENAME: &str = "roms.c";
     let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
 
@@ -179,6 +160,15 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "#endif // BOOT_LOGGING")?;
     writeln!(file)?;
 
+    // Helper function to convert CsLogic to enum string
+    let cs_logic_to_enum = |cs_logic: CsLogic| -> &'static str {
+        match cs_logic {
+            CsLogic::ActiveLow => "CS_ACTIVE_LOW",
+            CsLogic::ActiveHigh => "CS_ACTIVE_HIGH",
+            CsLogic::Ignore => "CS_NOT_USED",
+        }
+    };
+
     writeln!(
         file,
         "// All objects are static, except for the rom_set array.  This is the only"
@@ -194,14 +184,6 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "// ROM info")?;
     writeln!(file, "//")?;
     writeln!(file)?;
-
-    // Helper function to convert CsLogic to enum string
-    let cs_logic_to_enum = |cs_logic: CsLogic| -> &'static str {
-        match cs_logic {
-            CsLogic::ActiveLow => "CS_ACTIVE_LOW",
-            CsLogic::ActiveHigh => "CS_ACTIVE_HIGH",
-        }
-    };
 
     for (ii, rom_config) in config.roms.iter().enumerate() {
         writeln!(file, "// ROM {}", ii)?;
@@ -249,10 +231,16 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "//")?;
     writeln!(file)?;
 
-    for (ii, _rom_config) in config.roms.iter().enumerate() {
+    for rom_set in rom_sets {
+        let ii = rom_set.id;
         writeln!(file, "// ROM set {}", ii)?;
-        writeln!(file, "#define ROM_SET_{}_ROM_COUNT  {}", ii, 1)?;
-        writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_{}_SIZE", ii, ii)?;
+        let num_roms = rom_set.roms.len();
+        writeln!(file, "#define ROM_SET_{}_ROM_COUNT  {}", ii, num_roms)?;
+        if num_roms == 1 {
+            writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE", ii)?;
+        } else {
+            writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_SET_IMAGE_SIZE", ii)?;
+        }
         writeln!(
             file,
             "static const uint8_t rom_set_{}_data[];  // Forward declaration",
@@ -263,7 +251,9 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
             "static const sdrr_rom_info_t *rom_set_{}_roms[] = {{",
             ii
         )?;
-        writeln!(file, "    &rom_{}_info,", ii)?;
+        for rom_in_set in &rom_set.roms {
+            writeln!(file, "    &rom_{}_info,", rom_in_set.original_index)?;
+        }
         writeln!(file, "}};")?;
         writeln!(file)?;
     }
@@ -274,7 +264,8 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "//")?;
     writeln!(file, "const sdrr_rom_set_t rom_set[SDRR_NUM_SETS] = {{")?;
 
-    for (ii, _rom_config) in config.roms.iter().enumerate() {
+    for rom_set in rom_sets {
+        let ii = rom_set.id;
         writeln!(file, "    {{")?;
         writeln!(file, "        .data = rom_set_{}_data,", ii)?;
         writeln!(file, "        .size = ROM_SET_{}_DATA_SIZE,", ii)?;
@@ -287,34 +278,33 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "}};")?;
     writeln!(file)?;
 
-    // Generate individual ROM data arrays
-    for (i, (rom_config, rom)) in config.roms.iter().zip(rom_images.iter()).enumerate() {
-        writeln!(file, "// ROM image {} ({})", i, rom_config.rom_type.name())?;
-        writeln!(
-            file,
-            "static const uint8_t rom_set_{}_data[ROM_{}_SIZE] = {{",
-            i, i
-        )?;
-
-        let rom_len = match family {
-            StmFamily::F1 => rom_config.rom_type.size_bytes(),
-            StmFamily::F4 => 16384,
+    // Generate ROM set data arrays
+    let hw_rev = config.hw_rev.unwrap();
+    for rom_set in rom_sets {
+        // Determine image size based on number of ROMs in the set
+        let image_size = if rom_set.roms.len() == 1 {
+            16384
+        } else {
+            65536
         };
+        let ii = rom_set.id;
 
-        for j in 0..rom_len {
-            // 16 bytes per line
-            if j % 16 == 0 {
-                if j > 0 {
+        writeln!(file, "// ROM set {} data", rom_set.id)?;
+        writeln!(file, "static const uint8_t rom_set_{}_data[ROM_SET_{}_DATA_SIZE] = {{", ii, ii)?;
+
+        for address in 0..image_size {
+            if address % 16 == 0 {
+                if address > 0 {
                     writeln!(file)?;
                 }
                 write!(file, "    ")?;
             }
-
-            let byte = rom.get_byte(j, &family, &rom_config.rom_type);
+            
+            // This would call the new rom_set.get_byte() method I proposed
+            let byte = rom_set.get_byte(address, &family, hw_rev);
             write!(file, "0x{:02x}, ", byte)?;
         }
 
-        writeln!(file)?;
         writeln!(file, "}};")?;
         writeln!(file)?;
     }
@@ -513,10 +503,22 @@ fn generate_linker_script(config: &Config) -> Result<()> {
 
     writeln!(file, "MEMORY")?;
     writeln!(file, "{{")?;
-    writeln!(file, "    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = {}K", config.stm_variant.flash_storage_kb())?;
-    writeln!(file, "    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = {}K", config.stm_variant.ram_kb())?;
+    writeln!(
+        file,
+        "    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = {}K",
+        config.stm_variant.flash_storage_kb()
+    )?;
+    writeln!(
+        file,
+        "    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = {}K",
+        config.stm_variant.ram_kb()
+    )?;
     if let Some(ccm_ram_kb) = config.stm_variant.ccm_ram_kb() {
-        writeln!(file, "    CCMRAM (rw): ORIGIN = 0x10000000, LENGTH = {}K", ccm_ram_kb)?;
+        writeln!(
+            file,
+            "    CCMRAM (rw): ORIGIN = 0x10000000, LENGTH = {}K",
+            ccm_ram_kb
+        )?;
     }
     writeln!(file, "}}")?;
     writeln!(file)?;

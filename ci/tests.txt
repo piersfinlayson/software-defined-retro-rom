@@ -21,6 +21,18 @@ basic-f411re:STM=f411re,CONFIG=config/test-sdrr-0.mk
 basic-f405rg:STM=f405rg,CONFIG=config/test-sdrr-0.mk
 basic-f446re:STM=f446re,CONFIG=config/test-sdrr-0.mk
 
+# Test each config (except those requiring licenses and not sets)
+test-1541-f411re:STM=f401re,CONFIG=config/1541.mk
+test-2040-f411re:STM=f411re,CONFIG=config/2040.mk
+test-4040-f411re:STM=f411re,CONFIG=config/4040.mk
+test-c64-no-destestmax-f411re:STM=f411re,CONFIG=config/c64-no-destestmax.mk
+test-ieee-diag-f411re:STM=f411re,CONFIG=config/ieee-diag.mk
+test-pet-4-40-50-f411re:STM=f411re,CONFIG=config/pet-4-40-50.mk
+test-vic20-pal-f411re:STM=f411re,CONFIG=config/vic20-pal.mk
+
+# Test each set config - HW_REV=f only
+test-set-c64-f411re:HW_REV=f,STM=f411re,CONFIG=config/set-c64.mk
+
 # Test different hardware revisions
 hw-rev-d:HW_REV=d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 hw-rev-e:HW_REV=e,STM=f401rb,CONFIG=config/test-sdrr-0.mk

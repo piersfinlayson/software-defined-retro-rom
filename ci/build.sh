@@ -294,8 +294,8 @@ execute_test() {
     if [[ -n "$config_param" ]]; then
         make_cmd="$make_cmd $config_param"
     fi
-    echo "- command: $make_cmd make"
-    make_cmd="$make_cmd make"
+    echo "- command: $make_cmd make test"
+    make_cmd="$make_cmd make test"
     
     # Execute the build
     if eval "$make_cmd" > /dev/null ; then

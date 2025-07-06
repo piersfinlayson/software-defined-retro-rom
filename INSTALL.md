@@ -31,20 +31,28 @@
 
     If you install using the package manager, you will need to update the `TOOLCHAIN` environment variable or variable in the [Makefile](sdrr/Makefile) to point to the correct compiler binary directory.  It should probably `/usr/bin` or similar.
 
-3. Install [Rust](https://www.rust-lang.org/tools/install):
+3. Install libcurl (required for tests):
+
+    ```bash
+    sudo apt install libcurl4-openssl-dev
+    ```
+
+    If you are using a different package manager, the package name may vary slightly, e.g., `libcurl-devel` on Fedora.
+
+4. Install [Rust](https://www.rust-lang.org/tools/install):
 
     ```bash
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     source $HOME/.cargo/env
     ```
 
-4. Install [probe-rs](https://probe.rs/) for flashing the firmware to the SDRR device.
+5. Install [probe-rs](https://probe.rs/) for flashing the firmware to the SDRR device.
 
     ```bash
     curl --proto '=https' --tlsv1.2 -LsSf https://github.com/probe-rs/probe-rs/releases/latest/download/probe-rs-tools-installer.sh | sh
     probe-rs complete install
     ```
 
-5. Connect up the SDRR device to your [programmer](README.md#programmer).
+6. Connect up the SDRR device to your [programmer](README.md#programmer).
 
 At this point you can follow the instructions in [Quick Start](README.md#quick-start) to build and flash the SDRR firmware.

@@ -284,9 +284,7 @@ impl StmVariant {
             StmVariant::F446RC | StmVariant::F446RE => StmProcessor::F446,
             StmVariant::F411RC | StmVariant::F411RE => StmProcessor::F411,
             StmVariant::F405RG => StmProcessor::F405,
-            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => {
-                StmProcessor::F401
-            }
+            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => StmProcessor::F401,
         }
     }
 
@@ -352,7 +350,8 @@ impl StmVariant {
 
     /// Check if target frequency is valid for this variant
     pub fn is_frequency_valid(&self, target_freq_mhz: u32, overclock: bool) -> bool {
-        self.processor().is_frequency_valid(target_freq_mhz, overclock)
+        self.processor()
+            .is_frequency_valid(target_freq_mhz, overclock)
     }
 }
 
@@ -389,19 +388,85 @@ impl HwRev {
             HwRev::F => "#define HW_REV_F        1",
         }
     }
+
+    /// Return the pin number for the given CS line based on hardware revision
+    pub fn pin_cs1(&self) -> usize {
+        match self {
+            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
+            HwRev::D | HwRev::E | HwRev::F => 10,
+        }
+    }
+
+    /// Return the pin number for the given CS line based on hardware revision
+    pub fn pin_cs2(&self, rom_type: &RomType) -> usize {
+        match self {
+            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
+            HwRev::D | HwRev::E | HwRev::F => match rom_type {
+                    RomType::Rom2316 => 12,
+                    RomType::Rom2332 => 9,
+                    RomType::Rom2364 => unreachable!("CS2 not used for 2364 ROMs"),
+                }
+            }
+    }
+
+    /// Return the pin number for the given CS line based on hardware revision
+    pub fn pin_cs3(&self, rom_type: &RomType) -> usize {
+        match self {
+            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
+            HwRev::D | HwRev::E | HwRev::F => match rom_type {
+                RomType::Rom2316 => 9,
+                RomType::Rom2332 => unreachable!("CS3 not used for 2332 ROMs"),
+                RomType::Rom2364 => unreachable!("CS3 not used for 2364 ROMs"),
+            }
+        }
+    }
+
+    /// Return the pin number for the given CS line based on hardware revision
+    pub fn pin_x1(&self) -> usize {
+        match self {
+            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
+            HwRev::D | HwRev::E => unreachable!("X1 pin not provided in D/E revisions"),
+            HwRev::F => 14,
+        }
+    }
+
+    /// Return the pin number for the given CS line based on hardware revision
+    pub fn pin_x2(&self) -> usize {
+        match self {
+            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
+            HwRev::D | HwRev::E => unreachable!("X2 pin not provided in D/E revisions"),
+            HwRev::F => 15,
+        }
+    }
+
+    /// Get which pin (bit) controls the CS line for a ROM in a set.
+    pub fn cs_pin_for_rom_in_set(&self, index: usize) -> usize {
+        // The 0th ROM in a set uses CS1, the 1st uses X1, and the 2nd uses X2
+        match index {
+            0 => self.pin_cs1(),
+            1 => self.pin_x1(),
+            2 => self.pin_x2(),
+            _ => unreachable!("Invalid ROM index for set (max 3): {}", index),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CsLogic {
     ActiveLow,
     ActiveHigh,
+
+    /// Used for 2332/2316 ROMs, when a CS line isn't used because it's always
+    /// tied active.
+    Ignore,
 }
 
 impl CsLogic {
-    pub fn from_u8(value: u8) -> Option<Self> {
-        match value {
-            0 => Some(CsLogic::ActiveLow),
-            1 => Some(CsLogic::ActiveHigh),
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "0" => Some(CsLogic::ActiveLow),
+            "1" => Some(CsLogic::ActiveHigh),
+            "ignore" => Some(CsLogic::Ignore),
             _ => None,
         }
     }

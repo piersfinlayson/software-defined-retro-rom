@@ -32,7 +32,7 @@ typedef enum {
 typedef enum {
     CS_ACTIVE_LOW,
     CS_ACTIVE_HIGH,
-    CS_NOT_USED
+    CS_NOT_USED,
 } sdrr_cs_state_t;
 
 // ROM serving algorithm
