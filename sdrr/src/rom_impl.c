@@ -816,25 +816,38 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // the chip select(s) go inactive.
                 BRANCH(ALG2_LOOP)
 
-                // Chip select went active - immediately set data lines as
-                // outputs
+                // Chip select went active
             LABEL(ALG2_CS_ACTIVE)
+                // By definition we just loaded and tested the address/CS
+                // lines, immediately load the byte from RAM.  There's no load-
+                // use penalty here because we've alrady spent cycles since
+                // loading the address lines.
+                LOAD_FROM_RAM
+
+                // Set the data lines as outputs.  Doing this now avoids the
+                // load-use penalty of immediately applying the byte.  So,
+                // this code consumes 2 cycles, instead of consuming 2 cycles,
+                // if we did if before LOAD_FROM_RAM, and then 1 cycle load-use
+                // penalty here.
                 SET_DATA_OUT
 
-                // By definition we just loaded and tested the address/CS
-                // lines, immediately load the byte from RAM and apply it
-            LABEL(ALG2_CS_ACTIVE_DATA_ACTIVE)
-                LOAD_FROM_RAM
+                // Now store byte to data lines
                 STORE_TO_DATA
 
                 // Now test if CS has gone inactive again
                 LOAD_ADDR_CS
                 TEST_CS
+                BNE(ALG2_CS_INACTIVE)
 
+            LABEL(ALG2_CS_ACTIVE_MID_LOOP)
+                LOAD_FROM_RAM
+                STORE_TO_DATA
+                LOAD_ADDR_CS
+                TEST_CS
                 // If still active, load byte from address again in case the
                 // address lines changed.  Going backwards here is what the
                 // CPU will have predicted so saves a cycle.
-                BEQ(ALG2_CS_ACTIVE_DATA_ACTIVE)
+                BEQ(ALG2_CS_ACTIVE_MID_LOOP)
 
                 // CS went inactive.  We need to set the data lines as inputs.  Fall through into this code, so no branch penalty.
             LABEL(ALG2_CS_INACTIVE)
