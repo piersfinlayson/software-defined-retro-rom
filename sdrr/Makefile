@@ -56,29 +56,7 @@ DISASM := $(BUILD_DIR)/$(BIN_PREFIX).dis
 ifeq ($(filter clean clean-% distclean,$(MAKECMDGOALS)),)
 
 # Linker script selection
-ifeq ($(VARIANT),stm32f103r8)
-    LDSCRIPT := stm32f103x8.ld
-else ifeq ($(VARIANT),stm32f103rb)
-    LDSCRIPT := stm32f103xb.ld
-else ifeq ($(VARIANT),stm32f411rc)
-	LDSCRIPT := stm32f411xc.ld
-else ifeq ($(VARIANT),stm32f411re)
-	LDSCRIPT := stm32f411xe.ld
-else ifeq ($(VARIANT),stm32f401re)
-	LDSCRIPT := stm32f401xe.ld
-else ifeq ($(VARIANT),stm32f401rb)
-	LDSCRIPT := stm32f401xb.ld
-else ifeq ($(VARIANT),stm32f401rc)
-	LDSCRIPT := stm32f401xc.ld
-else ifeq ($(VARIANT),stm32f405rg)
-	LDSCRIPT := stm32f405xg.ld
-else ifeq ($(VARIANT),stm32f446rc)
-	LDSCRIPT := stm32f446xc.ld
-else ifeq ($(VARIANT),stm32f446re)
-	LDSCRIPT := stm32f446xe.ld
-else
-$(error Unsupported variant: $(VARIANT))
-endif
+LDSCRIPT=$(OUTPUT_DIR)/linker.ld
 
 # Flags
 ifeq ($(findstring stm32f103,$(VARIANT)),stm32f103)
@@ -129,8 +107,8 @@ $(BUILD_DIR)/SEGGER_RTT_printf.o: segger-rtt/RTT/SEGGER_RTT_printf.c ../Makefile
 segger-rtt/RTT/SEGGER_RTT.c segger-rtt/RTT/SEGGER_RTT_printf.c: segger-rtt
 
 # Link
-$(ELF): $(OBJS) $(ROMS_OBJ) $(SEGGER_OBJS) link/$(LDSCRIPT) | $(BUILD_DIR)
-	$(CC) $(LDFLAGS) -T link/$(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) -o $@
+$(ELF): $(OBJS) $(ROMS_OBJ) $(SEGGER_OBJS) $(LDSCRIPT) | $(BUILD_DIR)
+	$(CC) $(LDFLAGS) -T $(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) -o $@
 
 # Generate binary
 $(BIN): $(ELF)

@@ -385,10 +385,10 @@ void log_init(void) {
         flash_kb += 1;
     }
 #if !defined(DEBUG_LOGGING)
-    LOG("%s size: %dKB", flash, STM_FLASH_SIZE / 1024);
+    LOG("%s size: %dKB", flash, STM_FLASH_SIZE_KB);
     LOG("%s used: %dKB", flash, flash_kb);
 #else // DEBUG_LOGGING
-    LOG("%s size: %dKB (%d bytes)", flash, STM_FLASH_SIZE / 1024, STM_FLASH_SIZE);
+    LOG("%s size: %dKB (%d bytes)", flash, STM_FLASH_SIZE_KB, STM_FLASH_SIZE);
     LOG("%s used: %dKB %d bytes", flash, flash_kb, flash_bytes);
 #endif
 

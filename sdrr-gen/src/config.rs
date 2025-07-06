@@ -1,4 +1,4 @@
-use crate::rom_types::{CsLogic, HwRev, RomType, StmFamily, StmVariant};
+use crate::rom_types::{CsLogic, HwRev, RomType, StmFamily, StmVariant, StmProcessor};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
@@ -135,7 +135,8 @@ impl Config {
                 }
                 HwRev::D | HwRev::E | HwRev::F => {
                     if self.stm_variant.family() != StmFamily::F4 {
-                        return Err("Hardware revision D, E, and F only supports STM32F4 family".to_string());
+                        return Err("Hardware revision D, E, and F only supports STM32F4 family"
+                            .to_string());
                     }
                 }
             }
@@ -151,19 +152,31 @@ impl Config {
         }
 
         // Validate and set frequency
-        if !self
-            .stm_variant
-            .is_frequency_valid(self.freq, self.overclock)
-        {
-            return Err(format!(
-                "Frequency {}MHz is not valid for variant {}. Valid range: 16-{}MHz",
-                self.freq,
-                self.stm_variant.makefile_var(),
-                self.stm_variant
-                    .processor()
-                    .map(|p| p.max_sysclk_mhz())
-                    .unwrap_or(0)
-            ));
+        match self.stm_variant.processor() {
+            StmProcessor::F103 => {
+                if !self.stm_variant.is_frequency_valid(self.freq, self.overclock) {
+                    return Err(format!(
+                        "Frequency {}MHz is not valid for STM32F103. Valid range 8-64MHz",
+                        self.freq
+                    ));
+                }
+            }
+            _ => {
+                if !self
+                    .stm_variant
+                    .is_frequency_valid(self.freq, self.overclock)
+                {
+                    return Err(format!(
+                        "Frequency {}MHz is not valid for variant {}. Valid range: 16-{}MHz",
+                        self.freq,
+                        self.stm_variant.makefile_var(),
+                        self.stm_variant
+                            .processor()
+                            .max_sysclk_mhz()
+                    ));
+                }
+
+            }
         }
 
         Ok(())

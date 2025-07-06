@@ -648,7 +648,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 #if defined(PRELOAD_TO_RAM)
     register uint32_t rom_table asm(R_ROM_TABLE) = (uint32_t)&_ram_rom_image_start;
 #else
-    register uint32_t rom_table asm(R_ROM_TABLE) = (uint32_t)&(rom->data[0]);
+    register uint32_t rom_table asm(R_ROM_TABLE) = (uint32_t)&(set->data[0]);
 #endif // PRELOAD_TO_RAM
 
 #if defined(STATUS_LED)

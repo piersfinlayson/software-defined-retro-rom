@@ -438,8 +438,7 @@ fn main() -> Result<()> {
     let freq = args.freq.unwrap_or_else(|| {
         args.stm
             .processor()
-            .map(|p| p.max_sysclk_mhz())
-            .unwrap_or(64) // Default to 64MHz for F1 variants
+            .max_sysclk_mhz()
     });
 
     // Create configuration

@@ -50,6 +50,7 @@ pub enum StmFamily {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StmProcessor {
+    F103,
     F401,
     F405,
     F411,
@@ -59,6 +60,7 @@ pub enum StmProcessor {
 impl StmProcessor {
     pub fn vco_min_mhz(&self) -> u32 {
         match self {
+            StmProcessor::F103 => 0,
             StmProcessor::F401 => 192,
             StmProcessor::F405 => 100,
             StmProcessor::F411 => 100,
@@ -72,6 +74,7 @@ impl StmProcessor {
 
     pub fn max_sysclk_mhz(&self) -> u32 {
         match self {
+            StmProcessor::F103 => 64,
             StmProcessor::F401 => 84,
             StmProcessor::F405 => 168,
             StmProcessor::F411 => 100,
@@ -148,7 +151,19 @@ impl StmProcessor {
 
     /// Check if target frequency is achievable with HSI PLL configuration
     pub fn is_frequency_valid(&self, target_freq_mhz: u32, overclock: bool) -> bool {
-        self.calculate_pll_hsi(target_freq_mhz, overclock).is_some()
+        match self {
+            StmProcessor::F103 => {
+                if target_freq_mhz >= 8 && target_freq_mhz <= 64 && !overclock {
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => {
+                // F4 family uses HSI PLL, check if target frequency is achievable
+                self.calculate_pll_hsi(target_freq_mhz, overclock).is_some()
+            }
+        }
     }
 }
 
@@ -183,8 +198,12 @@ impl StmVariant {
         }
     }
 
-    fn flash_storage(&self) -> usize {
-        let kb = match self {
+    fn flash_storage_bytes(&self) -> usize {
+        self.flash_storage_kb() * 1024
+    }
+
+    pub fn flash_storage_kb(&self) -> usize {
+        match self {
             StmVariant::F103R8 => 64,
             StmVariant::F103RB => 128,
             StmVariant::F446RC => 256,
@@ -192,15 +211,45 @@ impl StmVariant {
             StmVariant::F411RC => 256,
             StmVariant::F411RE => 512,
             StmVariant::F405RG => 1024,
-            StmVariant::F401RE => 512,
             StmVariant::F401RB => 128,
             StmVariant::F401RC => 256,
-        };
-        kb * 1024 // Convert KB to bytes
+            StmVariant::F401RE => 512,
+        }
     }
 
-    pub fn define_flash_size(&self) -> String {
-        format!("#define STM_FLASH_SIZE {}", self.flash_storage())
+    pub fn ram_kb(&self) -> usize {
+        match self {
+            StmVariant::F103R8 => 20,
+            StmVariant::F103RB => 20,
+            StmVariant::F446RC | StmVariant::F446RE => 128,
+            StmVariant::F411RC | StmVariant::F411RE => 128,
+            StmVariant::F405RG => 128, // +64KB CCM RAM
+            StmVariant::F401RB | StmVariant::F401RC | StmVariant::F401RE => 96,
+        }
+    }
+
+    pub fn ccm_ram_kb(&self) -> Option<usize> {
+        // F405 has 64KB of CCM RAM, others don't
+        match self {
+            StmVariant::F405RG => Some(64),
+            _ => None,
+        }
+    }
+
+    pub fn define_flash_size_bytes(&self) -> String {
+        format!("#define STM_FLASH_SIZE {}", self.flash_storage_bytes())
+    }
+
+    pub fn define_flash_size_kb(&self) -> String {
+        format!("#define STM_FLASH_SIZE_KB {}", self.flash_storage_kb())
+    }
+
+    pub fn define_ram_size_bytes(&self) -> String {
+        format!("#define STM_RAM_SIZE {}", self.ram_kb() * 1024)
+    }
+
+    pub fn define_ram_size_kb(&self) -> String {
+        format!("#define STM_RAM_SIZE_KB {}", self.ram_kb())
     }
 
     pub fn define_var_sub_fam(&self) -> &str {
@@ -218,7 +267,7 @@ impl StmVariant {
     pub fn family(&self) -> StmFamily {
         match self {
             StmVariant::F103R8 | StmVariant::F103RB => StmFamily::F1,
-            StmVariant::F446RC 
+            StmVariant::F446RC
             | StmVariant::F446RE
             | StmVariant::F411RC
             | StmVariant::F411RE
@@ -229,14 +278,14 @@ impl StmVariant {
         }
     }
 
-    pub fn processor(&self) -> Option<StmProcessor> {
+    pub fn processor(&self) -> StmProcessor {
         match self {
-            StmVariant::F103R8 | StmVariant::F103RB => None, // F1 family doesn't use PLL the same way
-            StmVariant::F446RC | StmVariant::F446RE => Some(StmProcessor::F446),
-            StmVariant::F411RC | StmVariant::F411RE => Some(StmProcessor::F411),
-            StmVariant::F405RG => Some(StmProcessor::F405),
+            StmVariant::F103R8 | StmVariant::F103RB => StmProcessor::F103,
+            StmVariant::F446RC | StmVariant::F446RE => StmProcessor::F446,
+            StmVariant::F411RC | StmVariant::F411RE => StmProcessor::F411,
+            StmVariant::F405RG => StmProcessor::F405,
             StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => {
-                Some(StmProcessor::F401)
+                StmProcessor::F401
             }
         }
     }
@@ -265,7 +314,7 @@ impl StmVariant {
 
     /// Generate PLL defines for target frequency (F4 variants only)
     pub fn generate_pll_defines(&self, target_freq_mhz: u32, overclock: bool) -> Option<String> {
-        self.processor()?
+        self.processor()
             .generate_pll_defines(target_freq_mhz, overclock)
     }
 
@@ -303,10 +352,7 @@ impl StmVariant {
 
     /// Check if target frequency is valid for this variant
     pub fn is_frequency_valid(&self, target_freq_mhz: u32, overclock: bool) -> bool {
-        match self.processor() {
-            Some(proc) => proc.is_frequency_valid(target_freq_mhz, overclock),
-            None => false, // F1 variants don't use this PLL configuration
-        }
+        self.processor().is_frequency_valid(target_freq_mhz, overclock)
     }
 }
 
