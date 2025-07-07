@@ -1,4 +1,4 @@
-use crate::rom_types::{CsLogic, HwRev, RomType, StmFamily, StmProcessor, StmVariant};
+use crate::rom_types::{CsLogic, HwRev, RomType, ServeAlg, StmFamily, StmProcessor, StmVariant};
 use crate::preprocessor::{RomImage, RomSet};
 use std::path::PathBuf;
 use std::collections::BTreeMap;
@@ -23,6 +23,7 @@ pub struct Config {
     pub bootloader: bool,
     pub preload_to_ram: bool,
     pub auto_yes: bool,
+    pub serve_alg: ServeAlg,
 }
 
 #[derive(Debug, Clone)]

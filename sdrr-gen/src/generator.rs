@@ -266,12 +266,18 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
 
     for rom_set in rom_sets {
         let ii = rom_set.id;
+        let num_roms = rom_set.roms.len();
+        let serve_alg = if num_roms == 1 {
+            config.serve_alg.c_value()
+        } else {
+            config.serve_alg.c_value_multi_rom_set()
+        };
         writeln!(file, "    {{")?;
         writeln!(file, "        .data = rom_set_{}_data,", ii)?;
         writeln!(file, "        .size = ROM_SET_{}_DATA_SIZE,", ii)?;
         writeln!(file, "        .roms = rom_set_{}_roms,", ii)?;
         writeln!(file, "        .rom_count = ROM_SET_{}_ROM_COUNT,", ii)?;
-        writeln!(file, "        .serve = SERVE_TWO_CS_ONE_ADDR,")?;
+        writeln!(file, "        .serve = {},", serve_alg)?;
         writeln!(file, "    }},")?;
     }
 

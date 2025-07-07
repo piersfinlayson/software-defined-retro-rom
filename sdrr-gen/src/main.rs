@@ -6,7 +6,7 @@ mod rom_types;
 
 use crate::config::{Config, CsConfig, SizeHandling};
 use crate::generator::generate_files;
-use crate::rom_types::{CsLogic, RomType, StmVariant};
+use crate::rom_types::{CsLogic, RomType, StmVariant, ServeAlg};
 use anyhow::{Context, Result};
 use clap::Parser;
 use preprocessor::RomImage;
@@ -99,6 +99,10 @@ struct Args {
     /// Automatically answer [y]es to questions
     #[clap(long, short = 'y')]
     yes: bool,
+
+    /// Byte serving algorithm to choose (default, a = 2 CS 1 Addr, b = Addr on CS)
+    #[clap(long, value_parser = perse_serve_alg)]
+    serve_alg: Option<ServeAlg>,
 }
 
 fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
@@ -110,6 +114,15 @@ fn parse_hw_rev(s: &str) -> Result<HwRev, String> {
     HwRev::from_str(s).ok_or_else(|| {
         format!(
             "Invalid hardware revision: {}. Valid values are: a, b, c, d, e, f",
+            s
+        )
+    })
+}
+
+fn perse_serve_alg(s: &str) -> Result<ServeAlg, String> {
+    ServeAlg::from_str(s).ok_or_else(|| {
+        format!(
+            "Invalid serve algorithm: {}. Valid values are: default, a (2 CS 1 Addr), b (Addr on CS)",
             s
         )
     })
@@ -451,6 +464,7 @@ fn main() -> Result<()> {
         bootloader: args.bootloader,
         preload_to_ram: !args.disable_preload_to_ram,
         auto_yes: args.yes,
+        serve_alg: args.serve_alg.unwrap_or(ServeAlg::Default),
     };
 
     // Validate it

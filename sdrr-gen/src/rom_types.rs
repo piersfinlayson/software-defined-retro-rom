@@ -356,6 +356,41 @@ impl StmVariant {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServeAlg {
+    /// default
+    Default,
+
+    /// a
+    TwoCsOneAddr,
+
+    /// b
+    AddrOnCs,
+}
+
+impl ServeAlg {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "default" => Some(ServeAlg::Default),
+            "a" | "two_cs_one_addr" => Some(ServeAlg::TwoCsOneAddr),
+            "b" => Some(ServeAlg::AddrOnCs),
+            _ => None,
+        }
+    }
+
+    pub fn c_value(&self) -> &str {
+        match self {
+            ServeAlg::Default => "SERVE_TWO_CS_ONE_ADDR",
+            ServeAlg::TwoCsOneAddr => "SERVE_TWO_CS_ONE_ADDR",
+            ServeAlg::AddrOnCs => "SERVE_ADDR_ON_CS",
+        }
+    }
+
+    pub fn c_value_multi_rom_set(&self) -> &str {
+        "SERVE_ADDR_ON_CS"
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HwRev {
     A, // F103R based
     B, // F103R based
