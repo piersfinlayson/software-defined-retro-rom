@@ -840,8 +840,6 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 BNE(ALG2_CS_INACTIVE)
 
             LABEL(ALG2_CS_ACTIVE_MID_LOOP)
-                LOAD_FROM_RAM
-                STORE_TO_DATA
                 LOAD_ADDR_CS
                 TEST_CS
                 // If still active, load byte from address again in case the
@@ -855,6 +853,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 #if defined(MAIN_LOOP_LOGGING)
                 BRANCH(ALG2_END_LOOP)
 #endif // MAIN_LOOP_LOGGING
+                // Fall into main loop
 
             LABEL(ALG2_LOOP)
                 LOAD_ADDR_CS
@@ -866,6 +865,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 "mov %0, " R_ADDR_CS "\n"
                 "mov %1, " R_DATA "\n"
 #endif // MAIN_LOOP_LOGGING
+
+                // Start main loop again
+                BRANCH(ALG2_LOOP)
 
 #if defined(MAIN_LOOP_LOGGING)
                 : "=r" (addr_cs),
