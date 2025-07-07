@@ -494,6 +494,11 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 #define TEST_CS         "eor " R_CS_TEST ", " R_ADDR_CS ", " R_CS_INVERT_MASK "\n" \
                         "tst " R_CS_TEST ", " R_CS_CHECK_MASK "\n"
 
+// Tests where any of the CS lines are active - zero flash _not set_ if so.
+// BIC is bit clear - essentially destination = source & ~mask
+#define TEST_CS_ANY     "eor " R_CS_TEST ", " R_ADDR_CS ", " R_CS_INVERT_MASK "\n" \
+                        "bic " R_CS_TEST ", " R_CS_CHECK_MASK ", " R_CS_TEST "\n"
+
 // Loads the data byte from the ROM table into R_DATA, based on the address in
 // R_ADDR_CS
 #define LOAD_FROM_RAM   "ldrb " R_DATA ", [" R_ROM_TABLE ", " R_ADDR_CS "]\n"
@@ -533,8 +538,31 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     // Currently only support one ROM per set
     const sdrr_rom_info_t *rom = set->roms[0];
 
-    ROM_IMPL_DEBUG("Serve ROM: %s", rom->filename);
+    sdrr_serve_t serve_mode = set->serve;
 
+#if defined(HW_REV_F)
+    // Warn if serve mode is incorrectly set for multiple ROM images
+    if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
+        ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set - rectifying");
+        serve_mode = SERVE_ADDR_ON_ANY_CS;
+    } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
+        ROM_IMPL_LOG("!!! Single ROM image, but serve mode is incorrectly set - setting to default");
+        serve_mode = SERVE_TWO_CS_ONE_ADDR;
+    }
+#else // !HW_REV_F
+#endif // HW_REV_F
+
+    ROM_IMPL_DEBUG("Serve ROM: %s via mode: %d", rom->filename, serve_mode);
+
+#if defined(HW_REV_F)
+    if (serve_mode == SERVE_ADDR_ON_ANY_CS)
+    {
+        cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_X1_INT) | (1 << PIN_X2_INT);
+        if (set->multi_rom_cs1_state == CS_ACTIVE_HIGH) {
+            cs_invert_mask = cs_check_mask;
+        }
+    } else {
+#endif // HW_REV_F
     switch (rom->rom_type) {
         case ROM_TYPE_2316:
             ROM_IMPL_DEBUG("ROM type: 2316");
@@ -593,6 +621,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             }
             break;
     }
+#if defined(HW_REV_F)
+    }
+#endif // HW_REV_F
 
     // Enable GPIO clocks for the ports with address and data lines
     RCC_AHB1ENR |= (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN);
@@ -629,13 +660,6 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         GPIOC_PUPDR = 0xA0000000;
     }
 
-#if defined(HW_REV_F)
-    // Warn if serve mode is incorrectly set for multiple ROM images
-    if ((set->rom_count > 1) && (set->serve == SERVE_TWO_CS_ONE_ADDR)) {
-        ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set");
-    }
-#endif // HW_REV_F
-
     // Preload registers with their values
     register uint32_t cs_invert_mask_reg asm(R_CS_INVERT_MASK) = cs_invert_mask;
     register uint32_t cs_check_mask_reg asm(R_CS_CHECK_MASK) = cs_check_mask;
@@ -664,7 +688,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
 #endif // STATUS_LED
 #endif // MAIN_LOOP_LOGGING
-    switch (set->serve)
+    switch (serve_mode)
     {
         // Default case - test CS twice as often as loading the byte from RAM
         default:
@@ -868,6 +892,56 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
                 // Start main loop again
                 BRANCH(ALG2_LOOP)
+
+#if defined(MAIN_LOOP_LOGGING)
+                : "=r" (addr_cs),
+                "=r" (byte)
+#else // !MAIN_LOOP_LOGGING
+                :
+#endif // MAIN_LOOP_LOGGING
+                : ASM_INPUTS
+                : ASM_CLOBBERS
+            );
+            break;
+
+        case SERVE_ADDR_ON_ANY_CS:
+            // Same Logic as SERVE_ADDR_ON_CS, but the test result is inverted
+            // as we're using BIC
+            __asm volatile (
+                BRANCH(ALG3_LOOP)
+
+            LABEL(ALG3_CS_ACTIVE)
+                LOAD_FROM_RAM
+                SET_DATA_OUT
+                STORE_TO_DATA
+                LOAD_ADDR_CS
+                TEST_CS
+                BEQ(ALG3_CS_INACTIVE)
+
+            LABEL(ALG3_CS_ACTIVE_MID_LOOP)
+                LOAD_ADDR_CS
+                TEST_CS
+                BNE(ALG3_CS_ACTIVE_MID_LOOP)
+
+            LABEL(ALG3_CS_INACTIVE)
+                SET_DATA_IN
+#if defined(MAIN_LOOP_LOGGING)
+                BRANCH(ALG3_END_LOOP)
+#endif // MAIN_LOOP_LOGGING
+
+            LABEL(ALG3_LOOP)
+                LOAD_ADDR_CS
+                TEST_CS
+                BNE(ALG3_CS_ACTIVE)
+
+#if defined(MAIN_LOOP_LOGGING)
+            LABEL(ALG3_END_LOOP)
+                "mov %0, " R_ADDR_CS "\n"
+                "mov %1, " R_DATA "\n"
+#endif // MAIN_LOOP_LOGGING
+
+                // Start main loop again
+                BRANCH(ALG3_LOOP)
 
 #if defined(MAIN_LOOP_LOGGING)
                 : "=r" (addr_cs),

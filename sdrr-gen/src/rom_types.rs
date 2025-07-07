@@ -386,7 +386,7 @@ impl ServeAlg {
     }
 
     pub fn c_value_multi_rom_set(&self) -> &str {
-        "SERVE_ADDR_ON_CS"
+        "SERVE_ADDR_ON_ANY_CS"
     }
 }
 

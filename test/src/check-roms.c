@@ -147,11 +147,13 @@ uint16_t get_logical_address(uint16_t address) {
     return logical & 0x1FFF;
 }
 
-void validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int count) {
+int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int count) {
     printf("\n=== Validating All ROM Sets ===\n");
     
     int total_errors = 0;
     int total_checked = 0;
+
+    int overall_rom_idx = 0;
     
     // Validate each ROM set
     for (int set_idx = 0; set_idx < SDRR_NUM_SETS; set_idx++) {
@@ -170,7 +172,7 @@ void validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int
                 uint8_t demangled_byte = demangle_byte(compiled_byte);
                 
                 // Find the loaded ROM for this set
-                int loaded_rom_idx = set_idx; // For backward compatibility, set_idx = loaded_rom_idx
+                int loaded_rom_idx = overall_rom_idx;
                 uint16_t original_addr = logical_addr % loaded_roms[loaded_rom_idx].size;
                 uint8_t expected_byte = loaded_roms[loaded_rom_idx].data[original_addr];
                 
@@ -183,14 +185,18 @@ void validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int
                 }
                 checked++;
             }
+            overall_rom_idx++;
         } else {
             // Multi-ROM set: test each ROM with appropriate CS combinations  
             for (int rom_idx = 0; rom_idx < rom_set[set_idx].rom_count; rom_idx++) {
                 printf("  Testing ROM %d in set %d...\n", rom_idx, set_idx);
                 
-                // Find corresponding loaded ROM (need to map set_idx+rom_idx to loaded_roms index)
-                int loaded_rom_idx = set_idx * 3 + rom_idx;  // TODO fix this for multi-set support
-                if (loaded_rom_idx >= count) continue;
+                // Find corresponding loaded ROM
+                int loaded_rom_idx = overall_rom_idx;
+                if (loaded_rom_idx >= count) {
+                    printf("  Internal error - ran out of ROMs");
+                    continue;
+                }
                 
                 // Determine CS values for this ROM
                 int cs1, x1, x2;
@@ -232,6 +238,7 @@ void validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int
                 }
 
                 errors += rom_errors;
+                overall_rom_idx++;
             }
         }
         
@@ -241,7 +248,15 @@ void validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int
     }
     
     printf("\nOverall validation:\n");
+    printf("  Total ROM sets: %d\n", SDRR_NUM_SETS);
+    printf("  Total ROMs: %d\n", overall_rom_idx);
     printf("  Total addresses checked: %d\n", total_checked);
     printf("  Total errors found: %d\n", total_errors);
     printf("  Result: %s\n", (total_errors == 0) ? "PASS ✓" : "FAIL ✗");
+
+    if (total_errors > 0) {
+     return -1;
+    } else {
+        return 0;
+    }
 }

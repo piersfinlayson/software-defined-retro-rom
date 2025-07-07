@@ -32,6 +32,7 @@ test-vic20-pal-f411re:STM=f411re,CONFIG=config/vic20-pal.mk
 
 # Test each set config - HW_REV=f only
 test-set-c64-f411re:HW_REV=f,STM=f411re,CONFIG=config/set-c64.mk
+test-set-vic20-pal-f411re:HW_REV=f,STM=f411re,CONFIG=config/set-vic20-pal.mk
 
 # Test different hardware revisions
 hw-rev-d:HW_REV=d,STM=f401rb,CONFIG=config/test-sdrr-0.mk

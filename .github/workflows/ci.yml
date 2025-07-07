@@ -39,7 +39,7 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi make
+        sudo apt-get install -y gcc-arm-none-eabi make libcurl4-openssl-dev libzip-dev
         
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable

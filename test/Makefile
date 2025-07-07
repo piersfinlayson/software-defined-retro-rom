@@ -7,7 +7,7 @@ SOURCES = src/main.c src/check-roms.c src/load-config.c src/query-roms.c ../outp
 
 # Create build directory and build target
 $(BUILD_DIR)/$(TARGET): $(SOURCES) include/roms-test.h ../output/roms.h ../output/sdrr_config.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -o $@ $(SOURCES) -lcurl
+	$(CC) $(CFLAGS) -o $@ $(SOURCES) -lcurl -lzip
 
 # Create build directory
 $(BUILD_DIR):

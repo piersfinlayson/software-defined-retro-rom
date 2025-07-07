@@ -42,11 +42,18 @@ typedef enum {
     // is the default algorithm, and is used for all single ROM sets.
     SERVE_TWO_CS_ONE_ADDR,
 
-    // Serves the byte from RAM only once chip select line(s) active.  Used for
-    // sets with multiple ROM images, where we don't know the full address
-    // (i.e. the image to lookup from) until the chip select line(s) are
-    // active.
+    // Serves the byte from RAM only once chip select line(s) active.
+    // Very similar to SERVE_ADDR_ON_ANY_CS - but this only matches on all
+    // of the required CS lines, that matches on any, so is suitable for
+    // multiple ROM sets.
     SERVE_ADDR_ON_CS,
+
+    // Serves the byte from RAM once any of the chip select lines are active.
+    // This is used for sets with multiple ROM images, where we don't know the
+    // full address (i.e. the image to lookup from) until any of the chip
+    // select lines are active.  This is the default algorithm for sets with
+    // multiple ROM images on hardware revision F.
+    SERVE_ADDR_ON_ANY_CS,
 } sdrr_serve_t;
 
 typedef enum {
@@ -103,6 +110,9 @@ typedef struct {
 
     // Which ROM serving algorithm to use for this set.
     const sdrr_serve_t serve;         // ROM serving algorithm
+
+    // CS1 state (active high/low) when using multiple ROM images in this set
+    sdrr_cs_state_t multi_rom_cs1_state;  // CS1 state
 } sdrr_rom_set_t;
 
 #endif // CONFIG_BASE_H

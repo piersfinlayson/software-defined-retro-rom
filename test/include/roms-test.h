@@ -13,6 +13,7 @@
 #include <string.h>
 #include <assert.h>
 #include <curl/curl.h>
+#include <zip.h>
 
 #include "sdrr_config.h"
 #include "config_base.h"
@@ -24,6 +25,7 @@
 
 typedef struct {
     char *filename;
+    char *extract_name;
     char *type;     // "2316", "2332", "2364"
     int cs1;        // 0 or 1
     int cs2;        // 0, 1, or -1 for not specified
@@ -68,6 +70,6 @@ extern void print_loaded_rom_analysis(loaded_rom_t *loaded_roms, rom_config_t *c
 
 // check-roms.c
 extern void validate_single_rom_set(loaded_rom_t *loaded_roms, rom_config_t *configs, int count);
-extern void validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int count);
+extern int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int count);
 
 #endif // ROMS_TEST_H

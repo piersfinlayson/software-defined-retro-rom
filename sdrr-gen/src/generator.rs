@@ -278,6 +278,31 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
         writeln!(file, "        .roms = rom_set_{}_roms,", ii)?;
         writeln!(file, "        .rom_count = ROM_SET_{}_ROM_COUNT,", ii)?;
         writeln!(file, "        .serve = {},", serve_alg)?;
+        let set_cs_state = if num_roms == 1 {
+            "CS_NOT_USED"
+        } else {
+            // Check that every ROM in this set has the same CS1 configuration
+            if rom_set.roms.iter().any(|rom| rom.config.cs_config.cs1 != rom_set.roms[0].config.cs_config.cs1) {
+                return Err(anyhow::anyhow!(
+                    "All ROMs in a multi-ROM set must have the same CS1 configuration"
+                ));
+            }
+
+            // Check that every ROM in this set has CS2 and CS3 ignored.
+            if rom_set.roms.iter().any(|rom| {
+                rom.config.cs_config.cs2.is_some_and(|cs| cs != CsLogic::Ignore) ||
+                rom.config.cs_config.cs3.is_some_and(|cs| cs != CsLogic::Ignore)
+            }) {
+                return Err(anyhow::anyhow!(
+                    "All ROMs in a multi-ROM set must have CS2 and CS3 ignored or not present"
+                ));
+            }
+
+            // Use the CS1 state from any ROM image, as they must be the same
+            cs_logic_to_enum(rom_set.roms[0].config.cs_config.cs1)
+
+        };
+        writeln!(file, "        .multi_rom_cs1_state = {},", set_cs_state)?;
         writeln!(file, "    }},")?;
     }
 

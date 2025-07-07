@@ -62,6 +62,8 @@ int parse_rom_configs(const char *configs, rom_config_t **roms) {
                 
                 if (strcmp(key, "file") == 0) {
                     (*roms)[rom_idx].filename = strdup(value);
+                } else if (strcmp(key, "extract") == 0) {
+                    (*roms)[rom_idx].extract_name = strdup(value);
                 } else if (strcmp(key, "type") == 0) {
                     (*roms)[rom_idx].type = strdup(value);
                 } else if (strcmp(key, "cs1") == 0) {
@@ -107,6 +109,9 @@ void free_rom_configs(rom_config_t *roms, int count) {
     
     for (int i = 0; i < count; i++) {
         free(roms[i].filename);
+        if (roms[i].extract_name) {
+            free(roms[i].extract_name);
+        }
         free(roms[i].type);
     }
     free(roms);
@@ -190,12 +195,125 @@ static int load_file_from_file(const char *filename, uint8_t **data, size_t *siz
     return 0;
 }
 
-int load_rom_file(rom_config_t *config, uint8_t **data, size_t *size) {
-    if (strstr(config->filename, "http://") == config->filename || strstr(config->filename, "https://") == config->filename) {
-        return load_file_from_url(config->filename, data, size);
-    } else {
-        return load_file_from_file(config->filename, data, size);
+static void url_decode(char *dst, const char *src) {
+    char *d = dst;
+    const char *s = src;
+    
+    while (*s) {
+        if (*s == '%' && s[1] && s[2]) {
+            int hex;
+            if (sscanf(s + 1, "%2x", &hex) == 1) {
+                *d++ = hex;
+                s += 3;
+            } else {
+                *d++ = *s++;
+            }
+        } else {
+            *d++ = *s++;
+        }
     }
+    *d = '\0';
+}
+
+static int extract_from_zip(uint8_t *zip_data, size_t zip_size, const char *filename, uint8_t **extracted_data, size_t *extracted_size) {
+    zip_error_t error;
+    zip_source_t *source = zip_source_buffer_create(zip_data, zip_size, 0, &error);
+    if (!source) {
+        printf("Error: Failed to create zip source buffer\n");
+        return -1;
+    }
+    
+    zip_t *archive = zip_open_from_source(source, ZIP_RDONLY, &error);
+    if (!archive) {
+        printf("Error: Failed to open zip archive: %s\n", zip_error_strerror(&error));
+        zip_source_free(source);
+        return -1;
+    }
+    
+    // URL decode the filename
+    char decoded_filename[strlen(filename) + 1];
+    url_decode(decoded_filename, filename);
+
+    zip_file_t *file = zip_fopen(archive, decoded_filename, 0);
+    if (!file) {
+        printf("Error: Failed to open file '%s' in zip archive: %s\n", filename, zip_strerror(archive));
+        
+        // List available files for debugging
+        printf("Available files in zip:\n");
+        zip_int64_t num_entries = zip_get_num_entries(archive, 0);
+        for (zip_int64_t i = 0; i < num_entries; i++) {
+            const char *name = zip_get_name(archive, i, 0);
+            if (name) printf("  %s\n", name);
+        }
+        
+        zip_close(archive);
+        return -1;
+    }
+    
+    zip_stat_t stat;
+    if (zip_stat(archive, decoded_filename, 0, &stat) != 0) {
+        printf("Error: Failed to get file stats for '%s' (decoded from '%s'): %s\n", 
+            decoded_filename, filename, zip_strerror(archive));
+        zip_fclose(file);
+        zip_close(archive);
+        return -1;
+    }
+    
+    *extracted_data = malloc(stat.size);
+    if (!*extracted_data) {
+        printf("Error: Failed to allocate %llu bytes for extracted file\n", (unsigned long long)stat.size);
+        zip_fclose(file);
+        zip_close(archive);
+        return -1;
+    }
+    
+    zip_int64_t bytes_read = zip_fread(file, *extracted_data, stat.size);
+    if (bytes_read < 0 || (zip_uint64_t)bytes_read != stat.size) {
+        printf("Error: Failed to read file data (read %lld, expected %llu bytes)\n", 
+               (long long)bytes_read, (unsigned long long)stat.size);
+        free(*extracted_data);
+        zip_fclose(file);
+        zip_close(archive);
+        return -1;
+    }
+    
+    *extracted_size = stat.size;
+    printf("Successfully extracted '%s' (%llu bytes) from zip\n", decoded_filename, (unsigned long long)stat.size);
+    
+    zip_fclose(file);
+    zip_close(archive);
+    return 0;
+}
+
+int load_rom_file(rom_config_t *config, uint8_t **data, size_t *size) {
+    int rc;
+
+    if (strstr(config->filename, "http://") == config->filename || strstr(config->filename, "https://") == config->filename) {
+        rc = load_file_from_url(config->filename, data, size);
+    } else {
+        rc = load_file_from_file(config->filename, data, size);
+    }
+    if (rc == -1) {
+        printf("Error loading ROM file: %s\n", config->filename);
+        return -1;
+    }
+
+    // If extract_name is specified, treat as zip and extract the file
+    if (config->extract_name) {
+        uint8_t *extracted_data;
+        size_t extracted_size;
+        
+        if (extract_from_zip(*data, *size, config->extract_name, &extracted_data, &extracted_size) == 0) {
+            free(*data);  // Free the zip data
+            *data = extracted_data;
+            *size = extracted_size;
+        } else {
+            free(*data);
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 // Load all ROM files from configs

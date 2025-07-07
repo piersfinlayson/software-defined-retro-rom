@@ -34,11 +34,11 @@ int main(void) {
     print_compiled_rom_info();
 
     // Validate the loaded ROMs against the compiled sets
-    validate_all_rom_sets(loaded_roms, configs, count);
+    rc = validate_all_rom_sets(loaded_roms, configs, count);
 
     free_all_roms(loaded_roms, count);
     free_rom_configs(configs, count);
 
-    return 0; // Success
+    return rc;
 }
 
