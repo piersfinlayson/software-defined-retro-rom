@@ -8,7 +8,7 @@
 
 // Metadata strings to include in the binary
 const char build_date[] = __DATE__ " " __TIME__;
-const char version[] = "0.1.0";
+const char version[] = "0.1.1";
 const char stm_variant[] = STM_VARIANT;
 const char license[] = "MIT License";
 const char project_url[] = "https://piers.rocks/u/sdrr";
