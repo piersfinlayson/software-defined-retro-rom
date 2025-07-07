@@ -905,8 +905,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             break;
 
         case SERVE_ADDR_ON_ANY_CS:
-            // Same Logic as SERVE_ADDR_ON_CS, but the test result is inverted
-            // as we're using BIC
+            // Same Logic as SERVE_ADDR_ON_CS, except:
+            // - TEST_CS_TEST is used instead of TEST_CS(all)
+            // - Tests are reversed, as BIC is being used to test
             __asm volatile (
                 BRANCH(ALG3_LOOP)
 
@@ -915,12 +916,12 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 SET_DATA_OUT
                 STORE_TO_DATA
                 LOAD_ADDR_CS
-                TEST_CS
+                TEST_CS_ANY
                 BEQ(ALG3_CS_INACTIVE)
 
             LABEL(ALG3_CS_ACTIVE_MID_LOOP)
                 LOAD_ADDR_CS
-                TEST_CS
+                TEST_CS_ANY
                 BNE(ALG3_CS_ACTIVE_MID_LOOP)
 
             LABEL(ALG3_CS_INACTIVE)
@@ -931,7 +932,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
             LABEL(ALG3_LOOP)
                 LOAD_ADDR_CS
-                TEST_CS
+                TEST_CS_ANY
                 BNE(ALG3_CS_ACTIVE)
 
 #if defined(MAIN_LOOP_LOGGING)
