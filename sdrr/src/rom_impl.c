@@ -631,7 +631,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
 #if defined(HW_REV_F)
     // Warn if serve mode is incorrectly set for multiple ROM images
-    if ((set->rom_count > 1) || (set->serve == SERVE_TWO_CS_ONE_ADDR)) {
+    if ((set->rom_count > 1) && (set->serve == SERVE_TWO_CS_ONE_ADDR)) {
         ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set");
     }
 #endif // HW_REV_F
