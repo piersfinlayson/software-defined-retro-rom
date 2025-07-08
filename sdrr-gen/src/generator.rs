@@ -323,15 +323,45 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
         writeln!(file, "// ROM set {} data", rom_set.id)?;
         writeln!(file, "static const uint8_t rom_set_{}_data[ROM_SET_{}_DATA_SIZE] = {{", ii, ii)?;
 
+        fn format_binary_spaced(num: impl std::fmt::Binary, width: usize) -> String {
+            let binary = format!("{:0width$b}", num, width = width);
+            binary
+                .chars()
+                .collect::<Vec<_>>()
+                .chunks(4)
+                .map(|chunk| chunk.iter().collect::<String>())
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+
         for address in 0..image_size {
-            if address % 16 == 0 {
+            if address % 256 == 0 {
+                // Comment address every 256 bytes
                 if address > 0 {
                     writeln!(file)?;
+                    writeln!(file)?;
                 }
+
+                // Output address in hex and binary
+                writeln!(file, "    // Address 0x{:04x}, {}", address, format_binary_spaced(address, 16))?;
+                if rom_set.roms.len() > 1 {
+                    writeln!(
+                        file,
+                        "    // CS1 = {}, X1 = {}, X2 = {}",
+                        if (address & (1 << 10)) != 0 { 1 } else { 0 },
+                        if (address & (1 << 14)) != 0 { 1 } else { 0 },
+                        if (address & (1 << 15)) != 0 { 1 } else { 0 }
+                    )?;
+                }
+            } else if address % 16 == 0 {
+                // Otherwise, start a newline every 16 bytes
+                writeln!(file)?;
+            }
+
+            if address % 16 == 0 {
                 write!(file, "    ")?;
             }
-            
-            // This would call the new rom_set.get_byte() method I proposed
+
             let byte = rom_set.get_byte(address, &family, hw_rev);
             write!(file, "0x{:02x}, ", byte)?;
         }
