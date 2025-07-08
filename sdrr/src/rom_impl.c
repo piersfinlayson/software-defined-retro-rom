@@ -488,16 +488,17 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 // Assembly code macros
 
 // Loads the address/CS lines into R_ADDR_CS
-#define LOAD_ADDR_CS    "ldr " R_ADDR_CS ", [" R_GPIO_ADDR_CS_IDR "]\n"
+#define LOAD_ADDR_CS    "ldrh " R_ADDR_CS ", [" R_GPIO_ADDR_CS_IDR "]\n"
 
 // Tests whether the CS line is active - zero flag set if so (low)
 #define TEST_CS         "eor " R_CS_TEST ", " R_ADDR_CS ", " R_CS_INVERT_MASK "\n" \
                         "tst " R_CS_TEST ", " R_CS_CHECK_MASK "\n"
 
 // Tests where any of the CS lines are active - zero flash _not set_ if so.
-// BIC is bit clear - essentially destination = source & ~mask
+// BIC is bit clear - essentially destination = source & ~mask.  Note we need
+// BICS - where S indicates the N/Z flags should be updated, which we use
 #define TEST_CS_ANY     "eor " R_CS_TEST ", " R_ADDR_CS ", " R_CS_INVERT_MASK "\n" \
-                        "bic " R_CS_TEST ", " R_CS_CHECK_MASK ", " R_CS_TEST "\n"
+                        "bics " R_CS_TEST ", " R_CS_CHECK_MASK ", " R_CS_TEST "\n"
 
 // Loads the data byte from the ROM table into R_DATA, based on the address in
 // R_ADDR_CS
@@ -507,10 +508,10 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
 #define STORE_TO_DATA   "strb " R_DATA ", [" R_GPIO_DATA_ODR "]\n"
 
 // Sets the data lines as outputs
-#define SET_DATA_OUT    "str " R_DATA_OUT_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#define SET_DATA_OUT    "strh " R_DATA_OUT_MASK ", [" R_GPIO_DATA_MODER "]\n"
 
 // Sets the data lines as inputs
-#define SET_DATA_IN     "str " R_DATA_IN_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#define SET_DATA_IN     "strh " R_DATA_IN_MASK ", [" R_GPIO_DATA_MODER "]\n"
 
 // Branches if zero flag set
 #define BEQ(X)          "beq " #X "\n"
@@ -557,7 +558,15 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 #if defined(HW_REV_F)
     if (serve_mode == SERVE_ADDR_ON_ANY_CS)
     {
-        cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_X1_INT) | (1 << PIN_X2_INT);
+        if (set->rom_count == 2)
+        {
+            cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_X1_INT);
+        } else if (set->rom_count == 3) {
+            cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_X1_INT) | (1 << PIN_X2_INT);
+        } else {
+            ROM_IMPL_LOG("!!! Unsupported ROM count: %d", set->rom_count);
+            cs_check_mask = (1 << PIN_CS_INT); // Default to CS1 only
+        }
         if (set->multi_rom_cs1_state == CS_ACTIVE_HIGH) {
             cs_invert_mask = cs_check_mask;
         }
@@ -660,6 +669,14 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         GPIOC_PUPDR = 0xA0000000;
     }
 
+#if 0
+    // Hack in fixed values
+    GPIOC_PUPDR = 0xA0000000;
+    cs_check_mask = (1 << PIN_CS_INT);
+    cs_invert_mask = 0;
+    serve_mode = SERVE_TWO_CS_ONE_ADDR;
+#endif
+
     // Preload registers with their values
     register uint32_t cs_invert_mask_reg asm(R_CS_INVERT_MASK) = cs_invert_mask;
     register uint32_t cs_check_mask_reg asm(R_CS_CHECK_MASK) = cs_check_mask;
@@ -678,6 +695,13 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 #if defined(STATUS_LED)
     setup_status_led();
 #endif // STATUS_LED
+
+#if defined(MAIN_LOOP_LOGGING)
+    // Log some useful information before entering the main loop
+    ROM_IMPL_LOG("CS check mask: 0x%08X", cs_check_mask);
+    ROM_IMPL_LOG("CS invert mask: 0x%08X", cs_invert_mask);
+    ROM_IMPL_LOG("GPIOC_PUPDR: 0x%08X", GPIOC_PUPDR);
+#endif // MAIN_LOOP_LOGGING
 
 #if defined(MAIN_LOOP_LOGGING)
     uint32_t byte;
@@ -906,7 +930,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
         case SERVE_ADDR_ON_ANY_CS:
             // Same Logic as SERVE_ADDR_ON_CS, except:
-            // - TEST_CS_TEST is used instead of TEST_CS(all)
+            // - TEST_CS_ANY is used instead of TEST_CS(all)
             // - Tests are reversed, as BIC is being used to test
             __asm volatile (
                 BRANCH(ALG3_LOOP)
@@ -997,7 +1021,7 @@ uint8_t get_rom_set_index(void) {
 
 void preload_rom_image(const sdrr_rom_set_t *set) {
     uint32_t *img_src, *img_dst;
-    uint16_t img_size;
+    uint32_t img_size;
 
     // Find the start of this ROM image in the flash memory
     img_size = set->size;
@@ -1062,7 +1086,8 @@ void preload_rom_image(const sdrr_rom_set_t *set) {
     memcpy(img_dst, img_src, img_size);
 #endif // STM32F1/4
 
-    LOG("ROM %s preloaded to RAM 0x%08X", set->roms[0]->filename, (uint32_t)_ram_rom_image_start);
+    LOG("ROM %s preloaded to RAM 0x%08X size %d bytes", set->roms[0]->filename, (uint32_t)_ram_rom_image_start, img_size);
+    LOG("Set ROM count: %d, Serving algorithm: %d, multi-ROM CS1 state: %d", set->rom_count, set->serve, set->multi_rom_cs1_state);
 }
 
 #endif // !TIMER_TEST/TOGGLE_PA4
