@@ -227,7 +227,7 @@ impl RomImage {
     /// When reading the byte the hardware
     /// - Masks with 0x0F and shifts left 6 bits to apply to port C
     /// - Masks with 0xF0 and shifts left 4 (more) bits to apply to port A
-    pub fn transform_byte(&self, byte: u8, family: &StmFamily) -> u8 {
+    pub fn transform_byte(byte: u8, family: &StmFamily) -> u8 {
         // This array maps each original bit position to its new position
         let bit_posn_map = match family {
             StmFamily::F1 => [
@@ -295,7 +295,7 @@ impl RomImage {
 
         // Now transform the byte, as the physical data lines are not in the
         // expected order (0-7).
-        self.transform_byte(byte, &family)
+        Self::transform_byte(byte, &family)
     }
 }
 
@@ -316,20 +316,24 @@ impl RomSet {
         for (index, rom_in_set) in self.roms.iter().enumerate() {
             // Get the CS pin that controls this ROM's selection
             let cs_pin = hw_rev.cs_pin_for_rom_in_set(index);
-            let cs_active = (address & (1 << cs_pin)) == 0;  // Active low
+            let cs_active = if rom_in_set.config.cs_config.cs1 == CsLogic::ActiveHigh {
+                 (address & (1 << cs_pin)) == 1
+            } else {
+                (address & (1 << cs_pin)) == 0
+            };
             
             if cs_active {
                 // Check if this ROM's CS2/CS3 requirements are met
                 if self.check_rom_cs_requirements(rom_in_set, address, hw_rev) {
                     // This ROM responds - mask out CS selection bits and get data
-                    // let masked_address = self.mask_cs_selection_bits(address, &rom_in_set.config.rom_type, hw_rev);
-                    // return rom_in_set.image.get_byte(masked_address, family, &rom_in_set.config.rom_type);
+                    //let masked_address = self.mask_cs_selection_bits(address, &rom_in_set.config.rom_type, hw_rev);
+                    //return rom_in_set.image.get_byte(masked_address, family, &rom_in_set.config.rom_type);
                     return rom_in_set.image.get_byte(address, family, &rom_in_set.config.rom_type);
                 }
             }
         }
         
-        0xAA // No ROM selected
+        RomImage::transform_byte(0xAA, &family) // No ROM selected
     }
 
     fn check_rom_cs_requirements(&self, rom_in_set: &RomInSet, address: usize, hw_rev: HwRev) -> bool {
