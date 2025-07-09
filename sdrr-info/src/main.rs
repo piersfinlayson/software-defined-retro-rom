@@ -37,6 +37,9 @@ mod utils;
 // External crates
 use anyhow::Result;
 use std::io::Write;
+use std::path::Path;
+use std::fs::metadata;
+use chrono::{DateTime, Local};
 
 use symbols::SdrrInfo;
 use load::load_sdrr_firmware;
@@ -97,6 +100,20 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
     println!();
     println!("Core Firmware Properties");
     println!("------------------------");
+    println!("File name:     {}", 
+        Path::new(&args.firmware)
+            .file_name()
+            .map(|n| n.to_string_lossy())
+            .unwrap_or_else(|| "".into())
+    );
+    let modified_str = metadata(&args.firmware)
+        .and_then(|data| data.modified())
+        .map(|modified| {
+            let datetime: DateTime<Local> = modified.into();
+            datetime.format("%b %e %Y %H:%M:%S").to_string()
+        })
+        .unwrap_or_else(|_| "error".to_string());
+    println!("File modified: {}", modified_str);
     println!("File type:     {}", info.file_type);
     println!("File size:     {} bytes ({}KB)", add_commas(info.file_size as u64), (info.file_size + 1023) / 1024);
     println!(

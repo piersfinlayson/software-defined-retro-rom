@@ -5,21 +5,20 @@ The SDRR build system is a multi-stage pipeline that transforms ROM images and c
 ## Build Pipeline Overview
 
 ```ascii
-User Input → Top-level Make → sdrr-gen → sdrr Make → test (optional) → probe-rs → STM32
-    ↓              ↓            ↓          ↓                              ↓         ↓
-Config Files  ROM Download    Code Gen    Compile      Compile test     Flash     Running
-ROM Images    & Validation    & Mangle    & Link          & Run        Firmware
+User Input → Top-level Make → sdrr-gen → sdrr Make → sdrr-info → test (optional) → probe-rs → STM32
+    ↓              ↓            ↓          ↓             ↓              ↓              ↓        ↓
+Config Files  ROM Download    Code Gen    Compile      Query      Compile tests      Flash    Running
+ROM Images    & Validation    & Mangle    & Link      Firmware        & Run         Firmware
 ```
 
-The build process involves five main components:
+The build process involves six main components:
 
 1. **Top-level Makefile** - Configuration processing and orchestration
 2. **sdrr-gen** - Rust tool for ROM processing and generation of firmware code containing the ROMs
 3. **sdrr Makefile** - STM32 ARM firmware compilation
-4. **test** - Optioanl tests to verify the generated "mangled" ROMs
-5. **probe-rs** - STM32 flashing and debugging
-
-In addition, [`sdrr-info`](/sdrr-info/README.me) allows you to inspect SDRR `.elf` and `.bin` firmware files, created using version v0.1.1 and later.
+4. **sdrr-info** - Validate the build firmware and extract its key properties
+5. **test** - Optional tests to verify the generated "mangled" ROMs - `make test`
+6. **probe-rs** - STM32 flashing and debugging
 
 ## Component Breakdown
 
@@ -118,7 +117,13 @@ OBJCOPY := $(TOOLCHAIN)/bin/arm-none-eabi-objcopy
 - `/output/linker.ld` - Generated linker script for specific STM32 variant
 - `/sdrr/segger-rtt/RTT/*.c` - Debug logging library (downloaded automatically by build process)
 
-### 4. Test (Optional)
+### 6. sdrr-info
+
+**Purpose**: Validate the build firmware and extract its key properties
+
+See [`sdrr-info`](/sdrr-info/README.md) for details on how to use this tool.
+
+### 5. Test (Optional)
 
 **Purpose**: Validate the generated mangled ROM data, which is built into the firmware image
 
@@ -138,7 +143,7 @@ The test program builds in the `sdrr-gen` auto-generated `roms.c` output, loads 
 
 This is a complex process when testing rom sets, as the appropriate chip select line(s) have to be activated.
 
-### 5. probe-rs Integration
+### 6. probe-rs Integration
 
 **Purpose**: Hardware flashing and debugging
 

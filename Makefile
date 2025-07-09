@@ -451,20 +451,6 @@ endif
 
 $(info ==========================================)
 
-WARNINGS=0
-
-$(info SDRR Build Warnings: )
-ifneq ($(SWD), 1)
-  $(info - $(COLOUR_YELLOW)SWD is disabled$(COLOUR_RESET) - this will prevent you from reprogramming the device via SWD after flashing with this image)
-  WARNINGS += 1
-endif
-
-ifeq ($(WARNINGS),0)
-  $(info - None)
-endif
-
-$(info ==========================================)
-
 # Convert ROM_CONFIGS to --rom arguments, adjusting local file paths only
 #
 # HTTP/HTTPS URLs are used as-is
@@ -477,7 +463,7 @@ $(if $(findstring http://,$(1)),
         $(1),
         $(if $(filter /%,$(patsubst file=%,%,$(1))),
             $(1),
-            $(subst file=,file=../,$(1))
+            $(1)
         )
     )
 )
@@ -485,27 +471,81 @@ endef
 ROM_ARGS = $(foreach config,$(ROM_CONFIGS),--rom $(strip $(call process_rom_config,$(config))))
 $(info ROM_ARGS = $(ROM_ARGS))
 
-.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen firmware run test
+$(info ==========================================)
 
-all: firmware
+WARNINGS=0
+
+$(info SDRR Build Warnings: )
+ifneq ($(SWD), 1)
+  $(info - $(COLOUR_YELLOW)SWD is disabled$(COLOUR_RESET) - this will prevent you from reprogramming the device via SWD after flashing with this image)
+  WARNINGS += 1
+endif
+
+ifeq ($(WARNINGS),0)
+  $(info - None)
+endif
+
+.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen clean-sdrr-info sdrr-info info info-detail firmware run test
+
+all: firmware info
+	@echo "=========================================="
+	@echo "SDRR firmware build complete - firmware files are in sdrr/build/"
+	@ls -ltr sdrr/build/sdrr-stm32$(STM).elf
+	@ls -ltr sdrr/build/sdrr-stm32$(STM).bin
+	@echo "=========================================="
 
 sdrr-gen:
-	cd sdrr-gen && cargo build
+	@echo "=========================================="
+	@echo "Building sdrr-gen, to generate firmware settings and retrieve and process ROM data"
+	@echo "=========================================="
+	cd sdrr-gen && cargo build --release
 
 gen: sdrr-gen
+	@echo "=========================================="
+	@echo "Generating firmware settings and retrieving and processing ROM data"
+	@echo "=========================================="
 	mkdir -p $(GEN_OUTPUT_DIR)
-	cd sdrr-gen && cargo run -- --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output ../$(GEN_OUTPUT_DIR)
+	sdrr-gen/target/release/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output ../$(GEN_OUTPUT_DIR)
+
+sdrr-info:
+	cd sdrr-info && cargo build --release
+
+info: sdrr-info firmware
+	@echo "=========================================="
+	@echo "Validating SDRR firmware and extracting its key properties"
+	@echo "=========================================="
+	@sdrr-info/target/release/sdrr-info info sdrr/build/sdrr-stm32$(STM).bin
+	@echo "=========================================="
+	@echo "Use <SAME_ARGS> make info-detail to see more details about the firmware"
+
+info-detail: sdrr-info firmware
+	@echo "=========================================="
+	@echo "Detailed firmware information"
+	@echo "=========================================="
+	@sdrr-info/target/release/sdrr-info info -d sdrr/build/sdrr-stm32$(STM).bin
+	@echo "=========================================="
 
 firmware: gen
+	@echo "=========================================="
+	@echo "Building SDRR firmware for STM32$(STM) with HW revision $(HW_REV)"
+	@echo "=========================================="
 	+cd sdrr && make OUTPUT_DIR=../$(GEN_OUTPUT_DIR)
-	ls -ltr sdrr/build/*.bin
+	@echo "=========================================="
+	@echo "SDRR firmware build complete - firmware files are in sdrr/build/"
+	@ls -ltr sdrr/build/*.bin
 
 # Call make run-actual - this causes a new instance of make to be invoked and generated.mk exists, so it can load PROBE_RS_CHIP_ID
 run: firmware
 	make run-actual
 
 test: firmware
+	@echo "=========================================="
+	@echo "Building tests to verify generated ROMs"
+	@echo "=========================================="
 	+cd test && make
+	@echo "=========================================="
+	@echo "Running tests to verify generated ROMs"
+	@echo "=========================================="
 	ROM_CONFIGS="$(ROM_CONFIGS)" test/build/image-test
 
 -include $(GEN_OUTPUT_DIR)/generated.mk
@@ -525,4 +565,7 @@ clean-gen:
 clean-sdrr-gen:
 	cd sdrr-gen && cargo clean
 
-clean: clean-firmware clean-gen clean-sdrr-gen
+clean-sdrr-info:
+	cd sdrr-info && cargo clean
+
+clean: clean-firmware clean-gen clean-sdrr-gen clean-sdrr-info
