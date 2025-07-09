@@ -23,14 +23,15 @@ typedef enum uint32_t {
     HW_REV_28_A = HW_DEV_28 | 0x00,
 } sdrr_hw_rev_t;
 
-typedef enum : uint16_t {
+typedef enum {
     F401 = 0x0000,
     F405 = 0x0001,
     F411 = 0x0002,
     F446 = 0x0003,
+    STM_LINE_FORCE_UINT16 = 0xFFFF,
 } stm_line_t;
 
-typedef enum uint16_t {
+typedef enum {
     STORAGE_8 = 0x00,
     STORAGE_B = 0x01,
     STORAGE_C = 0x02,
@@ -38,6 +39,7 @@ typedef enum uint16_t {
     STORAGE_E = 0x04,
     STORAGE_F = 0x05,
     STORAGE_G = 0x06,
+    STM_STORAGE_FORFCE_UINT16 = 0xFFFF,
 } stm_storage_t;
 
 struct sdrr_rom_set_t;
