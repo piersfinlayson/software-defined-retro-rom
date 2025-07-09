@@ -662,4 +662,150 @@ impl SdrrInfo {
     pub fn is_hw_rev_f(&self) -> bool {
         matches!(self.hw_rev, SdrrHwRev::Rev24F)
     }
+
+    pub fn demangle_byte(&self, byte: u8) -> u8 {
+        match self.hw_rev {
+            SdrrHwRev::Rev24D |
+            SdrrHwRev::Rev24E |
+            SdrrHwRev::Rev24F |
+            SdrrHwRev::Rev28A => {
+                // Bit 0 -> 7
+                // Bit 1 -> 6
+                // Bit 2 -> 5
+                // Bit 3 -> 4
+                // Bit 4 -> 3
+                // Bit 5 -> 2
+                // Bit 6 -> 1
+                // Bit 7 -> 0
+                byte.reverse_bits()
+            }
+            _ => {
+                panic!("Unsupported hardware revision for demangling: {}", self.hw_rev);
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    #[allow(unused_variables)]
+    pub fn mangle_address(&self, addr: u32, cs1: bool, cs2: Option<bool>, c3: Option<bool>, x1: Option<bool>, x2: Option<bool>) -> u32 {
+        if self.hw_rev != SdrrHwRev::Rev24D && self.hw_rev != SdrrHwRev::Rev24E && self.hw_rev != SdrrHwRev::Rev24F {
+            panic!("Mangle address is only supported for hardware revisions 24-D, 24-E and 24-F");
+        }
+
+        let mut pin_to_addr_map = [
+            Some(7),
+            Some(6),
+            Some(5),
+            Some(4),
+            Some(1),
+            Some(0),
+            Some(2),
+            Some(3),
+            Some(8),
+            Some(12),
+            None,
+            Some(10),
+            Some(11),
+            Some(9),
+            None,
+            None,
+        ];
+
+        let num_roms = self.rom_sets[0].rom_count as usize;
+        if num_roms > 1 {
+            // X1 and X2 pins
+            pin_to_addr_map[14] = Some(14);
+            pin_to_addr_map[15] = Some(15);
+        }
+
+        let rom_type = self.rom_sets[0].roms[0].rom_type;
+        let addr_mask = match rom_type {
+            SdrrRomType::Rom2364 => {
+                pin_to_addr_map[10] = Some(13);
+                0x1FFF // 13-bit address
+            }
+            SdrrRomType::Rom2332 => {
+                pin_to_addr_map[10] = Some(13);
+                pin_to_addr_map[9] = Some(12);
+                0x0FFF // 12-bit address
+            }
+            SdrrRomType::Rom2316 => {
+                pin_to_addr_map[10] = Some(13);
+                pin_to_addr_map[9] = Some(11);
+                pin_to_addr_map[12] = Some(12);
+                0x07FF // 11-bit address
+            }
+        };
+
+        let overflow = addr & !addr_mask;
+        if overflow != 0 {
+            panic!("Requested Address 0x{:08X} overflows the address space for ROM type {}", addr, rom_type);
+        }
+
+        let mut input_addr = addr & addr_mask;
+        match rom_type {
+            SdrrRomType::Rom2364 => {
+                if cs1 {
+                    input_addr |= 1 << 13; // Set CS1 bit for 2364
+                }
+            },
+            SdrrRomType::Rom2332 => {
+                if cs1 {
+                    input_addr |= 1 << 13; // Set CS1 bit for 2332
+                }
+                if let Some(cs2) = cs2 {
+                    if cs2 {
+                        input_addr |= 1 << 12; // Set CS2 bit for 2332
+                    }
+                }
+            },
+            SdrrRomType::Rom2316 => {
+                if cs1 {
+                    input_addr |= 1 << 13; // Set CS1 bit for 2316
+                }
+                if let Some(cs2) = cs2 {
+                    if cs2 {
+                        input_addr |= 1 << 12; // Set CS2 bit for 2316
+                    }
+                }
+                if let Some(c3) = c3 {
+                    if c3 {
+                        input_addr |= 1 << 11; // Set CS3 bit for 2316
+                    }
+                }
+            }
+        };
+
+        if num_roms > 1 {
+            // Handle X1 and X2 pins
+            if let Some(x1) = x1 {
+                if x1 {
+                    input_addr |= 1 << 14; // Set X1 pin
+                }
+            }
+            if let Some(x2) = x2 {
+                if x2 {
+                    input_addr |= 1 << 15; // Set X2 pin
+                }
+            }
+        }
+
+        // Apply the pin mapping
+        let mut result = 0;
+        for pin in 0..pin_to_addr_map.len() {
+            if let Some(addr_bit) = pin_to_addr_map[pin] {
+                // Check if this address bit is set in the input address
+                if (input_addr & (1 << addr_bit)) != 0 {
+                    // Set the corresponding pin in the result
+                    result |= 1 << pin;
+                }
+            }
+        }
+
+        result
+    }
+
+    pub fn get_rom_set_image(&self, set: u8) -> Option<&[u8]> {
+        self.rom_sets.get(set as usize).map(|rom_set| rom_set.data.as_slice())
+    }
 }
