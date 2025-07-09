@@ -2,6 +2,10 @@
 
 This document summarises how SDRR provides the ROM emulation function, and hits the required timings.
 
+If you'd rather consume similar content in video form:
+
+[![How It's Done - Software ROMs](https://img.youtube.com/vi/pOZ2-W3dpZ8/maxresdefault.jpg)](https://youtu.be/pOZ2-W3dpZ8)
+
 ## Overview
 
 SDRR replaces mask-programmed ROMs (2364/8KB, 2332/4KB, 2316/2KB) in retro systems using an STM32F4 microcontroller.  Unlike traditional ROM replacements that require hardware modifications or expensive programming equipment, SDRR provides a software-configurable solution that can store multiple ROM images of different types and switch between them via jumpers.  It can also be reprogrammed in situ, without needing to remove it from the system.
