@@ -1,12 +1,12 @@
 /// sdrr-info
-/// 
+///
 /// This tool extracts the core properties, configuration options and ROM
 /// image information from an SDRR firmware binary or ELF file.
-/// 
+///
 /// It supports firmware version from v0.1.1 onwards.  v0.1.0 firmware did not
 /// contain the relevant magic bytes or properties in a format that could be
 /// easily extracted.
-/// 
+///
 /// It works by:
 /// - Loading the provided file
 /// - Detecting whether it's an ELF file (otherwise it assumes a binary file)
@@ -29,13 +29,14 @@ pub const SDRR_VERSION_MINOR: u16 = 1;
 pub const SDRR_VERSION_PATCH: u16 = 1;
 
 use anyhow::Result;
+use std::io::Write;
 
 mod symbols;
 use symbols::SdrrInfo;
 mod load;
 use load::load_sdrr_firmware;
 mod args;
-use args::{parse_args, Command, Args};
+use args::{Args, Command, parse_args};
 
 // SDRR info structure offset in firmware binary
 pub const SDRR_INFO_OFFSET: usize = 0x200;
@@ -43,13 +44,17 @@ pub const SDRR_INFO_OFFSET: usize = 0x200;
 // STM32F4 flash base address
 pub const STM32F4_FLASH_BASE: u32 = 0x08000000;
 
-// Example usage function
-pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn print_header() {
     println!("Software Defined Retro ROM - Firmware Information");
     println!("=================================================");
+}
+
+// Example usage function
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = match parse_args() {
         Ok(args) => args,
         Err(e) => {
+            print_header();
             eprintln!("{}", e);
             std::process::exit(1);
         }
@@ -57,16 +62,22 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let firmware_path = &args.firmware;
     let info = match load_sdrr_firmware(firmware_path) {
-        Ok(info) => {
-            info
-        }
+        Ok(info) => info,
         Err(e) => {
+            print_header();
             eprintln!("Error loading firmware");
-            println!("Did you supply an SDRR v0.1.1 or later .elf or .bin file?");
-            println!("Detailed error: {}", e);
+            eprintln!("Did you supply an SDRR v0.1.1 or later .elf or .bin file?");
+            eprintln!("Detailed error: {}", e);
             std::process::exit(1);
         }
     };
+
+    // Only output a header if output-binary argument not set
+    if let Some(binary) = args.output_binary {
+        if !binary {
+            print_header();
+        }
+    }
 
     match args.command {
         Command::Info => print_sdrr_info(&info, &args),
@@ -161,42 +172,52 @@ fn print_sdrr_info(info: &SdrrInfo, _args: &Args) {
 }
 
 fn lookup_byte_at_address(
-    info: &SdrrInfo, 
-    set: u8, 
-    lookup_addr: u32, 
+    info: &SdrrInfo,
+    set: u8,
+    lookup_addr: u32,
     original_addr: u32,
     output_mangled: bool,
-    addr_description: &str
+    addr_description: &str,
 ) -> Result<(), String> {
     // Get the image
-    let image = info.get_rom_set_image(set)
+    let image = info
+        .get_rom_set_image(set)
         .ok_or_else(|| format!("No ROM set found for set number {}", set))?;
 
     // Lookup the address in the image
     let byte = image[lookup_addr as usize];
 
     // Get ROM names
-    let roms: Vec<String> = info
-        .rom_sets[set as usize]
+    let roms: Vec<String> = info.rom_sets[set as usize]
         .roms
         .iter()
-        .map(|rom| rom.filename.clone().unwrap_or_else(|| "<unknown>".to_string()))
+        .map(|rom| {
+            rom.filename
+                .clone()
+                .unwrap_or_else(|| "<unknown>".to_string())
+        })
         .collect();
     let rom_name = roms.join(", ");
-    
+
     println!("Byte lookup ROM set {} ({})", set, rom_name);
-    
+
     if lookup_addr != original_addr {
         println!("Mangled address 0x{:04X}", lookup_addr);
     }
-    
+
     if output_mangled {
-        println!("{} 0x{:04X}: 0x{:02X} (mangled byte)", addr_description, original_addr, byte);
+        println!(
+            "{} 0x{:04X}: 0x{:02X} (mangled byte)",
+            addr_description, original_addr, byte
+        );
     } else {
         let demangled_byte = info.demangle_byte(byte);
-        println!("{} 0x{:04X}: 0x{:02X} (demangled byte)", addr_description, original_addr, demangled_byte);
+        println!(
+            "{} 0x{:04X}: 0x{:02X} (demangled byte)",
+            addr_description, original_addr, demangled_byte
+        );
     }
-    
+
     Ok(())
 }
 
@@ -207,9 +228,12 @@ fn lookup_raw(info: &SdrrInfo, args: &Args) {
     // Ensure we have the arguments
     let set = args.set.expect("Internal error: set number is required");
     let addr = args.addr.expect("Internal error: address is required");
-    let output_mangled = args.output_mangled.expect("Internal error: output_mangled is required");
+    let output_mangled = args
+        .output_mangled
+        .expect("Internal error: output_mangled is required");
 
-    if let Err(e) = lookup_byte_at_address(info, set, addr, addr, output_mangled, "Mangled address") {
+    if let Err(e) = lookup_byte_at_address(info, set, addr, addr, output_mangled, "Mangled address")
+    {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
@@ -228,60 +252,62 @@ fn lookup_range(
     x1: Option<bool>,
     x2: Option<bool>,
 ) -> Result<(), String> {
-    let image = info.get_rom_set_image(set)
+    let image = info
+        .get_rom_set_image(set)
         .ok_or_else(|| format!("No ROM set found for set number {}", set))?;
 
-    let roms: Vec<String> = info
-        .rom_sets[set as usize]
+    let roms: Vec<String> = info.rom_sets[set as usize]
         .roms
         .iter()
-        .map(|rom| rom.filename.clone().unwrap_or_else(|| "<unknown>".to_string()))
+        .map(|rom| {
+            rom.filename
+                .clone()
+                .unwrap_or_else(|| "<unknown>".to_string())
+        })
         .collect();
     let rom_name = roms.join(", ");
-    
-    println!("Byte lookup ROM set {} ({})", set, rom_name);
-    println!("Address range 0x{:04X} to 0x{:04X}:", start_addr, end_addr);
-    
+
     if output_binary {
         // Collect bytes for binary output
         let mut binary_data = Vec::new();
-        
+
         for addr in start_addr..=end_addr {
             let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2);
             let byte = image[lookup_addr as usize];
-            
+
             let output_byte = if output_mangled {
                 byte
             } else {
                 info.demangle_byte(byte)
             };
-            
+
             binary_data.push(output_byte);
         }
-        
-        // Write binary data to file
-        let filename = "/tmp/rom.bin";
-        std::fs::write(filename, &binary_data)
-            .map_err(|e| format!("Failed to write binary file {}: {}", filename, e))?;
-        
-        println!("Binary data written to {}", filename);
+
+        // Write binary data to stdout
+        std::io::stdout()
+            .write_all(&binary_data)
+            .map_err(|e| format!("Failed to write binary data to stdout: {}", e))?;
     } else {
         // Hex dump output
+        println!("Byte lookup ROM set {} ({})", set, rom_name);
+        println!("Address range 0x{:04X} to 0x{:04X}:", start_addr, end_addr);
+
         for addr in start_addr..=end_addr {
             let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2);
             let byte = image[lookup_addr as usize];
-            
+
             let output_byte = if output_mangled {
                 byte
             } else {
                 info.demangle_byte(byte)
             };
-            
+
             let byte_pos = (addr - start_addr) as usize;
-            
+
             // Print the byte
             print!("{:02X}", output_byte);
-            
+
             // Add spacing
             if (byte_pos + 1) % 16 == 0 {
                 // Newline every 16 bytes
@@ -294,25 +320,32 @@ fn lookup_range(
                 print!(" ");
             }
         }
-        
+
         // Ensure we end with a newline if we didn't just print one
         let total_bytes = (end_addr - start_addr + 1) as usize;
         if total_bytes % 16 != 0 {
             println!();
         }
     }
-    
+
     Ok(())
 }
 
 fn lookup(info: &SdrrInfo, args: &Args) {
-    println!("Lookup Byte Using Real (non-mangled) Address");
-    println!("--------------------------------------------");
+    let binary = args.output_binary.unwrap_or(false);
+    if !binary {
+        println!("Lookup Byte Using Real (non-mangled) Address");
+        println!("--------------------------------------------");
+    }
 
     // Ensure we have the arguments
     let set = args.set.expect("Internal error: set number is required");
-    let output_mangled = args.output_mangled.expect("Internal error: output_mangled is required");
-    let _output_binary = args.output_binary.expect("Internal error: output_binary is required");
+    let output_mangled = args
+        .output_mangled
+        .expect("Internal error: output_mangled is required");
+    let _output_binary = args
+        .output_binary
+        .expect("Internal error: output_binary is required");
     let cs1 = args.cs1.expect("Internal error: cs1 is required");
     let cs2 = args.cs2;
     let cs3 = args.cs3;
@@ -322,7 +355,19 @@ fn lookup(info: &SdrrInfo, args: &Args) {
     if let Some((start_addr, end_addr)) = args.range {
         // Range lookup
         let output_binary = args.output_binary.unwrap_or(false);
-        if let Err(e) = lookup_range(info, set, start_addr, end_addr, output_mangled, output_binary, cs1, cs2, cs3, x1, x2) {
+        if let Err(e) = lookup_range(
+            info,
+            set,
+            start_addr,
+            end_addr,
+            output_mangled,
+            output_binary,
+            cs1,
+            cs2,
+            cs3,
+            x1,
+            x2,
+        ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
         }
@@ -331,7 +376,14 @@ fn lookup(info: &SdrrInfo, args: &Args) {
         let addr = args.addr.expect("Internal error: address is required");
         let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2);
 
-        if let Err(e) = lookup_byte_at_address(info, set, lookup_addr, addr, output_mangled, "Actual address") {
+        if let Err(e) = lookup_byte_at_address(
+            info,
+            set,
+            lookup_addr,
+            addr,
+            output_mangled,
+            "Actual address",
+        ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
         }

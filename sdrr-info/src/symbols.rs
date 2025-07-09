@@ -665,10 +665,7 @@ impl SdrrInfo {
 
     pub fn demangle_byte(&self, byte: u8) -> u8 {
         match self.hw_rev {
-            SdrrHwRev::Rev24D |
-            SdrrHwRev::Rev24E |
-            SdrrHwRev::Rev24F |
-            SdrrHwRev::Rev28A => {
+            SdrrHwRev::Rev24D | SdrrHwRev::Rev24E | SdrrHwRev::Rev24F | SdrrHwRev::Rev28A => {
                 // Bit 0 -> 7
                 // Bit 1 -> 6
                 // Bit 2 -> 5
@@ -680,15 +677,29 @@ impl SdrrInfo {
                 byte.reverse_bits()
             }
             _ => {
-                panic!("Unsupported hardware revision for demangling: {}", self.hw_rev);
+                panic!(
+                    "Unsupported hardware revision for demangling: {}",
+                    self.hw_rev
+                );
             }
         }
     }
 
     #[allow(dead_code)]
     #[allow(unused_variables)]
-    pub fn mangle_address(&self, addr: u32, cs1: bool, cs2: Option<bool>, c3: Option<bool>, x1: Option<bool>, x2: Option<bool>) -> u32 {
-        if self.hw_rev != SdrrHwRev::Rev24D && self.hw_rev != SdrrHwRev::Rev24E && self.hw_rev != SdrrHwRev::Rev24F {
+    pub fn mangle_address(
+        &self,
+        addr: u32,
+        cs1: bool,
+        cs2: Option<bool>,
+        c3: Option<bool>,
+        x1: Option<bool>,
+        x2: Option<bool>,
+    ) -> u32 {
+        if self.hw_rev != SdrrHwRev::Rev24D
+            && self.hw_rev != SdrrHwRev::Rev24E
+            && self.hw_rev != SdrrHwRev::Rev24F
+        {
             panic!("Mangle address is only supported for hardware revisions 24-D, 24-E and 24-F");
         }
 
@@ -739,7 +750,10 @@ impl SdrrInfo {
 
         let overflow = addr & !addr_mask;
         if overflow != 0 {
-            panic!("Requested Address 0x{:08X} overflows the address space for ROM type {}", addr, rom_type);
+            panic!(
+                "Requested Address 0x{:08X} overflows the address space for ROM type {}",
+                addr, rom_type
+            );
         }
 
         let mut input_addr = addr & addr_mask;
@@ -748,7 +762,7 @@ impl SdrrInfo {
                 if cs1 {
                     input_addr |= 1 << 13; // Set CS1 bit for 2364
                 }
-            },
+            }
             SdrrRomType::Rom2332 => {
                 if cs1 {
                     input_addr |= 1 << 13; // Set CS1 bit for 2332
@@ -758,7 +772,7 @@ impl SdrrInfo {
                         input_addr |= 1 << 12; // Set CS2 bit for 2332
                     }
                 }
-            },
+            }
             SdrrRomType::Rom2316 => {
                 if cs1 {
                     input_addr |= 1 << 13; // Set CS1 bit for 2316
@@ -806,6 +820,8 @@ impl SdrrInfo {
     }
 
     pub fn get_rom_set_image(&self, set: u8) -> Option<&[u8]> {
-        self.rom_sets.get(set as usize).map(|rom_set| rom_set.data.as_slice())
+        self.rom_sets
+            .get(set as usize)
+            .map(|rom_set| rom_set.data.as_slice())
     }
 }
