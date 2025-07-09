@@ -459,7 +459,7 @@ void print_loaded_rom_analysis(loaded_rom_t *loaded_roms, rom_config_t *configs,
     
     // Compare with generated ROM sets
     printf("\n=== Generated ROM Sets Comparison ===\n");
-    printf("Generated sets: %d\n", SDRR_NUM_SETS);
+    printf("Generated sets: %d\n", sdrr_rom_set_count);
     printf("Generated images: %d\n", SDRR_NUM_IMAGES);
     
     if (count == SDRR_NUM_IMAGES) {
@@ -469,7 +469,7 @@ void print_loaded_rom_analysis(loaded_rom_t *loaded_roms, rom_config_t *configs,
     }
     
     // Show generated ROM set info
-    for (int i = 0; i < SDRR_NUM_SETS; i++) {
+    for (int i = 0; i < sdrr_rom_set_count; i++) {
         printf("Set %d: %u bytes, %d ROMs\n", i, rom_set[i].size, rom_set[i].rom_count);
     }
 }

@@ -61,369 +61,6 @@ ram_log_fn ROM_IMPL_DEBUG = do_log;
 extern uint32_t _ram_rom_image_start[];
 extern uint32_t _ram_rom_image_end[];
 
-#if defined(STM32F1)
-
-//
-// Pre-calculated GPIO configurations
-//
-
-//
-// A - CRH
-//
-#if defined(HW_REV_A)
-#define GPIO_CRH_OUTPUT_A  0x00043333  // PA8-11 as output (0011) - also A12 input (CS1)
-#define GPIO_CRH_INPUT_A   0x00044444  // PA8-11 as input (0100) - also A12 input (CS1)
-#endif // HW_REV_A
-#if defined(HW_REV_B)
-#define GPIO_CRH_OUTPUT_A  0x00003333  // PA8-11 as output (0011)
-#define GPIO_CRH_INPUT_A   0x00004444  // PA8-11 as input (0100)
-#endif // HW_REV_B
-#if defined(HW_REV_C)
-#define GPIO_CRH_OUTPUT_A  0x33333333  // PA8-15 as output (0011)
-#define GPIO_CRH_INPUT_A   0x44444444  // PA8-15 as input (0100)
-#endif // HW_REV_C
-
-//
-// C - CRL
-//
-#if defined(HW_REV_A) || defined(HW_REV_B)
-#define GPIO_CRL_OUTPUT_C  0x33000000  // PC6-7 as output (0011)
-#define GPIO_CRL_INPUT_C   0x44000000  // PC6-7 as input (0100)
-#endif // HW_REV_A/B
-#if defined(HW_REV_C)
-#define GPIO_CRL_OUTPUT_C  0x00000444  // PC0-2 as input (0011)
-#define GPIO_CRL_INPUT_C   0x00000444  // PC0-2 as input (0100)
-#endif // HW_REV_C
-
-//
-// C - CRH
-//
-#if defined(HW_REV_A)
-#define GPIO_CRH_OUTPUT_C  0x00000033  // PC8-9 as output (0011)
-#define GPIO_CRH_INPUT_C   0x00000044  // PC8-9 as input (0100)
-#endif // HW_REV_A
-#if defined(HW_REV_B)
-#define GPIO_CRH_OUTPUT_C  0x00044433  // PC8-9 as output (0011) and PC10-12 inputs
-#define GPIO_CRH_INPUT_C   0x00044444  // PC8-9 as input (0100) and PC10-12 inputs
-#endif // HW_REV_B
-#if defined(HW_REV_C)
-#define GPIO_CRH_OUTPUT_C  0x00044400  // PC10-12 inputs outputs
-#define GPIO_CRH_INPUT_C   0x00044400  // PC10-12 inputs
-#endif // HW_REV_A/B/C
-
-void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_t *rom)
-{
-    ROM_IMPL_LOG("Starting main loop");
-
-#if defined(MAIN_LOOP_LOGGING)
-    uint32_t byte;
-
-    // When MAIN_LOOP_LOGGING is enabled, we iterate using a while loop and
-    // log at the end of each iteration (from C).  This means we add extra
-    // delay before restarting the wait for chip select.
-    while (1) {
-        ROM_IMPL_LOG("Waiting for CS");
-#endif // MAIN_LOOP_LOGGING
-    __asm volatile (
-        // Load base addresses into registers (persistent through loop)
-        "movw r4,  #:lower16:%[gpioa] \n"
-        "movt r4,  #:upper16:%[gpioa] \n"
-        "movw r5,  #:lower16:%[gpiob] \n"
-        "movt r5,  #:upper16:%[gpiob] \n"
-        "movw r6,  #:lower16:%[gpioc] \n"
-        "movt r6,  #:upper16:%[gpioc] \n"
-        "movw r7,  #:lower16:%[rom_base] \n"
-        "movt r7,  #:upper16:%[rom_base] \n"
-
-        // Pre-load GPIO configuration values (for performance)
-        "movw r8,  #:lower16:%[gpio_crh_out_a] \n"
-        "movt r8,  #:upper16:%[gpio_crh_out_a] \n"
-        "movw r9,  #:lower16:%[gpio_crl_out_c] \n"
-        "movt r9,  #:upper16:%[gpio_crl_out_c] \n"
-        "movw r10, #:lower16:%[gpio_crh_out_c] \n"
-        "movt r10, #:upper16:%[gpio_crh_out_c] \n"
-        "movw r11, #:lower16:%[gpio_crh_in_a] \n"
-        "movt r11, #:upper16:%[gpio_crh_in_a] \n"
-        "movw r12, #:lower16:%[gpio_crl_in_c] \n"
-        "movt r12, #:upper16:%[gpio_crl_in_c] \n"
-        "movw r1,  #:lower16:%[gpio_crh_in_c] \n"
-        "movt r1,  #:upper16:%[gpio_crh_in_c] \n"
-
-#if 0
-        // Required if we use BSRR
-        "  mov  r0, #0 \n"
-        "  strh  r0, [r4, %[gpio_odr]] \n"
-        "  strh  r0, [r6, %[gpio_odr]] \n"
-#endif
-
-        "main_asm_loop: \n"
-
-        // Chip select handling
-#if defined(ROM_2364)
-        // 2364
-
-        // Check if ~CS1 has gone active. Ignore CS2 and CS3 - these are
-        // address lines in this configuration
-
-#if defined(HW_REV_A)
-        // Rev A - CS1 is PA12 
-        "  ldrh r0,  [r4, %[gpio_idr]] \n"
-        "  tst  r0,  #(1 << 12) \n"
-#elif defined(HW_REV_B) || defined(HW_REV_C)
-        // Revs B & C - CS1 is PC10
-        "  ldrh r0,  [r6, %[gpio_idr]] \n"
-        "  tst  r0,  #(1 << 10) \n"
-#endif // HW_REV_A/B/C
-
-#if CS1_ACTIVE_LOW == 1
-        "  bne  main_asm_loop \n"
-#else // !CS1_ACTIVE_LOW
-        "  beq  main_asm_loop \n"
-#endif // CS1_ACTIVE_LOW
-
-#elif defined(ROM_2332)
-#if defined(HW_REV_A)
-#error "2332 ROM not supported on rev A"
-#endif // HW_REV_A
-        // 2332 uses CS1 and CS3 (the latter called CS2 on the 2332).
-        // CS1 is PC10 and CS3 is PC12.
-        // We support 4 combinations - all but CS1 and CS3 active low require
-        // an additional instruction (a cmp).
-        "  ldrh r0, [r6, %[gpio_idr]] \n"
-#if (CS1_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 1)
-        // ~CS1, ~CS3
-        "  tst  r0, #(0b101 << 10) \n"
-#else // CS1_ACTIVE_LOW == 0 || CS3_ACTIVE_LOW == 0
-        // All other CS1/CS3 combinations
-        "  and  r0, r0, #(0b101 << 10) \n"
-#if (CS1_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 0)
-        // ~CS1, CS3 - CS1 must be low, CS3 must be high
-        "  cmp  r0, #(0b100 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 1)
-        // CS1, ~CS3 - CS1 must be high, CS3 must be low
-        "  cmp  r0, #(0b001 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 0)
-        // CS1, CS3 - Both must be high to be active
-        "  cmp  r0, #(0b101 << 10) \n"
-#else 
-#error "Unreachable code"
-#endif // Handle other CS1/CS3 combinations
-        "  bne  main_asm_loop \n"
-#endif // Handle all CS1/CS3 combinations
-
-#else // ROM_2316
-
-#if defined(HW_REV_A)
-#error "2316 ROM not supported on rev A"
-#endif // HW_REV_A
-        // 2316 uses CS1, CS2 and CS3
-        // CS1 is PC10, CS2 is PC11, CS3 is PC12
-        // We support 4 combinations - all but CS1 and CS3 active low require
-        // an additional instruction (a cmp).
-        "  ldrh r0, [r6, %[gpio_idr]] \n"
-#if (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 1)
-        // ~CS1, ~CS2, ~CS3 - All must be low to be active
-        "  tst  r0, #(0b111 << 10) \n"
-#else
-        // All other CS combinations.
-        // In the cmp instruction 0bxyz - x refers to CS3, y to CS2, and z to
-        // CS1.  We test against the active combination - so 0b100 for CS3
-        // active high, CS2 and CS1 active low - for example.
-        "  and  r0, r0, #(0b111 << 10) \n"
-#if (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 0)
-        // ~CS1, ~CS2, CS3 - CS1 and CS2 must be low, CS3 must be high
-        "  cmp  r0, #(0b100 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 1)
-        // ~CS1, CS2, ~CS3 - CS1 and CS3 must be low, CS2 must be high
-        "  cmp  r0, #(0b010 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 0)
-        // ~CS1, CS2, CS3 - CS1 must be low, CS2 and CS3 must be high
-        "  cmp  r0, #(0b110 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 1)
-        // CS1, ~CS2, ~CS3 - CS2 and CS3 must be low, CS1 must be high
-        "  cmp  r0, #(0b001 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 0)
-        // CS1, ~CS2, CS3 - CS2 must be low, CS1 and CS3 must be high
-        "  cmp  r0, #(0b101 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 1)
-        // CS1, CS2, ~CS3 - CS3 must be low, CS1 and CS2 must be high
-        "  cmp  r0, #(0b011 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 0)
-        // CS1, CS2, CS3 - All must be high to be active
-        "  cmp  r0, #(0b111 << 10) \n"
-#endif
-        "  bne  main_asm_loop \n"
-#endif
-
-#endif // ROM_2364/2332/2316 CS active handling
-
-        // Chip select line(s) has (have) been asserted - read address from
-        // GPIOB
-        "  ldrh r0, [r5, %[gpio_idr]] \n"
-
-        // Shift right to get rid of PB0/1
-        "  lsr  r0, r0, #2 \n"
-
-        // Load byte from ROM using address as offset.  Remember that PB5
-        // (which is bit 3 after the shift) will always be 0, the bits 4
-        // onwards signify bits 3 onwards of the actual address.  PB5 is not
-        // used because it isn't 5V tolerant.
-        "  ldrb r3, [r7, r0] \n"
-
-        // Potential future performance improvement - performing the operation
-        // to set the data pins to outputs here would save 1 cycle, as loading
-        // the ROM byte then using it immediately after suffers from a load-use
-        // penalty.  However, it makes it harder to test the performance, as
-        // we detect how long the output port takes to go low.
-
-        // Extract and position bits for Port C (PC6-9)
-        // - get lower 4 bits (7210)
-        // - shift to positions 6-9
-#if !defined(HW_REV_C)
-        // Not required for HW_REV_C as all data pins on port A
-        "  and  r2, r3, #0x0F \n"
-        "  lsl  r2, r2, #6 \n"
-#endif // !HW_REV_C
-
-        // Extract and position bits for Port A (PA8-11)
-        // - get upper 4 bits (3456)
-        // - shift to positions 8-11
-        // Apply it
-#if !defined(HW_REV_C)
-        "  and  r0, r3, #0xF0 \n"
-        "  lsl  r0, r0, #4 \n"
-#else // HW_REV_C
-        // Shift left by 8 bits to apply to PA8-15.  No masking is required.
-        "  lsl  r0, r3, #8 \n"
-#endif // !HW_REV_C
-
-        // Could use BSRR instead, if we reset ODR to 0 before hand
-
-        // Write to port A ODR register
-        "  strh  r0, [r4, %[gpio_odr]] \n"
-#if !defined(HW_REV_C)
-        // Not required for HW_REV_C as all data pins on port A
-        "  strh  r2, [r6, %[gpio_odr]] \n"
-#endif // !HW_REV_C
-
-        // Configure output pins (using pre-loaded values)
-        "  str  r8, [r4, %[gpio_crh]] \n"
-#if !defined(HW_REV_C)
-        // Not required for HW_REV_C as all data pins on port A
-        "  str  r9, [r6, %[gpio_crl]] \n"
-        "  str  r10, [r6, %[gpio_crh]] \n"
-#endif // !HW_REV_C
-
-        // Sub-loop: wait for chip select(s) to go inactive
-        "wait_cs_high: \n"
-#if defined(ROM_2364)
-        // 2364
-
-#if defined(HW_REV_A)
-        // Rev A - CS1 is PA12
-        "  ldrh r0, [r4, %[gpio_idr]] \n"
-        "  tst  r0, #(1 << 12) \n"
-#elif defined(HW_REV_B) || defined(HW_REV_C)
-        // Revs B & C - CS1 is PC10
-        "  ldrh r0, [r6, %[gpio_idr]] \n"
-        "  tst  r0, #(1 << 10) \n"
-#endif // HW_REV_A/B/C
-
-#if CS1_ACTIVE_LOW == 1
-        "  beq  wait_cs_high \n"
-#else
-        "  bne  wait_cs_high \n"
-#endif
-
-#elif defined(ROM_2332)
-        // 2332 - CS1 is PC10 and CS3 is PC12
-        "  ldrh r0, [r6, %[gpio_idr]] \n"
-        "  and  r0, r0, #(0b101 << 10) \n"
-        
-#if (CS1_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 1)
-        // No-op - zero flag set by and if both are still low 
-#elif (CS1_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 0)
-        "  cmp  r0, #(0b100 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 1)
-        "  cmp  r0, #(0b001 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 0)
-        "  cmp  r0, #(0b101 << 10) \n"
-#endif
-        "  beq  wait_cs_high \n"
-
-#else // ROM_2316
-        // 2316 - CS1 is PC10, CS2 is PC11, CS3 is PC12
-        "  ldrh r0, [r6, %[gpio_idr]] \n"
-        "  and  r0, r0, #(0b111 << 10) \n"
-        
-#if (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 1)
-        // No-op - zero flag set by and if all are still low
-#elif (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 0)
-        "  cmp  r0, #(0b100 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 1)
-        "  cmp  r0, #(0b010 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 1) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 0)
-        "  cmp  r0, #(0b110 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 1)
-        "  cmp  r0, #(0b001 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 1) && (CS3_ACTIVE_LOW == 0)
-        "  cmp  r0, #(0b101 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 1)
-        "  cmp  r0, #(0b011 << 10) \n"
-#elif (CS1_ACTIVE_LOW == 0) && (CS2_ACTIVE_LOW == 0) && (CS3_ACTIVE_LOW == 0)
-        "  cmp  r0, #(0b111 << 10) \n"
-#endif // Handle all CS1/CS2/CS3 combinations
-        "  beq  wait_cs_high \n"
-
-#endif // ROM_2364/2332/2316 CS inactive handling
-
-        // Chip selects went inactive - configure data pins back to inputs
-        "  str  r11, [r4, %[gpio_crh]] \n"
-#if !defined(HW_REV_C)
-        // Not required for HW_REV_C as all data pins on port A
-        "  str  r12, [r6, %[gpio_crl]] \n"
-        "  str  r1, [r6, %[gpio_crh]] \n"
-#endif // !HW_REV_C
-
-        // Potentially use BRR to set ODR back to 0
-
-#if !defined(MAIN_LOOP_LOGGING)
-        // Restart main loop
-        "  b main_asm_loop \n"
-#else // MAIN_LOOP_LOGGING
-        // Output data byte (which we read and signalled via the data pins)
-        // from this assembly block, so we can log it
-        "  mov %0, r3 \n"
-#endif // !MAIN_LOOP_LOGGING
-#if defined(MAIN_LOOP_LOGGING)
-        : "=r" (byte) // Output the byte
-#else // !MAIN_LOOP_LOGGING
-        :
-#endif // MAIN_LOOP_LOGGING
-        : [gpioa]           "i" (GPIOA_BASE),
-            [gpiob]           "i" (GPIOB_BASE),
-            [gpioc]           "i" (GPIOC_BASE),
-            [rom_base]        "i" (&_ram_rom_image_start),
-            [gpio_idr]        "i" (GPIO_IDR_OFFSET),
-            [gpio_odr]        "i" (GPIO_ODR_OFFSET),
-            [gpio_crl]        "i" (GPIO_CRL_OFFSET),
-            [gpio_crh]        "i" (GPIO_CRH_OFFSET),
-            [gpio_crh_out_a]  "i" (GPIO_CRH_OUTPUT_A),
-            [gpio_crh_in_a]   "i" (GPIO_CRH_INPUT_A),
-            [gpio_crl_out_c]  "i" (GPIO_CRL_OUTPUT_C),
-            [gpio_crl_in_c]   "i" (GPIO_CRL_INPUT_C),
-            [gpio_crh_out_c]  "i" (GPIO_CRH_OUTPUT_C),
-            [gpio_crh_in_c]   "i" (GPIO_CRH_INPUT_C)
-        : "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "r12", "cc", "memory"
-    );
-#if defined(MAIN_LOOP_LOGGING)
-        ROM_IMPL_LOG("Byte served: 0x%02X", byte);
-    }
-#endif // MAIN_LOOP_LOGGING
-}
-
-#elif defined(STM32F4)
-
 //
 // Defines for assembly routine
 //
@@ -466,24 +103,6 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_info_
     "r" (data_output_mask), \
     "r" (data_input_mask)
 #define ASM_CLOBBERS R_ADDR_CS, R_DATA, R_CS_TEST, "cc", "memory"
-
-// Pins
-#if defined(HW_REV_D) || defined(HW_REV_E) || defined(HW_REV_F)
-#define PIN_CS              "10"
-#define PIN_CS_INT           10
-#define PIN_CS2             "12"
-#define PIN_CS2_INT          12
-#define PIN_CS3             "9"
-#define PIN_CS3_INT          9
-#else // !(HW_REV_D || HW_REV_E || HW_REV_F)
-#error "Only HW_REV_D and HW_REV_E are supported for STM32F4"
-#endif // HW_REV_D || HW_REV_E || HW_REV_F
-#if defined(HW_REV_F)
-#define PIN_X1              "14"
-#define PIN_X1_INT          14
-#define PIN_X2              "15"
-#define PIN_X2_INT          15
-#endif // HW_REV_F
 
 // Assembly code macros
 
@@ -536,103 +155,114 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     uint32_t cs_invert_mask = 0;
     uint32_t cs_check_mask;
 
-    // Currently only support one ROM per set
     const sdrr_rom_info_t *rom = set->roms[0];
 
+    // Set up serve mode
     sdrr_serve_t serve_mode = set->serve;
-
-#if defined(HW_REV_F)
-    // Warn if serve mode is incorrectly set for multiple ROM images
-    if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
-        ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set - rectifying");
-        serve_mode = SERVE_ADDR_ON_ANY_CS;
-    } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
-        ROM_IMPL_LOG("!!! Single ROM image, but serve mode is incorrectly set - setting to default");
-        serve_mode = SERVE_TWO_CS_ONE_ADDR;
+    if (sdrr_info.hw_rev == HW_REV_24_F) {
+        // Warn if serve mode is incorrectly set for multiple ROM images
+        if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
+            ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set - rectifying");
+            serve_mode = SERVE_ADDR_ON_ANY_CS;
+        } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
+            ROM_IMPL_LOG("!!! Single ROM image, but serve mode is incorrectly set - setting to default");
+            serve_mode = SERVE_TWO_CS_ONE_ADDR;
+        }
     }
-#else // !HW_REV_F
-#endif // HW_REV_F
-
     ROM_IMPL_DEBUG("Serve ROM: %s via mode: %d", rom->filename, serve_mode);
 
-#if defined(HW_REV_F)
-    if (serve_mode == SERVE_ADDR_ON_ANY_CS)
+    // Set up CS pins.  These are the same values for:
+    // - HW_REV_24_D
+    // - HW_REV_24_E
+    // - HW_REV_24_F 
+    //
+    // HW_REV_28_A requires different logic and hasn't been implemented yet
+    //
+    // We could (should?) read the pin number from the rom_set.
+    //
+    // Note that X1 and X2 are hard-coded into the pull-down code below.
+    uint8_t pin_cs = 10;
+    uint8_t pin_cs2 = 12;
+    uint8_t pin_cs3 = 9;
+    uint8_t pin_x1 = 14;
+    uint8_t pin_x2 = 15;
+
+    if ((sdrr_info.hw_rev == HW_REV_24_F) && (serve_mode == SERVE_ADDR_ON_ANY_CS))
     {
         if (set->rom_count == 2)
         {
-            cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_X1_INT);
+            cs_check_mask = (1 << pin_cs) | (1 << pin_x1);
         } else if (set->rom_count == 3) {
-            cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_X1_INT) | (1 << PIN_X2_INT);
+            cs_check_mask = (1 << pin_cs) | (1 << pin_x1) | (1 << pin_x2);
         } else {
             ROM_IMPL_LOG("!!! Unsupported ROM count: %d", set->rom_count);
-            cs_check_mask = (1 << PIN_CS_INT); // Default to CS1 only
+            cs_check_mask = (1 << pin_cs); // Default to CS1 only
         }
         if (set->multi_rom_cs1_state == CS_ACTIVE_HIGH) {
             cs_invert_mask = cs_check_mask;
         }
     } else {
-#endif // HW_REV_F
-    switch (rom->rom_type) {
-        case ROM_TYPE_2316:
-            ROM_IMPL_DEBUG("ROM type: 2316");
-            cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_CS2_INT) | (1 << PIN_CS3_INT);
-            if (rom->cs1_state == CS_ACTIVE_LOW) {
-                ROM_IMPL_DEBUG("CS1 active low");
-            } else {
-                ROM_IMPL_DEBUG("CS1 active high");
-                cs_invert_mask |= (1 << PIN_CS_INT);
-            }
-            if (rom->cs2_state == CS_ACTIVE_LOW) {
-                ROM_IMPL_DEBUG("CS2 active low");
-            } else {
-                ROM_IMPL_DEBUG("CS2 active high");
-                cs_invert_mask |= (1 << PIN_CS2_INT);
-            }
-            if (rom->cs3_state == CS_ACTIVE_LOW) {
-                ROM_IMPL_DEBUG("CS3 active low");
-            } else {
-                ROM_IMPL_DEBUG("CS3 active high");
-                cs_invert_mask |= (1 << PIN_CS3_INT);
-            }
-            break;
+        switch (rom->rom_type) {
+            case ROM_TYPE_2316:
+                ROM_IMPL_DEBUG("ROM type: 2316");
+                cs_check_mask = (1 << pin_cs) | (1 << pin_cs2) | (1 << pin_cs3);
+                if (rom->cs1_state == CS_ACTIVE_LOW) {
+                    ROM_IMPL_DEBUG("CS1 active low");
+                } else {
+                    ROM_IMPL_DEBUG("CS1 active high");
+                    cs_invert_mask |= (1 << pin_cs);
+                }
+                if (rom->cs2_state == CS_ACTIVE_LOW) {
+                    ROM_IMPL_DEBUG("CS2 active low");
+                } else {
+                    ROM_IMPL_DEBUG("CS2 active high");
+                    cs_invert_mask |= (1 << pin_cs2);
+                }
+                if (rom->cs3_state == CS_ACTIVE_LOW) {
+                    ROM_IMPL_DEBUG("CS3 active low");
+                } else {
+                    ROM_IMPL_DEBUG("CS3 active high");
+                    cs_invert_mask |= (1 << pin_cs3);
+                }
+                break;
 
-        case ROM_TYPE_2332:
-            // 2332 CS2 actually uses the same pin as 2316 CS3
-            // In roms.c/h it is called cs2_state
-            // Here is is called CS3 
-            ROM_IMPL_DEBUG("ROM type: 2332");
-            cs_check_mask = (1 << PIN_CS_INT) | (1 << PIN_CS3_INT);
-            if (rom->cs1_state == CS_ACTIVE_LOW) {
-                ROM_IMPL_DEBUG("CS1 active low");
-            } else {
-                ROM_IMPL_DEBUG("CS1 active high");
-                cs_invert_mask |= (1 << PIN_CS_INT);
-            }
-            if (rom->cs2_state == CS_ACTIVE_LOW) {
-                ROM_IMPL_DEBUG("CS2(3) active low");
-            } else {
-                ROM_IMPL_DEBUG("CS2(3) active high");
-                cs_invert_mask |= (1 << PIN_CS3_INT);
-            }
-            break;
+            case ROM_TYPE_2332:
+                // 2332 CS2 actually uses the same pin as 2316 CS3
+                // In roms.c/h it is called cs2_state
+                // Here is is called CS3 
+                ROM_IMPL_DEBUG("ROM type: 2332");
+                cs_check_mask = (1 << pin_cs) | (1 << pin_cs3);
+                if (rom->cs1_state == CS_ACTIVE_LOW) {
+                    ROM_IMPL_DEBUG("CS1 active low");
+                } else {
+                    ROM_IMPL_DEBUG("CS1 active high");
+                    cs_invert_mask |= (1 << pin_cs);
+                }
+                if (rom->cs2_state == CS_ACTIVE_LOW) {
+                    ROM_IMPL_DEBUG("CS2(3) active low");
+                } else {
+                    ROM_IMPL_DEBUG("CS2(3) active high");
+                    cs_invert_mask |= (1 << pin_cs3);
+                }
+                break;
 
-        default:
-            ROM_IMPL_LOG("Unsupported ROM type: %d", rom->rom_type);
-            __attribute__((fallthrough));
-        case ROM_TYPE_2364:
-            ROM_IMPL_DEBUG("ROM type: 2364");
-            cs_check_mask = (1 << PIN_CS_INT);
-            if (rom->cs1_state == CS_ACTIVE_LOW) {
-                ROM_IMPL_DEBUG("CS1 active low");
-            } else {
-                ROM_IMPL_DEBUG("CS1 active high");
-                cs_invert_mask |= 1 << PIN_CS_INT;
-            }
-            break;
+            default:
+                ROM_IMPL_LOG("Unsupported ROM type: %d", rom->rom_type);
+                __attribute__((fallthrough));
+            case ROM_TYPE_2364:
+                ROM_IMPL_DEBUG("ROM type: 2364");
+                cs_check_mask = (1 << pin_cs);
+                if (rom->cs1_state == CS_ACTIVE_LOW) {
+                    ROM_IMPL_DEBUG("CS1 active low");
+                } else {
+                    ROM_IMPL_DEBUG("CS1 active high");
+                    cs_invert_mask |= 1 << pin_cs;
+                }
+                break;
+        }
     }
-#if defined(HW_REV_F)
-    }
-#endif // HW_REV_F
+
+    // Set up the GPIOs
 
     // Enable GPIO clocks for the ports with address and data lines
     RCC_AHB1ENR |= (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN);
@@ -652,27 +282,28 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         // Set pull-downs on PC14/15 only, so RAM lookup only takes 16KB
         GPIOC_PUPDR = 0xA0000000;
     }
-#if defined(HW_REV_F)
-    // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
-    // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
-    else if (set->rom_count == 2) {
-        // Set pull-down on PC15, as PC14 used to select the second ROM image
-        GPIOC_PUPDR = 0x80000000;
-    } else if (set->rom_count == 3) {
-        // No pull-downs - PC14/PC15 used to select second and third ROM images
-        GPIOC_PUPDR = 0;
-    }
-#endif // HW_REV_F
     else {
-        // Handle gracefully by assuming one ROM image 
-        ROM_IMPL_LOG("!!! Unsupported ROM count: %d", set->rom_count);
-        GPIOC_PUPDR = 0xA0000000;
+        if (sdrr_info.hw_rev == HW_REV_24_F) {
+            // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
+            // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
+            if (set->rom_count == 2) {
+                // Set pull-down on PC15, as PC14 used to select the second ROM image
+                GPIOC_PUPDR = 0x80000000;
+            } else if (set->rom_count == 3) {
+                // No pull-downs - PC14/PC15 used to select second and third ROM images
+                GPIOC_PUPDR = 0;
+            }
+        } else {
+            // Handle gracefully by assuming one ROM image 
+            ROM_IMPL_LOG("!!! Unsupported ROM count: %d", set->rom_count);
+            GPIOC_PUPDR = 0xA0000000;
+        }
     }
 
 #if 0
     // Hack in fixed values
     GPIOC_PUPDR = 0xA0000000;
-    cs_check_mask = (1 << PIN_CS_INT);
+    cs_check_mask = (1 << pin_cs);
     cs_invert_mask = 0;
     serve_mode = SERVE_TWO_CS_ONE_ADDR;
 #endif
@@ -686,15 +317,16 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     register uint32_t data_output_mask asm(R_DATA_OUT_MASK) = DATA_OUTPUT_MASK;
     register uint32_t data_input_mask asm(R_DATA_IN_MASK) = DATA_INPUT_MASK;
 
-#if defined(PRELOAD_TO_RAM)
-    register uint32_t rom_table asm(R_ROM_TABLE) = (uint32_t)&_ram_rom_image_start;
-#else
-    register uint32_t rom_table asm(R_ROM_TABLE) = (uint32_t)&(set->data[0]);
-#endif // PRELOAD_TO_RAM
+    register uint32_t rom_table asm(R_ROM_TABLE);
+    if (sdrr_info.preload_image_to_ram) {
+        rom_table = (uint32_t)&_ram_rom_image_start;
+    } else {
+        rom_table = (uint32_t)&(set->data[0]);
+    }
 
-#if defined(STATUS_LED)
-    setup_status_led();
-#endif // STATUS_LED
+    if (sdrr_info.status_led_enabled) {
+        setup_status_led();
+    }
 
 #if defined(MAIN_LOOP_LOGGING)
     // Log some useful information before entering the main loop
@@ -708,9 +340,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     uint32_t addr_cs;
     while (1) {
         ROM_IMPL_LOG("Waiting for CS to go active");
-#if defined(STATUS_LED)
-        GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-#endif // STATUS_LED
+        if (sdrr_info.status_led_enabled) {
+            GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
+        }
 #endif // MAIN_LOOP_LOGGING
     switch (serve_mode)
     {
@@ -981,15 +613,13 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     }
 
 #if defined(MAIN_LOOP_LOGGING)
-#if defined(STATUS_LED)
-        GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
-#endif // STATUS_LED
+        if (sdrr_info.status_led_enabled) {
+            GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
+        }
         ROM_IMPL_LOG("Address/CS: 0x%08X Byte: 0x%08X", addr_cs, byte);
     }
 #endif // MAIN_LOOP_LOGGING
 }
-
-#endif // STM32F1/4
 
 // Get the index of the selected ROM by reading the select jumpers
 //
@@ -997,22 +627,15 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 uint8_t get_rom_set_index(void) {
     uint8_t rom_sel, rom_index;
 
-    // Read image selection pins - these are set up in gpio_init().
-#if defined(STM32F1)
-    // Sel pins are PC0-2 on HW revs A-C
-    rom_sel = GPIOC_IDR & 0x07;  // Get bits 0-2
-    RCC_APB2ENR &= ~(1 << 4);  // Disable GPIOC clock
-#elif defined(STM32F4)
     // Read the ROM image selection bits PB0 (LSB) to PB2, and PB7 (MSB).
     rom_sel = GPIOB_IDR;
     rom_sel = (rom_sel & 0x07) | ((rom_sel & 0x80) >> 4);  // Get bits 0-2 and 7, shift PB7 to bit 3
     RCC_AHB1ENR &= ~RCC_AHB1ENR_GPIOBEN;  // Disable GPIOB clock
-#endif // STM32F1/4
 
     // Calculate the ROM image index based on the selection bits and number of
     // images installed in this firmware.  For example, if image 4 was selected
     // but there are only 3 images, it will select image 1.
-    rom_index = rom_sel % SDRR_NUM_SETS;
+    rom_index = rom_sel % sdrr_rom_set_count;
 
     LOG("ROM sel/index %d/%d", rom_sel, rom_index);
 
@@ -1047,44 +670,9 @@ void preload_rom_image(const sdrr_rom_set_t *set) {
     }
     DEBUG("ROM size %d bytes", img_size);
 
-    // Copy the ROM image to RAM
-#if defined(STM32F1)
-    // There is a complication.  We support 2KB, 4KB and 8KB ROM images. 
-    // These are addressed using 13 bits (A0-A12).  However, due to PB5
-    // (which should be our bit 3) not being 5V tolerant, we skip it and
-    // pull it low.  Hence bit 3 will always read 0 and we have 14 bits to
-    // address 8KB.  This means we need to copy the 8KB of data to
-    // XXXXXXXXX0XXX not to XXXXXXXXXXXXX.
-    //
-    // sdrr-gen has already maps the other address lines to their
-    // appropriate places, and also mapped the data bits to the correct
-    // places to be applied easily to the GPIO ports.
-    //
-    // This routine should complete for an 8KB image in a few ms, and is the
-    // bulk of the work done at startup.
-    uint32_t src_ptr = (uint32_t)rom_src;
-    uint32_t dst_ptr = (uint32_t)rom_dst;
-    size_t ii;
-    
-    for (ii = 0; ii < rom_size; ii++) {
-        // Read a byte from source
-        uint8_t byte = *(uint8_t *)(src_ptr + ii);
-
-        // Calculate destination address with bit 3 always 0 and higher bits
-        // shifted
-        size_t byte_offset = ii;
-        size_t dst_offset = (byte_offset & 0x7) | ((byte_offset & ~0x7) << 1);
-        
-        // Write to destination
-        *(uint8_t *)(dst_ptr + dst_offset) = byte;
-    }
-#elif defined(STM32F4)
-    // For the STM32F4 family the ROM image is always 16KB and all address
-    // and data line mappings have been done by sdrr-gen before building
-    // the mapped image into the firmware.  Hence we can just copy the
-    // image.
+    // Set image (either single ROM or multiple ROMs) has been fully pre-
+    // processed before embedding in the flash.
     memcpy(img_dst, img_src, img_size);
-#endif // STM32F1/4
 
     LOG("ROM %s preloaded to RAM 0x%08X size %d bytes", set->roms[0]->filename, (uint32_t)_ram_rom_image_start, img_size);
     LOG("Set ROM count: %d, Serving algorithm: %d, multi-ROM CS1 state: %d", set->rom_count, set->serve, set->multi_rom_cs1_state);

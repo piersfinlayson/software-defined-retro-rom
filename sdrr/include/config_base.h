@@ -10,6 +10,108 @@
 
 #include <stdint.h>
 
+#define HW_DEV_24  0x00000000
+#define HW_DEV_28  0x00000020
+typedef enum uint32_t {
+    HW_REV_NONE = 0xFFFFFFFF,
+    HW_REV_24_A = HW_DEV_24 | 0x00,
+    HW_REV_24_B = HW_DEV_24 | 0x01,
+    HW_REV_24_C = HW_DEV_24 | 0x02,
+    HW_REV_24_D = HW_DEV_24 | 0x03,
+    HW_REV_24_E = HW_DEV_24 | 0x04,
+    HW_REV_24_F = HW_DEV_24 | 0x05,
+    HW_REV_28_A = HW_DEV_28 | 0x00,
+} sdrr_hw_rev_t;
+
+typedef enum : uint16_t {
+    F401 = 0x0000,
+    F405 = 0x0001,
+    F411 = 0x0002,
+    F446 = 0x0003,
+} stm_line_t;
+
+typedef enum uint16_t {
+    STORAGE_8 = 0x00,
+    STORAGE_B = 0x01,
+    STORAGE_C = 0x02,
+    STORAGE_D = 0x03,
+    STORAGE_E = 0x04,
+    STORAGE_F = 0x05,
+    STORAGE_G = 0x06,
+} stm_storage_t;
+
+struct sdrr_rom_set_t;
+
+// Main SDRR information data structure
+typedef struct {
+    // Magic bytes to identify the firmware and structure
+    // Offset: 0
+    // 4 bytes
+    const char magic[4];  // Magic bytes = "SDRR"
+
+    // Firmware version information
+    // Offset: 4
+    // 4 x 2 bytes = 8 bytes
+    const uint16_t major_version;
+    const uint16_t minor_version;
+    const uint16_t patch_version;
+    const uint16_t build_number;
+
+    // Pointer to build date/time string
+    // Offset: 12
+    // 4 bytes
+    const char* build_date;
+
+    // Git commit hash, NULL terminated
+    // Offset: 16
+    // 8 bytes
+    char commit[8];
+
+    // Hardware revision
+    // Offset: 24
+    // 4 bytes
+    const sdrr_hw_rev_t hw_rev;
+
+    // STM32 product line
+    // Offset: 28
+    // 2 x 2 bytes = 4 bytes
+    const stm_line_t stm_line;
+    const stm_storage_t stm_storage;
+
+    // Target frequency in MHz
+    // Offset: 32
+    // 2 + 1 bytes = 3 bytes
+    const uint16_t freq;
+    const uint8_t overclock;
+
+    // Enable SWD support
+    // Offset: 35
+    // 1 byte
+    const uint8_t swd_enabled;
+
+    // Various debug options
+    // Offset: 36
+    // 5 x 1 bytes = 5 bytes
+    const uint8_t preload_image_to_ram;
+    const uint8_t bootloader_capable;
+    const uint8_t status_led_enabled;
+    const uint8_t boot_logging_enabled;
+    const uint8_t mco_enabled;
+
+    // Number of ROM sets - length of the `rom_sets` array 
+    // Offset: 41
+    // 3 bytes
+    const uint8_t rom_set_count;
+    const uint8_t pad2[2];
+    
+    // Pointer to array of ROM sets
+    // Offset: 44
+    // 4 bytes
+    const struct sdrr_rom_set_t *rom_sets;
+
+    // Length: 48
+} sdrr_info_t;
+
 // ROM image sizes by type (F1 family)
 #define ROM_IMAGE_SIZE_2316  2048
 #define ROM_IMAGE_SIZE_2332  4096
@@ -61,24 +163,22 @@ typedef enum {
     PIN_18,     // This is 23xx pin 18, so CS2 on 2316
     PIN_20,     // This is 23xx pin 20, so CS1 on 2364, 2332 and 2316
     PIN_21,     // This is 23xx pin 21, so CS3 on 2316, CS2 on 2332
-#if defined(HW_REV_F)
     PIN_X1,     // This is pin X1 on SDRR, aka STM32F4 PC14 in hw rev f
     PIN_X2,     // This is pin X2 on SDRR, aka STM32F4 PC15 in hw rev f
-#endif // HW_REV_F
 } sdrr_cs_pin_t;
 
 // ROM information structure
 typedef struct {
-    sdrr_rom_type_t rom_type;   // ROM type
-    sdrr_cs_state_t cs1_state;  // CS1 state
-    sdrr_cs_state_t cs2_state;  // CS2 state
-    sdrr_cs_state_t cs3_state;  // CS3 state
+    const sdrr_rom_type_t rom_type;   // ROM type
+    const sdrr_cs_state_t cs1_state;  // CS1 state
+    const sdrr_cs_state_t cs2_state;  // CS2 state
+    const sdrr_cs_state_t cs3_state;  // CS3 state
 #if defined(BOOT_LOGGING)
     const char* filename;       // Source filename (BOOT_LOGGING only)
 #endif // BOOT_LOGGING
-    sdrr_cs_pin_t cs1_line;     // CS1 pin (rom_type=*)
-    sdrr_cs_pin_t cs2_line;     // CS2 pin (rom_type = 2316 or 2332)
-    sdrr_cs_pin_t cs3_line;     // CS3 pin (rom_type = 2316)
+    const sdrr_cs_pin_t cs1_line;     // CS1 pin (rom_type=*)
+    const sdrr_cs_pin_t cs2_line;     // CS2 pin (rom_type = 2316 or 2332)
+    const sdrr_cs_pin_t cs3_line;     // CS3 pin (rom_type = 2316)
 } sdrr_rom_info_t;
 
 // ROM set information structure
@@ -90,7 +190,7 @@ typedef struct {
 //
 // If the multiple ROM image support is not used, there is be a 1:1 mapping
 // between set and image - i.e. `rom_count` is be 1.
-typedef struct {
+typedef struct sdrr_rom_set_t {
     // Pointer to the data for the ROM image(s) in this set.  Copied to RAM at
     // startup.
     const uint8_t* data;
@@ -101,8 +201,11 @@ typedef struct {
     // - ROM_SET_IMAGE_SIZE for a set of multiple ROM images
     const uint32_t size;
 
-    // Pointer to array of pointers to ROMs in this set.
-    const sdrr_rom_info_t** roms;
+    // Pointer to array of pointers to ROMs in this set.  Note it needs to be
+    // a pointer to const pointer to const data, otherwise the linker will
+    // decide that the sdrr_rom_info_t structs need to be relocated to RAM
+    // on startup, which is unnecessary. 
+    const sdrr_rom_info_t* const * roms;
 
     // The number of unique ROM images in this set.  Used to index the above
     // array.
@@ -112,7 +215,7 @@ typedef struct {
     const sdrr_serve_t serve;         // ROM serving algorithm
 
     // CS1 state (active high/low) when using multiple ROM images in this set
-    sdrr_cs_state_t multi_rom_cs1_state;  // CS1 state
+    const sdrr_cs_state_t multi_rom_cs1_state;  // CS1 state
 } sdrr_rom_set_t;
 
 #endif // CONFIG_BASE_H

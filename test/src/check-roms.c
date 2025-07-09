@@ -10,8 +10,8 @@ void validate_single_rom_set(loaded_rom_t *loaded_roms, rom_config_t *configs, i
     (void)configs;  // Suppress unused warning
     
     // Verify we have exactly one ROM set with one ROM
-    if (SDRR_NUM_SETS != 1) {
-        printf("Error: Expected 1 ROM set, got %d\n", SDRR_NUM_SETS);
+    if (sdrr_rom_set_count != 1) {
+        printf("Error: Expected 1 ROM set, got %d\n", sdrr_rom_set_count);
         return;
     }
     
@@ -156,7 +156,7 @@ int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int 
     int overall_rom_idx = 0;
     
     // Validate each ROM set
-    for (int set_idx = 0; set_idx < SDRR_NUM_SETS; set_idx++) {
+    for (int set_idx = 0; set_idx < sdrr_rom_set_count; set_idx++) {
         printf("\nValidating ROM set %d (%d ROMs)...\n", set_idx, rom_set[set_idx].rom_count);
         
         int errors = 0;
@@ -248,7 +248,7 @@ int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int 
     }
     
     printf("\nOverall validation:\n");
-    printf("  Total ROM sets: %d\n", SDRR_NUM_SETS);
+    printf("  Total ROM sets: %d\n", sdrr_rom_set_count);
     printf("  Total ROMs: %d\n", overall_rom_idx);
     printf("  Total addresses checked: %d\n", total_checked);
     printf("  Total errors found: %d\n", total_errors);

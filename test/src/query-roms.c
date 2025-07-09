@@ -88,10 +88,10 @@ size_t get_expected_rom_size(int rom_type) {
 void print_compiled_rom_info(void) {
     printf("\n=== Compiled ROM Sets Analysis ===\n");
     printf("Total ROM images: %d\n", SDRR_NUM_IMAGES);
-    printf("Total ROM sets: %d\n", SDRR_NUM_SETS);
+    printf("Total ROM sets: %d\n", sdrr_rom_set_count);
     
     // Print details for each ROM set
-    for (int set_idx = 0; set_idx < SDRR_NUM_SETS; set_idx++) {
+    for (int set_idx = 0; set_idx < sdrr_rom_set_count; set_idx++) {
         printf("\nROM Set %d:\n", set_idx);
         printf("  Size: %u bytes (%s)\n", rom_set[set_idx].size, 
                (rom_set[set_idx].size == 16384) ? "16KB" : 

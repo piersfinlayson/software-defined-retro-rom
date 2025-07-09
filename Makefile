@@ -14,6 +14,13 @@
 # STM=f411rc CONFIG=configs/your_config.mk make
 #
 
+VERSION_MAJOR := 0
+VERSION_MINOR := 1
+VERSION_PATCH := 1
+BUILD_NUMBER := 1
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+export VERSION_MAJOR VERSION_MINOR VERSION_PATCH BUILD_NUMBER GIT_COMMIT
+
 # Allow specifying config file to override the below settings
 CONFIG ?= configs/blank.mk
 -include $(CONFIG)

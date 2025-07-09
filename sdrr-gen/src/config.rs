@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
 use crate::rom_types::{CsLogic, HwRev, RomType, ServeAlg, StmFamily, StmProcessor, StmVariant};
 use crate::preprocessor::{RomImage, RomSet};
 use std::path::PathBuf;

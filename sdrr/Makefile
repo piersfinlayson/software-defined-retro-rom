@@ -18,7 +18,7 @@ ifeq ($(filter clean clean-% distclean,$(MAKECMDGOALS)),)
   ifneq ($(wildcard $(OUTPUT_DIR)/generated.mk),)
     include $(OUTPUT_DIR)/generated.mk
   else
-$(error sddr-gen generated.mk Makefile fragment not found. Please run the sddr-gen tool first.)
+$(error sdrr-gen generated.mk Makefile fragment not found. Please run the sdrr-gen tool first.)
   endif
 endif
 
@@ -44,6 +44,8 @@ SEGGER_OBJS := $(BUILD_DIR)/SEGGER_RTT.o $(BUILD_DIR)/SEGGER_RTT_printf.o
 
 ROMS_SRC := $(OUTPUT_DIR)/roms.c
 ROMS_OBJ := $(BUILD_DIR)/roms.o
+SDRR_CONFIG_SRC := $(OUTPUT_DIR)/sdrr_config.c
+SDRR_CONFIG_OBJ := $(BUILD_DIR)/sdrr_config.o
 
 # Output files
 BIN_PREFIX := sdrr-$(VARIANT)
@@ -94,8 +96,12 @@ $(BUILD_DIR)/%.o: src/%.c ../Makefile | $(BUILD_DIR) segger-rtt
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # roms.o is built from roms.c from a different directory
-$(ROMS_OBJ): $(OUTPUT_DIR)/roms.c ../Makefile 
+$(ROMS_OBJ): $(ROMS_SRC) ../Makefile 
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# sdrr_config.o is built from sdrr_config.c from a different directory
+$(SDRR_CONFIG_OBJ): $(SDRR_CONFIG_SRC) ../Makefile 
+	$(CC) $(CFLAGS) -DSDRR_VERSION_MAJOR=$(VERSION_MAJOR) -DSDRR_VERSION_MINOR=$(VERSION_MINOR) -DSDRR_VERSION_PATCH=$(VERSION_PATCH) -DSDRR_BUILD_NUMBER=$(BUILD_NUMBER) -DSDRR_GIT_COMMIT=\"$(GIT_COMMIT)\" -c $< -o $@
 
 # Explicit rules for SEGGER files
 $(BUILD_DIR)/SEGGER_RTT.o: segger-rtt/RTT/SEGGER_RTT.c ../Makefile  | $(BUILD_DIR)
@@ -107,8 +113,8 @@ $(BUILD_DIR)/SEGGER_RTT_printf.o: segger-rtt/RTT/SEGGER_RTT_printf.c ../Makefile
 segger-rtt/RTT/SEGGER_RTT.c segger-rtt/RTT/SEGGER_RTT_printf.c: segger-rtt
 
 # Link
-$(ELF): $(OBJS) $(ROMS_OBJ) $(SEGGER_OBJS) $(LDSCRIPT) | $(BUILD_DIR)
-	$(CC) $(LDFLAGS) -T $(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) -o $@
+$(ELF): $(OBJS) $(ROMS_OBJ) $(SDRR_CONFIG_OBJ) $(SEGGER_OBJS) $(LDSCRIPT) | $(BUILD_DIR)
+	$(CC) $(LDFLAGS) -T $(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) $(SDRR_CONFIG_OBJ) -o $@
 
 # Generate binary
 $(BIN): $(ELF)

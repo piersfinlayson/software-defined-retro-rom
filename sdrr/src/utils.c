@@ -7,90 +7,11 @@
 #include "include.h"
 #include "roms.h"
 
-// Most/all of this is likely unnecessary
-void reset_rcc_registers(void) {
-#if defined(STM32F1)
-    // Can't be bothered to implement for STM32F4 as unnecessary
-
-    // Set RCC_CR to reset value
-    // Retain reserved and read-only bits
-    // Set HSION and default HSI trim value
-    uint32_t rcc_cr = RCC_CR;
-    rcc_cr &= RCC_CR_RSVD_RO_MASK; 
-    rcc_cr |= RCC_CR_HSION | (0x10 << 3);
-    RCC_CR = rcc_cr;
-
-    // Set RCC_CFGR to reset value
-    // Retain reserved and read-only bits
-    // Set SW to HSI (value 0)
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= RCC_CFGR_RSVD_RO_MASK;
-    RCC_CFGR = rcc_cfgr;
-
-    // Set RCC_CIR to reset value
-    uint32_t rcc_cir = RCC_CIR;
-    rcc_cir &= RCC_CIR_RSVD_RO_MASK;
-    RCC_CIR = rcc_cir;
-
-    // Set RCC_APB2RSTR to reset value
-    uint32_t rcc_apb2rstr = RCC_APB2RSTR;
-    rcc_apb2rstr &= RCC_APB2RSTR_RSVD_RO_MASK;
-    RCC_APB2RSTR = rcc_apb2rstr;
-
-    // Set RCC_APB1RSTR to reset value
-    uint32_t rcc_apb1rstr = RCC_APB1RSTR;
-    rcc_apb1rstr &= RCC_APB1RSTR_RSVD_RO_MASK;
-    RCC_APB1RSTR = rcc_apb1rstr;
-
-    // Set RCC_AHBENR to reset value
-    uint32_t rcc_ahbenr = RCC_AHBENR;
-    rcc_ahbenr &= RCC_AHBENR_RSVD_RO_MASK;
-    rcc_ahbenr |= (1 << 4);  // FLITF clock enabled during sleep mode
-    RCC_AHBENR = rcc_ahbenr;
-
-    // Set RCC_APB2ENR to reset value
-    uint32_t rcc_apb2enr = RCC_APB2ENR;
-    rcc_apb2enr &= RCC_APB2ENR_RSVD_RO_MASK;
-    RCC_APB2ENR = rcc_apb2enr;
-
-    // Set RCC_APB1ENR to reset value
-    uint32_t rcc_apb1enr = RCC_APB1ENR;
-    rcc_apb1enr &= RCC_APB1ENR_RSVD_RO_MASK;
-    RCC_APB1ENR = rcc_apb1enr;
-
-    // Set RCC_BDCR to reset value
-    uint32_t rcc_bdcr = RCC_BDCR;
-    rcc_bdcr &= RCC_BDCR_RSVD_RO_MASK;
-    RCC_BDCR = rcc_bdcr;
-#endif // STM32F1
-}
-
-// May be unnecessary
-#if defined(STM32F1)
-void reset_afio_registers(void) {
-    uint32_t afio_mapr = AFIO_MAPR;
-    afio_mapr &= AFIO_MAPR_RSVD_RO_MASK;
-    AFIO_MAPR = afio_mapr;
-}
-#endif // STM32F1
-
 // Sets up the MCO (clock output) on PA8, to the value provided
-#if defined(MCO)
 void setup_mco(uint8_t mco) {
     // Enable GPIOA clock
-#if defined(STM32F1)
-    RCC_APB2ENR |= (1 << 2);
-#elif defined(STM32F4)
     RCC_AHB1ENR |= (1 << 0);
-#endif // STM32F1/4
 
-#if defined(STM32F1)
-    // Configure PA8 as output (MODE=11, CNF=00)
-    uint32_t gpioa_crh = GPIOA_CRH;
-    gpioa_crh &= ~(0b1111 << 0);  // Clear CND and MODE bits for PA8
-    gpioa_crh |= (0b1011 << 0);   // Set as AF 50MHz push-pull
-    GPIOA_CRH = gpioa_crh;
-#elif defined(STM32F4)
     uint32_t gpioa_moder = GPIOA_MODER;
     gpioa_moder &= ~(0b11 << (8 * 2));  // Clear bits for PA8
     gpioa_moder |= (0b10 << (8 * 2));   // Set as AF
@@ -106,14 +27,9 @@ void setup_mco(uint8_t mco) {
     GPIOC_OSPEEDR |= (0b11 << (9 * 2));  // Set speed to very high speed
     GPIOC_OTYPER &= ~(0b1 << 9);  // Set as push-pull
 #endif // MCO2
-#endif // STM32F1/4
 
     // Set MCO bits in RCC_CFGR
     uint32_t rcc_cfgr = RCC_CFGR;
-#if defined(STM32F1)
-    rcc_cfgr &= ~RCC_CFGR_MCO_MASK;  // Clear MCO bits
-    rcc_cfgr |= ((mco & 0b111) << 24);  // Set MCO bits
-#elif defined(STM32F4)
     rcc_cfgr &= ~RCC_CFGR_MCO1_MASK;  // Clear MCO1 bits
     rcc_cfgr |= ((mco & 0b11) << 21);  // Set MCO1 bits for PLL
     if ((mco & 0b11) == RCC_CFGR_MCO1_PLL) {
@@ -128,19 +44,9 @@ void setup_mco(uint8_t mco) {
     rcc_cfgr &= ~(0b111 << 27); // Clear MCO7 pre-scaler bits
     rcc_cfgr |= (0b110 << 27);  // Set MCO7 pre-scaler to /4
 #endif // MCO2
-#endif // STM32F4
     RCC_CFGR = rcc_cfgr;
 
     // Check MCO configuration in RCC_CFGR
-#if defined(STM32F1)
-    while(1) {
-        uint32_t cfgr = RCC_CFGR;
-        uint32_t mco_bits = (cfgr >> 24) & 0b111;
-        if (mco_bits == (mco & 0b111)) {
-            break;  // MCO1 set to PLL
-        }
-    }
-#elif defined(STM32F4)    
     while(1) {
         uint32_t cfgr = RCC_CFGR;
         uint32_t mco1_bits = (cfgr >> 21) & 0b11;
@@ -148,21 +54,8 @@ void setup_mco(uint8_t mco) {
             break;  // MCO1 set to PLL
         }
     }
-#endif // STM32F1/4
 }
-#endif // MCO
 
-#if defined(STM32F1)
-// Sets up the PLL multiplier to the value provided
-void setup_pll_mul(uint8_t mul) {
-    // Set PLL multiplier in RCC_CFGR
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= ~RCC_CFGR_PLLMULL_MASK;  // Clear PLLMUL bits
-    rcc_cfgr |= ((mul & 0b1111) << 18);  // Set PLLMUL bits
-    RCC_CFGR = rcc_cfgr;
-}
-#endif // STM32F1
-#if defined(STM32F4)
 // Sets up the PLL dividers/multiplier to the values provided
 void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q) {
     // Set PLL multiplier in RCC_PLLCFGR
@@ -184,36 +77,15 @@ void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q) {
     LOG("Configured PLL MNPQ: %d/%d/%d/%d", actual_m, actual_n, actual_p, actual_q);
 #endif // BOOT_LOGGING
 }
-#endif // STM32F4
 
 // Sets up the PLL source to the value provided
 void setup_pll_src(uint8_t src) {
-#if defined(STM32F1)
-    // Set PLL source in RCC_CFGR
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= ~RCC_CFGR_PLLSRC;  // Clear PLLSRC bit
-    rcc_cfgr |= (src & 1) << 16;  // Set PLLSRC bit
-    RCC_CFGR = rcc_cfgr;
-#elif defined(STM32F4)
     // Set PLL source in RCC_PLLCFGR
     uint32_t rcc_pllcfgr = RCC_PLLCFGR;
     rcc_pllcfgr &= ~RCC_PLLCFGR_PLLSRC_MASK;  // Clear PLLSRC bit
     rcc_pllcfgr |= (src & 1) << 22;  // Set PLLSRC bit
     RCC_PLLCFGR = rcc_pllcfgr;
-#endif // STM32F4
 }
-
-#if defined(STM32F1)
-// Sets up the PLL XTPRE to the value provided - this is the HSE divider
-// for the PLL input clock
-void setup_pll_xtpre(uint8_t xtpre) {
-    // Set PLL XTPRE in RCC_CFGR
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= ~RCC_CFGR_PLLXTPRE_MASK;  // Clear PLLXTPRE bit
-    rcc_cfgr |= (xtpre & 0b1) << 17;  // Set PLLXTPRE bit
-    RCC_CFGR = rcc_cfgr;
-}
-#endif // STM32F1
 
 // Enables the PLL and waits for it to be ready
 void enable_pll(void) {
@@ -287,39 +159,29 @@ void set_bus_clks(void) {
 // switching to the PLL as we're running from flash.  Also enable the prefetch
 // buffer.
 void set_flash_ws(void) {
-    uint8_t wait_states;
-#ifdef STM32F1
-#if TARGET_FREQ_MHZ <= 24
-    wait_states = 0;
-#elif TARGET_FREQ_MHZ <= 48
-    wait_states = 1;
-#elif TARGET_FREQ_MHZ <= 72
-    wait_states = 2;
-#else
-#error "Unsupported frequency for STM32F1"
-#endif // TARGET_FREQ_MHZ
-    FLASH_ACR = FLASH_ACR_PRFTBE;
-#elif defined(STM32F4)
+    uint8_t wait_states = 0;
+
     // Set data and instruction caches
     FLASH_ACR = FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
-#if TARGET_FREQ_MHZ <= 30
-    wait_states = 0;
-#elif TARGET_FREQ_MHZ <= 60
-    wait_states = 1;
-#elif TARGET_FREQ_MHZ <= 90
-    wait_states = 2;
-#elif TARGET_FREQ_MHZ <= 120
-    wait_states = 3;
-#elif TARGET_FREQ_MHZ <= 150
-    wait_states = 4;
-#elif TARGET_FREQ_MHZ <= 180
-    wait_states = 5;
-#elif TARGET_FREQ_MHZ <= 210
-    wait_states = 6;
-#else
-#error "Unsupported frequency for STM32F4"
-#endif // TARGET_FREQ_MHZ
-#endif // STM32F1/4
+    if (sdrr_info.freq > 30) {
+        if (sdrr_info.freq <= 60) {
+            wait_states = 1;
+        } else if (sdrr_info.freq <= 90) {
+            wait_states = 2;
+        } else if (sdrr_info.freq <= 120) {
+            wait_states = 3;
+        } else if (sdrr_info.freq <= 150) {
+            wait_states = 4;
+        } else if (sdrr_info.freq <= 180) {
+            wait_states = 5;
+        } else if (sdrr_info.freq <= 210) {
+            wait_states = 6;
+        } else if (sdrr_info.freq <= 240) {
+            wait_states = 7;
+        } else if (sdrr_info.freq <= 270) {
+            wait_states = 8;
+        }
+    }
     FLASH_ACR &= ~FLASH_ACR_LATENCY_MASK;  // Clear latency bits
     FLASH_ACR |= wait_states & FLASH_ACR_LATENCY_MASK;  // Set wait states
 
@@ -355,30 +217,42 @@ extern uint32_t _ram_size;
 // Logging function to output various debug information via RTT
 void log_init(void) {
     LOG("%s", log_divider);
-    LOG("%s v%s - %s", product, version, project_url);
+    LOG("%s v%d.%d.%d (build %d) - %s", product, sdrr_info.major_version, sdrr_info.minor_version, sdrr_info.patch_version, sdrr_info.build_number, project_url);
     LOG("%s %s", copyright, author);
-    LOG("Build date: %s", build_date);
+    LOG("Build date: %s", sdrr_info.build_date);
+    LOG("Git commit: %s", sdrr_info.commit);
 
     LOG("%s", log_divider);
     LOG("Hardware info ...");
     LOG("STM32%s", stm_variant);
-    char hw_rev;
-#if defined(HW_REV_A)
-    hw_rev = 'A';
-#elif defined(HW_REV_B)
-    hw_rev = 'B';
-#elif defined(HW_REV_C)
-    hw_rev = 'C';
-#elif defined(HW_REV_D)
-    hw_rev = 'D';
-#elif defined(HW_REV_E)
-    hw_rev = 'E';
-#elif defined(HW_REV_F)
-    hw_rev = 'F';
-#else
-#error "Unknown hardware revision"
-#endif // HW_REV_A/B/C/D/E/F
-    LOG("PCB rev %c", hw_rev);
+    char *hw_rev;
+    switch (sdrr_info.hw_rev) {
+        case HW_REV_24_A:
+            hw_rev = "24-A";
+            break;
+        case HW_REV_24_B:
+            hw_rev = "24-B";
+            break;
+        case HW_REV_24_C:
+            hw_rev = "24-C";
+            break;
+        case HW_REV_24_D:
+            hw_rev = "24-D";
+            break;
+        case HW_REV_24_E:
+            hw_rev = "24-E";
+            break;
+        case HW_REV_24_F:
+            hw_rev = "24-F";
+            break;
+        case HW_REV_28_A:
+            hw_rev = "28-A";
+            break;
+        default:
+            hw_rev = "??";
+            break;
+    }
+    LOG("PCB rev %s", hw_rev);
     uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
     uint32_t flash_kb = flash_bytes / 1024;
     if (flash_bytes % 1024 != 0) {
@@ -400,46 +274,30 @@ void log_init(void) {
     LOG("RAM: %dKB (%d bytes)", ram_size_kb, ram_size_bytes);
 #endif
 
-#if defined(USE_PLL)
     LOG("Target freq: %dMHz", TARGET_FREQ_MHZ);
-#endif // USE_PLL
-#if defined(HSI)
     LOG("%s: HSI", oscillator);
 #if defined(HSI_TRIM)
     LOG("HSI Trim: 0x%X", HSI_TRIM);
 #endif // HSI_TRIM
-#if defined(USE_PLL)
-#if defined(STM32F1)
-    LOG("PLLx: %d", HSI_PLL);
-#elif defined(STM32F4)
     LOG("PLL MNPQ: %d/%d/%d/%d", PLL_M, PLL_N, PLL_P, PLL_Q);
-#endif // STM32F1/4
-#endif // USE_PLL
-#endif // HSI
-#if defined(HSE)
-    LOG("%s: HSE", oscillator);
-#if defined(USE_PLL)
-    LOG("PLLx: %d", HSE_PLL);
-#endif // USE_PLL
-#endif // HSE
-#if defined(MCO)
-    LOG("MCO: %s - PA8", enabled);
+    if (sdrr_info.mco_enabled) {
+        LOG("MCO: enabled - PA8");
+    } else {
+        LOG("MCO: disabled");
+    }
 #if defined(MCO2)
     LOG("MCO2: %s - PC9", enabled);
 #endif // MCO2
-#else // !MCO
-    LOG("MCO: %s", disabled);
-#endif // MCO
-#if !defined(NO_BOOTLOADER)
-    LOG("%s %s", stm32_bootloader_mode, enabled);
-#else // NO_BOOTLOADER
-    LOG("%s %s", stm32_bootloader_mode, disabled);
-#endif // NO_BOOTLOADER
+    if (sdrr_info.bootloader_capable) {
+        LOG("Bootloader: %s", enabled);
+    } else {
+        LOG("Bootloader: %s", disabled);
+    }
 
     LOG("%s", log_divider);
     LOG("Firmware info ...");
-    LOG("# of ROM sets: %d", SDRR_NUM_SETS);
-    for (uint8_t ii = 0; ii < SDRR_NUM_SETS; ii++) {
+    LOG("# of ROM sets: %d", sdrr_rom_set_count);
+    for (uint8_t ii = 0; ii < sdrr_rom_set_count; ii++) {
         const char *rom_type_str;
         const sdrr_rom_info_t *rom = rom_set[ii].roms[0];
         switch (rom->rom_type) {
@@ -514,19 +372,17 @@ void execute_ram_func(uint32_t ram_addr) {
 
 // Common setup for stauts LED output using PB15 (inverted logic: 0=on, 1=off)
 void setup_status_led(void) {
-#if defined(STM32F4)
-#if defined(STATUS_LED)
-    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN; // Enable GPIOB clock
-    
-    GPIOB_MODER &= ~(0x3 << (15 * 2));  // Clear bits for PB15
-    GPIOB_MODER |= (0x1 << (15 * 2));   // Set as output
-    GPIOB_OSPEEDR |= (0x3 << (15 * 2)); // Set speed to high speed
-    GPIOB_OTYPER &= ~(0x1 << 15);       // Set as push-pull
-    GPIOB_PUPDR &= ~(0x3 << (15 * 2));  // No pull-up/down
-    
-    GPIOB_BSRR = (1 << 15); // Start with LED off (PB15 high)
-#endif // STATUS_LED
-#endif // STM32F4
+    if (sdrr_info.status_led_enabled) {
+        RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN; // Enable GPIOB clock
+        
+        GPIOB_MODER &= ~(0x3 << (15 * 2));  // Clear bits for PB15
+        GPIOB_MODER |= (0x1 << (15 * 2));   // Set as output
+        GPIOB_OSPEEDR |= (0x3 << (15 * 2)); // Set speed to high speed
+        GPIOB_OTYPER &= ~(0x1 << 15);       // Set as push-pull
+        GPIOB_PUPDR &= ~(0x3 << (15 * 2));  // No pull-up/down
+        
+        GPIOB_BSRR = (1 << 15); // Start with LED off (PB15 high)
+    }
 }
 
 // Simple delay function
@@ -536,16 +392,12 @@ void delay(volatile uint32_t count) {
 
 // Blink pattern: on_time, off_time, repeat_count
 void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
-#if defined(STATUS_LED)
-    for(uint8_t i = 0; i < repeats; i++) {
-        GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-        delay(on_time);
-        GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
-        delay(off_time);
+    if (sdrr_info.status_led_enabled) {
+        for(uint8_t i = 0; i < repeats; i++) {
+            GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
+            delay(on_time);
+            GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
+            delay(off_time);
+        }
     }
-#else // !STATUS_LED
-    (void)on_time;
-    (void)off_time;
-    (void)repeats;
-#endif // STATUS_LED
 }

@@ -8,8 +8,6 @@
 #define CONSTANTS_H
 
 // Metadata strings to include in the binary
-extern const char build_date[];
-extern const char version[];
 extern const char stm_variant[];
 extern const char license[];
 extern const char project_url[];

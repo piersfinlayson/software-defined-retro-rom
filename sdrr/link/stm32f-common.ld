@@ -20,6 +20,18 @@ SECTIONS
         _isr_vector_end = .;
     } >FLASH
 
+    /* Start at 0x200 to give some space after the vector table, in case */
+    /* it's bigger than planned on a specific variant. */
+    .sdrr_info :
+    {
+        . = ORIGIN(FLASH) + 0x200;
+        . = ALIGN(4);
+        _sdrr_info_start = .;
+        KEEP(*(.sdrr_info))
+        . = ALIGN(4);
+        _sdrr_info_end = .;
+    } >FLASH
+
     .text :
     {
         . = ALIGN(4);

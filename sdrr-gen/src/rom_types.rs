@@ -1,4 +1,6 @@
-// ROM types and their properties
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RomType {
@@ -195,6 +197,36 @@ impl StmVariant {
             "f401rb" => Some(StmVariant::F401RB),
             "f401rc" => Some(StmVariant::F401RC),
             _ => None,
+        }
+    }
+
+    pub fn line_enum(&self) -> &str {
+        match self {
+            StmVariant::F103R8 |
+            StmVariant::F103RB => "F103",
+            StmVariant::F446RC => "STM32F446RCTx",
+            StmVariant::F446RE => "F446",
+            StmVariant::F411RC |
+            StmVariant::F411RE => "F411",
+            StmVariant::F405RG => "F405",
+            StmVariant::F401RE |
+            StmVariant::F401RB |
+            StmVariant::F401RC => "F401",
+        }
+    }
+
+    pub fn storage_enum(&self) -> &str {
+        match self {
+            StmVariant::F103R8 => "STORAGE_8",
+            StmVariant::F103RB => "STORAGE_B",
+            StmVariant::F446RC => "STORAGE_C",
+            StmVariant::F446RE => "STORAGE_E",
+            StmVariant::F411RC => "STORAGE_C",
+            StmVariant::F411RE => "STORAGE_E",
+            StmVariant::F405RG => "STORAGE_G",
+            StmVariant::F401RE => "STORAGE_E",
+            StmVariant::F401RB => "STORAGE_B",
+            StmVariant::F401RC => "STORAGE_C",
         }
     }
 
@@ -410,6 +442,17 @@ impl HwRev {
             "E" | "e" => Some(HwRev::E),
             "F" | "f" => Some(HwRev::F),
             _ => None,
+        }
+    }
+
+    pub fn c_enum_value(&self) -> &str {
+        match self {
+            HwRev::A => "HW_REV_24_A",
+            HwRev::B => "HW_REV_24_B",
+            HwRev::C => "HW_REV_24_C",
+            HwRev::D => "HW_REV_24_D",
+            HwRev::E => "HW_REV_24_E",
+            HwRev::F => "HW_REV_24_F",
         }
     }
 

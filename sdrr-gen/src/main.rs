@@ -1,4 +1,7 @@
-// src/main.rs
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
 mod config;
 mod generator;
 mod preprocessor;

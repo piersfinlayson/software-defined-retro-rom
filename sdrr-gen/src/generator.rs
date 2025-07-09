@@ -1,4 +1,7 @@
-// src/generator.rs
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
 use crate::config::Config;
 use crate::rom_types::{CsLogic, StmFamily};
 use crate::preprocessor::RomSet;
@@ -32,6 +35,9 @@ pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
 
     // Generate sdrr_config.h
     generate_sdrr_config_header(config)?;
+
+    // Generate sdrr_config.c
+    generate_sdrr_config_implementation(config, rom_sets)?;
 
     // Generate Makefile fragment
     generate_makefile_fragment(config)?;
@@ -119,6 +125,7 @@ fn generate_roms_header_file(config: &Config, rom_sets: &[RomSet]) -> Result<()>
 
     // ROM set array
     writeln!(file, "// ROM set array")?;
+    writeln!(file, "extern const uint8_t sdrr_rom_set_count;")?;
     writeln!(file, "extern const sdrr_rom_set_t rom_set[SDRR_NUM_SETS];")?;
     writeln!(file)?;
 
@@ -248,7 +255,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
         )?;
         writeln!(
             file,
-            "static const sdrr_rom_info_t *rom_set_{}_roms[] = {{",
+            "static const sdrr_rom_info_t * const rom_set_{}_roms[] = {{",
             ii
         )?;
         for rom_in_set in &rom_set.roms {
@@ -262,6 +269,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
     writeln!(file, "//")?;
     writeln!(file, "// ROM set array")?;
     writeln!(file, "//")?;
+    writeln!(file, "const uint8_t sdrr_rom_set_count = SDRR_NUM_SETS;")?;
     writeln!(file, "const sdrr_rom_set_t rom_set[SDRR_NUM_SETS] = {{")?;
 
     for rom_set in rom_sets {
@@ -380,8 +388,12 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
 
     writeln!(file, "#ifndef SDRR_CONFIG_H")?;
     writeln!(file, "#define SDRR_CONFIG_H")?;
-
     writeln!(file)?;
+
+    writeln!(file, "// Created within main.c but required by sdrr_config.c")?;
+    writeln!(file, "extern const char sdrr_build_date[];")?;
+    writeln!(file)?;
+
     writeln!(file, "//")?;
     writeln!(file, "// Hardware configuration")?;
     writeln!(file, "//")?;
@@ -536,6 +548,65 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
 
     writeln!(file)?;
     writeln!(file, "#endif // SDRR_CONFIG_H")?;
+
+    Ok(())
+}
+
+// Generate sdrr_config.c implementation file
+fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
+    const FILENAME: &str = "sdrr_config.c";
+    let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
+
+    writeln!(file, "#include \"sdrr_config.h\"")?;
+    writeln!(file, "#include \"config_base.h\"")?;
+    writeln!(file, "#include \"roms.h\"")?;
+    writeln!(file)?;
+
+    // Build date string
+    // Main info structure
+    writeln!(file, "// Main SDRR information structure, located at known point in flash")?;
+    writeln!(file, "__attribute__((section(\".sdrr_info\"))) const sdrr_info_t sdrr_info = {{")?;
+    
+    // Magic bytes
+    writeln!(file, "    .magic = {{'S', 'D', 'R', 'R'}},")?;
+    
+    // Version info - these would come from environment or build system
+    writeln!(file, "    .major_version = SDRR_VERSION_MAJOR,")?;
+    writeln!(file, "    .minor_version = SDRR_VERSION_MINOR,")?;
+    writeln!(file, "    .patch_version = SDRR_VERSION_PATCH,")?;
+    writeln!(file, "    .build_number = SDRR_BUILD_NUMBER,")?;
+    
+    // Build date pointer
+    writeln!(file, "    .build_date = sdrr_build_date,")?;
+    
+    // Git commit - this would come from build system
+    writeln!(file, "    .commit = SDRR_GIT_COMMIT,")?;
+    
+    // Hardware revision
+    writeln!(file, "    .hw_rev = {},", config.hw_rev.unwrap().c_enum_value())?;
+    
+    // STM32 info
+    writeln!(file, "    .stm_line = {},", config.stm_variant.line_enum())?;
+    writeln!(file, "    .stm_storage = {},", config.stm_variant.storage_enum())?;
+    
+    // Frequency and overclock
+    writeln!(file, "    .freq = {},", config.freq)?;
+    writeln!(file, "    .overclock = {},", if config.overclock { 1 } else { 0 })?;
+    
+    // Feature flags
+    writeln!(file, "    .swd_enabled = {},", if config.swd { 1 } else { 0 })?;
+    writeln!(file, "    .preload_image_to_ram = {},", if config.preload_to_ram { 1 } else { 0 })?;
+    writeln!(file, "    .bootloader_capable = {},", if config.bootloader { 1 } else { 0 })?;
+    writeln!(file, "    .status_led_enabled = {},", if config.status_led { 1 } else { 0 })?;
+    writeln!(file, "    .boot_logging_enabled = {},", if config.boot_logging { 1 } else { 0 })?;
+    writeln!(file, "    .mco_enabled = {},", if config.mco { 1 } else { 0 })?;
+
+    // ROM set info
+    writeln!(file, "    .rom_set_count = {},", rom_sets.len())?;
+    writeln!(file, "    .pad2 = {{0, 0}},")?;
+    writeln!(file, "    .rom_sets = rom_set")?;
+    
+    writeln!(file, "}};")?;
 
     Ok(())
 }

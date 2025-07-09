@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
 use crate::config::{SizeHandling, RomInSet};
 use crate::rom_types::{RomType, StmFamily, HwRev, CsLogic};
 use anyhow::{Context, Result};
