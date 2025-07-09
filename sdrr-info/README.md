@@ -5,6 +5,7 @@ This tool parses eithe a .bin or .elf SDRR firmware file, from v0.1.1 onwards, a
 - Key firmware properties
 - Configuration options
 - Information about included ROM images
+- Bytes of specific stored ROM images, to allow extraction of ROM images from the firmware.
 
 See [`main.rs`](src/main.rs) for a description of its operation.
 
@@ -20,18 +21,35 @@ cargo build --release
 cargo run --release -- ../sdrr/build/sdrr-yourtarget.elf
 ```
 
+There are a number of commands:
+
+- `info` - Display key firmware properties, configuration options, and ROM information - chosen automatically if no command is specified.
+- `lookup` - Look up one of more bytes from a ROM image by its set and address or range.
+- `lookup-raw` - Look up one or more bytes from a ROM image by its set and address **as read in by the STM32 on its address/CS port**.  Likely to be useful for debugging and developers only.
+- `help <command>` - More details on the commands and options available.
+
+Some further notes:
+
+- All commands accept the `-d|--detail` flag to provide more detailed output.
+- `lookup` and `lookup-raw` accept the `--output-mangled` flag to output the resulting byte(s) as the mangled byte that the STM32 would write to the data port.  Likely to be useful for debugging and developers only.
+- `lookup` can be used with `--output-binary` to output the result as a binary file, which is useful for extracting ROMs from the firmware, for checksumming and/or comparing with the originals.
+
 ## Sample Output
 
-```text
-Software Defined Retro ROM - Firmware Information
-=================================================
+The following is sample output from the following command:
 
+```bash
+cargo run --release -- info -d ../sdrr/build/sdrr-yourtarget.elf
+```
+
+```text
 Core Firmware Properties
 ------------------------
 File type:     Binary (.bin)
+File size:     82,524 bytes (81KB)
 Version:       0.1.1 (build 1)
-Build Date:    Jul  9 2025 14:14:23
-Git commit:    73987d0
+Build Date:    Jul  9 2025 18:50:57
+Git commit:    171a135
 Hardware:      24 pin rev F
 STM32:         F411RE (512KB flash, 128KB RAM)
 Frequency:     100 MHz (Overclocking: false)
@@ -41,12 +59,17 @@ Configurable Options
 Serve image from: RAM
 SWD enabled:      true
 Boot logging:     true
-Status LED:       true
-STM bootloader:   true (close all image select jumpers to activate)
-MCO enabled:      true (exposed via test pad)
+Status LED:       false
+STM bootloader:   false
+MCO enabled:      false
 
-ROM Sets: 4
------------
+ROMs Summary:
+-------------
+Total sets: 4
+Total ROMs: 4
+
+ROM Details: 4
+--------------
 ROM Set: 0
   Size: 16384 bytes
   ROM Count:     1
