@@ -1,6 +1,6 @@
 # Quick test harness for ROM data validation
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c99 -g -I include -I../sdrr/include -I../output
+CFLAGS = -Werror -Wall -Wextra -g -I include -I../sdrr/include -I../output
 TARGET = image-test
 BUILD_DIR = build
 SOURCES = src/main.c src/check-roms.c src/load-config.c src/query-roms.c ../output/roms.c
