@@ -11,13 +11,15 @@ Config Files  ROM Download    Code Gen    Compile      Compile test     Flash   
 ROM Images    & Validation    & Mangle    & Link          & Run        Firmware
 ```
 
-The build process involves four main components:
+The build process involves five main components:
 
 1. **Top-level Makefile** - Configuration processing and orchestration
 2. **sdrr-gen** - Rust tool for ROM processing and generation of firmware code containing the ROMs
 3. **sdrr Makefile** - STM32 ARM firmware compilation
 4. **test** - Optioanl tests to verify the generated "mangled" ROMs
 5. **probe-rs** - STM32 flashing and debugging
+
+In addition, [`sdrr-info`](/sdrr-info/README.me) allows you to inspect SDRR `.elf` and `.bin` firmware files, created using version v0.1.1 and later.
 
 ## Component Breakdown
 
