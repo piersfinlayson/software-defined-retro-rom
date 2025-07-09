@@ -28,15 +28,20 @@ pub const SDRR_VERSION_MAJOR: u16 = 0;
 pub const SDRR_VERSION_MINOR: u16 = 1;
 pub const SDRR_VERSION_PATCH: u16 = 1;
 
+// Modules
+mod symbols;
+mod load;
+mod args;
+mod utils;
+
+// External crates
 use anyhow::Result;
 use std::io::Write;
 
-mod symbols;
 use symbols::SdrrInfo;
-mod load;
 use load::load_sdrr_firmware;
-mod args;
 use args::{Args, Command, parse_args};
+use utils::add_commas;
 
 // SDRR info structure offset in firmware binary
 pub const SDRR_INFO_OFFSET: usize = 0x200;
@@ -88,11 +93,12 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn print_sdrr_info(info: &SdrrInfo, _args: &Args) {
+fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
     println!();
     println!("Core Firmware Properties");
     println!("------------------------");
     println!("File type:     {}", info.file_type);
+    println!("File size:     {} bytes ({}KB)", add_commas(info.file_size as u64), (info.file_size + 1023) / 1024);
     println!(
         "Version:       {}.{}.{} (build {})",
         info.major_version, info.minor_version, info.patch_version, info.build_number
@@ -139,40 +145,53 @@ fn print_sdrr_info(info: &SdrrInfo, _args: &Args) {
     };
     println!("MCO enabled:      {}", mco);
     println!();
-    println!("ROM Sets: {}", info.rom_set_count);
-    println!("-----------");
 
-    for (ii, rom_set) in info.rom_sets.iter().enumerate() {
-        if ii > 0 {
-            println!("-----------");
-        }
-        println!("ROM Set: {}", ii);
-        println!("  Size: {} bytes", rom_set.size);
-        println!("  ROM Count:     {}", rom_set.rom_count);
-        println!("  Algorithm:     {}", rom_set.serve);
-        println!("  Multi-ROM CS1: {}", rom_set.multi_rom_cs1_state);
+    println!("ROMs Summary:");
+    println!("-------------");
+    println!("Total sets: {}", info.rom_set_count);
+    // Count up total number of ROM images across all sets
+    let total_roms: usize = info.rom_sets.iter().map(|set| set
+        .roms.len()).sum();
+    println!("Total ROMs: {}", total_roms);
 
-        for (jj, rom) in rom_set.roms.iter().enumerate() {
-            println!("  ROM: {}", jj);
-            println!("    Type:      {}", rom.rom_type);
-            println!(
-                "    Name:      {}",
-                rom.filename.as_deref().unwrap_or("<not present>")
-            );
-            println!(
-                "    CS States: {}/{}/{}",
-                rom.cs1_state, rom.cs2_state, rom.cs3_state
-            );
-            println!(
-                "    CS Lines:  {}/{}/{}",
-                rom.cs1_line, rom.cs2_line, rom.cs3_line
-            );
+    if args.detail {
+        println!();
+        println!("ROM Details: {}", info.rom_set_count);
+        println!("--------------");
+
+        for (ii, rom_set) in info.rom_sets.iter().enumerate() {
+            if ii > 0 {
+                println!("-----------");
+            }
+            println!("ROM Set: {}", ii);
+            println!("  Size: {} bytes", rom_set.size);
+            println!("  ROM Count:     {}", rom_set.rom_count);
+            println!("  Algorithm:     {}", rom_set.serve);
+            println!("  Multi-ROM CS1: {}", rom_set.multi_rom_cs1_state);
+
+            for (jj, rom) in rom_set.roms.iter().enumerate() {
+                println!("  ROM: {}", jj);
+                println!("    Type:      {}", rom.rom_type);
+                println!(
+                    "    Name:      {}",
+                    rom.filename.as_deref().unwrap_or("<not present>")
+                );
+                println!(
+                    "    CS States: {}/{}/{}",
+                    rom.cs1_state, rom.cs2_state, rom.cs3_state
+                );
+                println!(
+                    "    CS Lines:  {}/{}/{}",
+                    rom.cs1_line, rom.cs2_line, rom.cs3_line
+                );
+            }
         }
     }
 }
 
 fn lookup_byte_at_address(
     info: &SdrrInfo,
+    detail: bool,
     set: u8,
     lookup_addr: u32,
     original_addr: u32,
@@ -199,10 +218,11 @@ fn lookup_byte_at_address(
         .collect();
     let rom_name = roms.join(", ");
 
-    println!("Byte lookup ROM set {} ({})", set, rom_name);
-
-    if lookup_addr != original_addr {
-        println!("Mangled address 0x{:04X}", lookup_addr);
+    if detail {
+        println!("Byte lookup ROM set {} ({})", set, rom_name);
+        if lookup_addr != original_addr {
+            println!("Mangled address 0x{:04X}", lookup_addr);
+        }
     }
 
     if output_mangled {
@@ -232,7 +252,7 @@ fn lookup_raw(info: &SdrrInfo, args: &Args) {
         .output_mangled
         .expect("Internal error: output_mangled is required");
 
-    if let Err(e) = lookup_byte_at_address(info, set, addr, addr, output_mangled, "Mangled address")
+    if let Err(e) = lookup_byte_at_address(info, args.detail, set, addr, addr, output_mangled, "Mangled address")
     {
         eprintln!("Error: {}", e);
         std::process::exit(1);
@@ -241,6 +261,7 @@ fn lookup_raw(info: &SdrrInfo, args: &Args) {
 
 fn lookup_range(
     info: &SdrrInfo,
+    detail: bool,
     set: u8,
     start_addr: u32,
     end_addr: u32,
@@ -290,8 +311,10 @@ fn lookup_range(
             .map_err(|e| format!("Failed to write binary data to stdout: {}", e))?;
     } else {
         // Hex dump output
-        println!("Byte lookup ROM set {} ({})", set, rom_name);
-        println!("Address range 0x{:04X} to 0x{:04X}:", start_addr, end_addr);
+        if detail {
+            println!("Byte lookup ROM set {} ({})", set, rom_name);
+            println!("Address range 0x{:04X} to 0x{:04X}:", start_addr, end_addr);
+        }
 
         for addr in start_addr..=end_addr {
             let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2);
@@ -357,6 +380,7 @@ fn lookup(info: &SdrrInfo, args: &Args) {
         let output_binary = args.output_binary.unwrap_or(false);
         if let Err(e) = lookup_range(
             info,
+            args.detail,
             set,
             start_addr,
             end_addr,
@@ -378,6 +402,7 @@ fn lookup(info: &SdrrInfo, args: &Args) {
 
         if let Err(e) = lookup_byte_at_address(
             info,
+            args.detail,
             set,
             lookup_addr,
             addr,

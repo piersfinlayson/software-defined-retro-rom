@@ -49,6 +49,7 @@ fn load_from_binary(firmware_data: Vec<u8>) -> Result<SdrrInfo> {
         &firmware_data,
         STM32F4_FLASH_BASE,
         SDRR_INFO_OFFSET,
+        firmware_data.len(),
     )
     .map_err(|e| anyhow::anyhow!(e))
 }
@@ -105,6 +106,7 @@ fn load_from_elf(firmware_data: Vec<u8>) -> Result<SdrrInfo> {
         &synthetic_binary,
         STM32F4_FLASH_BASE,
         SDRR_INFO_OFFSET,
+        firmware_data.len(),
     )
     .map_err(|e| anyhow::anyhow!(e))
 }

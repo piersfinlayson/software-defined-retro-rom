@@ -325,6 +325,7 @@ pub struct SdrrRomSet {
 #[derive(Debug)]
 pub struct SdrrInfo {
     pub file_type: FileType,
+    pub file_size: usize,
     pub magic: [u8; 4],             // Offset: 0
     pub major_version: u16,         // Offset: 4
     pub minor_version: u16,         // Offset: 6
@@ -354,6 +355,7 @@ impl SdrrInfo {
         full_firmware: &[u8],
         _base_addr: u32,
         info_offset: usize,
+        file_size: usize,
     ) -> Result<Self, String> {
         if data.len() < 48 {
             return Err("Firmware data too small".into());
@@ -447,6 +449,7 @@ impl SdrrInfo {
 
         Ok(SdrrInfo {
             file_type,
+            file_size,
             magic,
             major_version,
             minor_version,

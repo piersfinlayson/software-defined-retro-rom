@@ -6,6 +6,7 @@ use std::path::PathBuf;
 pub struct Args {
     pub command: Command,
     pub firmware: PathBuf,
+    pub detail: bool,
     pub set: Option<u8>,
     pub addr: Option<u32>,
     pub range: Option<(u32, u32)>,
@@ -46,6 +47,9 @@ enum Commands {
     Info {
         /// Firmware filename (.bin or .elf files supported)
         firmware: PathBuf,
+        /// Provide detailed information about the ROMs
+        #[arg(short, long, default_value = "false")]
+        detail: bool,
     },
     /// Lookup a byte associated with a raw STM32F4 address port line
     /// configuration.  Use this to detect what byte the STM32F4 will output
@@ -58,6 +62,9 @@ enum Commands {
     LookupRaw {
         /// Firmware filename (.bin or .elf files supported)
         firmware: PathBuf,
+        /// Provide detailed information about the address lookup
+        #[arg(short, long, default_value = "false")]
+        detail: bool,
         /// ROM set number (starts from 0)
         #[arg(short, long, default_value = "0")]
         set: u8,
@@ -85,6 +92,9 @@ enum Commands {
     Lookup {
         /// Firmware filename (.bin or .elf files supported)
         firmware: PathBuf,
+        /// Provide detailed information about the address lookup
+        #[arg(short, long, default_value = "false")]
+        detail: bool,
         /// ROM set number (starts from 0)
         #[arg(short, long, default_value = "0")]
         set: u8,
@@ -160,11 +170,12 @@ fn parse_range(s: &str) -> Result<(u32, u32), String> {
 pub fn parse_args() -> Result<Args, String> {
     let cli = Cli::parse();
 
-    let (command, firmware, set, addr, range, cs1, cs2, cs3, x1, x2, output_mangled, output_binary) =
+    let (command, firmware, detail, set, addr, range, cs1, cs2, cs3, x1, x2, output_mangled, output_binary) =
         match cli.command {
-            Some(Commands::Info { firmware }) => (
+            Some(Commands::Info { firmware, detail }) => (
                 Command::Info,
                 firmware,
+                detail,
                 None,
                 None,
                 None,
@@ -179,12 +190,14 @@ pub fn parse_args() -> Result<Args, String> {
 
             Some(Commands::LookupRaw {
                 firmware,
+                detail,
                 set,
                 addr,
                 output_mangled,
             }) => (
                 Command::LookupRaw,
                 firmware,
+                detail,
                 Some(set),
                 Some(addr),
                 None,
@@ -199,6 +212,7 @@ pub fn parse_args() -> Result<Args, String> {
 
             Some(Commands::Lookup {
                 firmware,
+                detail,
                 set,
                 addr,
                 range,
@@ -221,10 +235,19 @@ pub fn parse_args() -> Result<Args, String> {
                         return Err("--output-binary only valid when using --range".to_string());
                     }
                 }
+                if output_binary {
+                    if range.is_none() {
+                        return Err("--output-binary requires --range to be specified".to_string());
+                    }
+                    if detail {
+                        return Err("--output-binary cannot be used with --detail".to_string());
+                    }
+                }
 
                 (
                     Command::Lookup,
                     firmware,
+                    detail,
                     Some(set),
                     addr,
                     range,
@@ -243,6 +266,7 @@ pub fn parse_args() -> Result<Args, String> {
                     (
                         Command::Info,
                         firmware,
+                        false,
                         None,
                         None,
                         None,
@@ -295,6 +319,7 @@ pub fn parse_args() -> Result<Args, String> {
     Ok(Args {
         command,
         firmware,
+        detail,
         set,
         addr,
         range,
