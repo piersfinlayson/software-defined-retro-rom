@@ -62,10 +62,11 @@ STM ?= f411re
 # HW_REV ?= a (no longer supported)
 # HW_REV ?= b (no longer supported)
 # HW_REV ?= c (no longer supported)
-# HW_REV ?= d
-# HW_REV ?= e
-# HW_REV ?= f
-HW_REV ?= d
+# HW_REV ?= 24-d  # 24-pin rev D
+# HW_REV ?= 24-e  # 24-pin rev E
+# HW_REV ?= 24-f  # 24-pin rev F
+# HW_REV ?= 28-a  # 28-pin rev A - not yet supported
+HW_REV ?= 24-d
 
 # ROM configurations - each ROM can have its own type and CS settings
 #
@@ -485,7 +486,7 @@ ifeq ($(WARNINGS),0)
   $(info - None)
 endif
 
-.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen clean-sdrr-info sdrr-info info info-detail firmware run test
+.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen clean-sdrr-info sdrr-info info info-detail firmware run test sdrr-gen/target/release/sdrr-gen
 
 all: firmware info
 	@echo "=========================================="
@@ -500,12 +501,14 @@ sdrr-gen:
 	@echo "=========================================="
 	cd sdrr-gen && cargo build --release
 
-gen: sdrr-gen
+sdrr-gen/target/release/sdrr-gen: sdrr-gen
+
+gen: sdrr-gen/target/release/sdrr-gen
 	@echo "=========================================="
 	@echo "Generating firmware settings and retrieving and processing ROM data"
 	@echo "=========================================="
 	mkdir -p $(GEN_OUTPUT_DIR)
-	sdrr-gen/target/release/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output ../$(GEN_OUTPUT_DIR)
+	sdrr-gen/target/release/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output $(GEN_OUTPUT_DIR)
 
 sdrr-info:
 	cd sdrr-info && cargo build --release

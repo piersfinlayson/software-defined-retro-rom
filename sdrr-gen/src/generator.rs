@@ -3,7 +3,7 @@
 // MIT License
 
 use crate::config::Config;
-use crate::rom_types::{CsLogic, StmFamily};
+use crate::rom_types::{CsLogic, StmFamily, RomType};
 use crate::preprocessor::RomSet;
 use anyhow::{Context, Result};
 use std::fs;
@@ -197,14 +197,6 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
 
         writeln!(file, "static const sdrr_rom_info_t rom_{}_info = {{", ii)?;
 
-        let (rom_type_enum, cs1_pin, cs2_pin, cs3_pin) = match rom_config.rom_type {
-            crate::rom_types::RomType::Rom2316 => {
-                ("ROM_TYPE_2316", "PIN_20", "PIN_NONE", "PIN_NONE")
-            }
-            crate::rom_types::RomType::Rom2332 => ("ROM_TYPE_2332", "PIN_20", "PIN_21", "PIN_NONE"),
-            crate::rom_types::RomType::Rom2364 => ("ROM_TYPE_2364", "PIN_20", "PIN_18", "PIN_21"),
-        };
-
         let cs1_state = cs_logic_to_enum(rom_config.cs_config.cs1);
         let cs2_state = rom_config
             .cs_config
@@ -217,16 +209,13 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
             .map(cs_logic_to_enum)
             .unwrap_or("CS_NOT_USED");
 
-        writeln!(file, "    .rom_type = {},", rom_type_enum)?;
+        writeln!(file, "    .rom_type = {},", rom_config.rom_type.c_enum())?;
         writeln!(file, "    .cs1_state = {},", cs1_state)?;
         writeln!(file, "    .cs2_state = {},", cs2_state)?;
         writeln!(file, "    .cs3_state = {},", cs3_state)?;
         writeln!(file, "#if defined(BOOT_LOGGING)")?;
         writeln!(file, "    .filename = sdrr_rom_{}_filename,", ii)?;
         writeln!(file, "#endif // BOOT_LOGGING")?;
-        writeln!(file, "    .cs1_line = {},", cs1_pin)?;
-        writeln!(file, "    .cs2_line = {},", cs2_pin)?;
-        writeln!(file, "    .cs3_line = {},", cs3_pin)?;
         writeln!(file, "}};")?;
         writeln!(file)?;
     }
@@ -562,7 +551,38 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "#include \"roms.h\"")?;
     writeln!(file)?;
 
-    // Build date string
+    let hw_rev = config.hw_rev.expect("SDRR hardware revision is not set");
+
+    // Pin definitions
+    writeln!(file, "// Pin definitions")?;
+    writeln!(file, "static const sdrr_pins_t sdrr_pins = {{")?;
+    writeln!(file, "    .data_port = PORT_A,")?;
+    writeln!(file, "    .addr_port = PORT_C,")?;
+    writeln!(file, "    .cs_port = PORT_C,")?;
+    writeln!(file, "    .sel_port = PORT_B,")?;
+    writeln!(file, "    .reserved1 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .addr = {{5, 4, 6, 7, 3, 2, 1, 0, 8, 13, 11, 12, 9, 255, 255, 255}},")?;
+    writeln!(file, "    .reserved2 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .cs1_2364 = {},", hw_rev.pin_cs1(&RomType::Rom2364))?;
+    writeln!(file, "    .cs1_2332 = {},", hw_rev.pin_cs1(&RomType::Rom2332))?;
+    writeln!(file, "    .cs1_2316 = {},", hw_rev.pin_cs1(&RomType::Rom2316))?;
+    writeln!(file, "    .cs2_2332 = {},", hw_rev.pin_cs2(&RomType::Rom2332))?;
+    writeln!(file, "    .cs2_2316 = {},", hw_rev.pin_cs2(&RomType::Rom2316))?;
+    writeln!(file, "    .cs3_2316 = {},", hw_rev.pin_cs3(&RomType::Rom2316))?;
+    writeln!(file, "    .x1 = {},", hw_rev.pin_x1())?;
+    writeln!(file, "    .x2 = {},", hw_rev.pin_x2())?;
+    writeln!(file, "    .ce_23128 = {},", hw_rev.pin_ce(&RomType::Rom23128))?;
+    writeln!(file, "    .oe_23128 = {},", hw_rev.pin_oe(&RomType::Rom23128))?;
+    writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
+    writeln!(file, "    .sel0 = {},", hw_rev.pin_sel(0))?;
+    writeln!(file, "    .sel1 = {},", hw_rev.pin_sel(1))?;
+    writeln!(file, "    .sel2 = {},", hw_rev.pin_sel(2))?;
+    writeln!(file, "    .sel3 = {},", hw_rev.pin_sel(3))?;
+    writeln!(file, "    .reserved4 = {{0, 0, 0, 0}},")?;
+
+    writeln!(file, "}};")?;
+    writeln!(file)?;
+
     // Main info structure
     writeln!(file, "// Main SDRR information structure, located at known point in flash")?;
     writeln!(file, "__attribute__((section(\".sdrr_info\"))) const sdrr_info_t sdrr_info = {{")?;
@@ -604,7 +624,8 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     // ROM set info
     writeln!(file, "    .rom_set_count = {},", rom_sets.len())?;
     writeln!(file, "    .pad2 = {{0, 0}},")?;
-    writeln!(file, "    .rom_sets = rom_set")?;
+    writeln!(file, "    .rom_sets = rom_set,")?;
+    writeln!(file, "    .pins = &sdrr_pins,")?;
     
     writeln!(file, "}};")?;
 

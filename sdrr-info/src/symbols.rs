@@ -290,6 +290,65 @@ impl SdrrCsPin {
     }
 }
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SdrrStmPort {
+    None = 0x00,
+    PortA = 0x01,
+    PortB = 0x02,
+    PortC = 0x03,
+    PortD = 0x04,
+}
+
+impl fmt::Display for SdrrStmPort {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SdrrStmPort::None => write!(f, "None"),
+            SdrrStmPort::PortA => write!(f, "A"),
+            SdrrStmPort::PortB => write!(f, "B"),
+            SdrrStmPort::PortC => write!(f, "C"),
+            SdrrStmPort::PortD => write!(f, "D"),
+        }
+    }
+}
+
+impl SdrrStmPort {
+    fn from_u8(value: u8) -> Option<Self> {
+        match value {
+            0x00 => Some(SdrrStmPort::None),
+            0x01 => Some(SdrrStmPort::PortA),
+            0x02 => Some(SdrrStmPort::PortB),
+            0x03 => Some(SdrrStmPort::PortC),
+            0x04 => Some(SdrrStmPort::PortD),
+            _ => None,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct SdrrPins {
+    pub data_port: SdrrStmPort,
+    pub addr_port: SdrrStmPort,
+    pub cs_port: SdrrStmPort,
+    pub sel_port: SdrrStmPort,
+    pub addr: [u8; 16],
+    pub cs1_2364: u8,
+    pub cs1_2332: u8,
+    pub cs1_2316: u8,
+    pub cs2_2332: u8,
+    pub cs2_2316: u8,
+    pub cs3_2316: u8,
+    pub x1: u8,
+    pub x2: u8,
+    pub ce_23128: u8,
+    pub oe_23128: u8,
+    pub sel0: u8,
+    pub sel1: u8,
+    pub sel2: u8,
+    pub sel3: u8,
+}
+
 // ROM image size constants
 pub const ROM_IMAGE_SIZE_2316: usize = 2048;
 pub const ROM_IMAGE_SIZE_2332: usize = 4096;
@@ -305,9 +364,6 @@ pub struct SdrrRomInfo {
     pub cs2_state: SdrrCsState,
     pub cs3_state: SdrrCsState,
     pub filename: Option<String>, // Only present with BOOT_LOGGING
-    pub cs1_line: SdrrCsPin,
-    pub cs2_line: SdrrCsPin,
-    pub cs3_line: SdrrCsPin,
 }
 
 #[repr(C)]
@@ -346,6 +402,7 @@ pub struct SdrrInfo {
     pub mco_enabled: bool,          // Offset: 40
     pub rom_set_count: u8,          // Offset: 41
     pub rom_sets: Vec<SdrrRomSet>,  // Offset: 44 (pointer resolved)
+    pub pins: SdrrPins,             // Offset: 48 (pointer resolved)
 }
 
 impl SdrrInfo {
@@ -447,6 +504,10 @@ impl SdrrInfo {
             boot_logging_enabled,
         )?;
 
+        // Parse pins if present (at offset 48 from structure start)
+        let pins_ptr = u32::from_le_bytes([data[48], data[49], data[50], data[51]]);
+        let pins = Self::read_pins_at_ptr(full_firmware, pins_ptr, STM32F4_FLASH_BASE)?;
+
         Ok(SdrrInfo {
             file_type,
             file_size,
@@ -470,6 +531,7 @@ impl SdrrInfo {
             mco_enabled: mco_enabled != 0,
             rom_set_count,
             rom_sets,
+            pins,
         })
     }
 
@@ -596,11 +658,10 @@ impl SdrrInfo {
 
             // sdrr_rom_info_t structure size depends on BOOT_LOGGING
             let rom_info_size = if boot_logging_enabled != 0 {
-                12 // 11 bytes + padding
+                8
             } else {
-                8 // 7 bytes + padding
+                4
             };
-            let post_filename_offset = if boot_logging_enabled != 0 { 4 } else { 0 };
 
             if info_offset + rom_info_size > data.len() {
                 return Err("ROM info data out of bounds".into());
@@ -617,17 +678,6 @@ impl SdrrInfo {
                 .ok_or_else(|| format!("Invalid CS2 state {}", info_data[2]))?;
             let cs3_state = SdrrCsState::from_u8(info_data[3])
                 .ok_or_else(|| format!("Invalid CS3 state {}", info_data[3]))?;
-
-            // Pin assignments (without BOOT_LOGGING, they start at offset 4)
-            let mut index = 4 + post_filename_offset;
-            let cs1_line = SdrrCsPin::from_u8(info_data[index])
-                .ok_or_else(|| format!("Invalid CS1 pin {}", info_data[index]))?;
-            index += 1;
-            let cs2_line = SdrrCsPin::from_u8(info_data[index])
-                .ok_or_else(|| format!("Invalid CS2 pin {}", info_data[index]))?;
-            index += 1;
-            let cs3_line = SdrrCsPin::from_u8(info_data[index])
-                .ok_or_else(|| format!("Invalid CS3 pin {}", info_data[index]))?;
 
             let filename = if boot_logging_enabled != 0 {
                 // Read filename if BOOT_LOGGING is enabled
@@ -651,9 +701,6 @@ impl SdrrInfo {
                 cs2_state,
                 cs3_state,
                 filename,
-                cs1_line,
-                cs2_line,
-                cs3_line,
             };
 
             rom_infos.push(rom_info);
@@ -826,5 +873,54 @@ impl SdrrInfo {
         self.rom_sets
             .get(set as usize)
             .map(|rom_set| rom_set.data.as_slice())
+    }
+
+    fn read_pins_at_ptr(data: &[u8], ptr: u32, base_addr: u32) -> Result<SdrrPins, String> {
+        let offset = (ptr - base_addr) as usize;
+        if offset + 52 > data.len() {
+            return Err("Pins data out of bounds".into());
+        }
+        
+        Self::read_pins(&data[offset..offset + 52])
+    }
+
+    fn read_pins(data: &[u8]) -> Result<SdrrPins, String> {
+        if data.len() < 52 {
+            return Err("Pins data too small".into());
+        }
+
+        let data_port = SdrrStmPort::from_u8(data[0])
+            .ok_or_else(|| format!("Invalid data port {}", data[0]))?;
+        let addr_port = SdrrStmPort::from_u8(data[1])
+            .ok_or_else(|| format!("Invalid addr port {}", data[1]))?;
+        let cs_port = SdrrStmPort::from_u8(data[2])
+            .ok_or_else(|| format!("Invalid cs port {}", data[2]))?;
+        let sel_port = SdrrStmPort::from_u8(data[3])
+            .ok_or_else(|| format!("Invalid sel port {}", data[3]))?;
+
+        let mut addr = [0u8; 16];
+        addr.copy_from_slice(&data[8..24]);
+
+        Ok(SdrrPins {
+            data_port,
+            addr_port,
+            cs_port,
+            sel_port,
+            addr,
+            cs1_2364: data[28],
+            cs1_2332: data[29],
+            cs1_2316: data[30],
+            cs2_2332: data[31],
+            cs2_2316: data[32],
+            cs3_2316: data[33],
+            x1: data[34],
+            x2: data[35],
+            ce_23128: data[36],
+            oe_23128: data[37],
+            sel0: data[44],
+            sel1: data[45],
+            sel2: data[46],
+            sel3: data[47],
+        })
     }
 }

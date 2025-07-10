@@ -75,7 +75,7 @@ struct Args {
     #[clap(long, conflicts_with = "hsi")]
     hse: bool,
 
-    /// Hardware revision (a, b, c, d, e, f)
+    /// Hardware revision (24-d, 24-e, 24-f, 28-f)
     #[clap(long, value_parser = parse_hw_rev)]
     hw_rev: Option<HwRev>,
 
@@ -114,12 +114,22 @@ fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
 }
 
 fn parse_hw_rev(s: &str) -> Result<HwRev, String> {
-    HwRev::from_str(s).ok_or_else(|| {
+    let result = HwRev::from_str(s).ok_or_else(|| {
         format!(
-            "Invalid hardware revision: {}. Valid values are: a, b, c, d, e, f",
+            "Invalid hardware revision: {}. Valid values are: 24-d, 24-e, 24-f, 28-a",
             s
         )
-    })
+    });
+
+    if let Ok(hw_rev) = &result {
+        if hw_rev.is_28_pin() {
+            return Err("28-pin hardware revisions are not yet supported".to_string());
+        } else {
+            result
+        }
+    } else {
+        return result
+    }
 }
 
 fn perse_serve_alg(s: &str) -> Result<ServeAlg, String> {

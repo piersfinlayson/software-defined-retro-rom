@@ -42,6 +42,63 @@ typedef enum {
     STM_STORAGE_FORFCE_UINT16 = 0xFFFF,
 } stm_storage_t;
 
+// Only ports A-D are exposed on the 64-pin STM32F4s.
+typedef enum {
+    PORT_NONE = 0x00,
+    PORT_A    = 0x01,
+    PORT_B    = 0x02,
+    PORT_C    = 0x03,
+    PORT_D    = 0x04,
+} sdrr_stm_port_t;
+
+// Pin allocations
+//
+// All pin numbers are physical pins - allocated from the configured STM32F4
+// port.  Valid numbers are 0-15.  255 indicates a particular pin is present.
+typedef struct {
+    // SDRR STM32 pin port locations
+    // Offset: 0
+    // 8 x 1 byte = 8 bytes
+    sdrr_stm_port_t data_port;  // Data lines
+    sdrr_stm_port_t addr_port;  // Address lines
+    sdrr_stm_port_t cs_port;    // Chip select/enable lines
+    sdrr_stm_port_t sel_port;   // Image select jumpers
+    uint8_t reserved1[4];
+
+    // Up to 16 address lines.  0xFF indicates unused line.
+    // Offset: 8
+    // 20 x 1 byte = 20 bytes
+    uint8_t addr[16];
+    uint8_t reserved2[4];
+
+    // Chip select lines for supported variants
+    // Offset: 28
+    // 16 x 1 byte = 16 bytes
+    uint8_t cs1_2364;
+    uint8_t cs1_2332;
+    uint8_t cs1_2316;
+    uint8_t cs2_2332;
+    uint8_t cs2_2316;
+    uint8_t cs3_2316;
+    uint8_t x1;
+    uint8_t x2;
+    uint8_t ce_23128;
+    uint8_t oe_23128;
+    uint8_t reserved3[6];
+
+    // Image select lines
+    // Offset: 44
+    // 8 x 1 byte = 8 bytes
+    uint8_t sel0;
+    uint8_t sel1;
+    uint8_t sel2;
+    uint8_t sel3;
+    uint8_t reserved4[4];
+
+    // Length: 52
+} sdrr_pins_t;
+
+// Forward declarations
 struct sdrr_rom_set_t;
 
 // Main SDRR information data structure
@@ -111,7 +168,12 @@ typedef struct {
     // 4 bytes
     const struct sdrr_rom_set_t *rom_sets;
 
-    // Length: 48
+    // Pin allocation structure
+    // Offset: 48
+    // 4 bytes
+    const sdrr_pins_t *pins;
+
+    // Length: 52
 } sdrr_info_t;
 
 // ROM image sizes by type (F1 family)
@@ -178,9 +240,6 @@ typedef struct {
 #if defined(BOOT_LOGGING)
     const char* filename;       // Source filename (BOOT_LOGGING only)
 #endif // BOOT_LOGGING
-    const sdrr_cs_pin_t cs1_line;     // CS1 pin (rom_type=*)
-    const sdrr_cs_pin_t cs2_line;     // CS2 pin (rom_type = 2316 or 2332)
-    const sdrr_cs_pin_t cs3_line;     // CS3 pin (rom_type = 2316)
 } sdrr_rom_info_t;
 
 // ROM set information structure

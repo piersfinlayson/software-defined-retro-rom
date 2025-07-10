@@ -100,6 +100,9 @@ impl CsConfig {
                     Ok(())
                 }
             }
+            RomType::Rom23128 => {
+                unreachable!("23128 not yet supported");
+            }
         } {
             Ok(()) => Ok(()),
             Err(()) => {
@@ -142,7 +145,7 @@ impl Config {
 
         if let Some(hw_rev) = self.hw_rev {
             match hw_rev {
-                HwRev::A | HwRev::B | HwRev::C => {
+                HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => {
                     if self.stm_variant != StmVariant::F103RB
                         && self.stm_variant != StmVariant::F103R8
                     {
@@ -151,20 +154,23 @@ impl Config {
                         );
                     }
                 }
-                HwRev::D | HwRev::E | HwRev::F => {
+                HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => {
                     if self.stm_variant.family() != StmFamily::F4 {
                         return Err("Hardware revision D, E, and F only supports STM32F4 family"
                             .to_string());
                     }
                 }
+                HwRev::A_28 => {
+                    unreachable!("Hardware revision A_28 not yet supported");
+                }
             }
         } else {
             match self.stm_variant.family() {
                 StmFamily::F1 => {
-                    self.hw_rev = Some(HwRev::A);
+                    self.hw_rev = Some(HwRev::A_24);
                 }
                 StmFamily::F4 => {
-                    self.hw_rev = Some(HwRev::D);
+                    self.hw_rev = Some(HwRev::D_24);
                 }
             }
         }
@@ -250,7 +256,7 @@ impl Config {
             return Ok(rom_sets);
         }
 
-        if hw_rev != HwRev::F {
+        if hw_rev != HwRev::F_24 {
             return Err("Multiple ROMs per set is only supported on hardware revision F".to_string());
         }
 

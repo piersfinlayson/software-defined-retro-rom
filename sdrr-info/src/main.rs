@@ -163,6 +163,46 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
     println!("MCO enabled:      {}", mco);
     println!();
 
+    if args.detail {
+        let pins = &info.pins;
+        println!("Pin Configuration");
+        println!("-----------------");
+        println!("Data port:    {:?}", pins.data_port);
+        println!("Address port: {:?}", pins.addr_port);
+        println!("CS port:      {:?}", pins.cs_port);
+        println!("Select port:  {:?}", pins.sel_port);
+        
+        println!();
+        println!("Address pin mapping:");
+        for (ii, &pin) in pins.addr.iter().enumerate() {
+            if pin != 0xFF {
+                println!("  A{}: {}Port pin {}", ii, if ii < 10 { " " } else { "" }, pin);
+            }
+        }
+        
+        println!();
+        println!("Chip select pins:");
+        if pins.cs1_2364 != 0xFF { println!("  2364 CS1: Port pin {}", pins.cs1_2364); }
+        if pins.cs1_2332 != 0xFF { println!("  2332 CS1: Port pin {}", pins.cs1_2332); }
+        if pins.cs2_2332 != 0xFF { println!("  2332 CS2: Port pin {}", pins.cs2_2332); }
+        if pins.cs1_2316 != 0xFF { println!("  2316 CS1: Port pin {}", pins.cs1_2316); }
+        if pins.cs2_2316 != 0xFF { println!("  2316 CS2: Port pin {}", pins.cs2_2316); }
+        if pins.cs3_2316 != 0xFF { println!("  2316 CS3: Port pin {}", pins.cs3_2316); }
+        if pins.ce_23128 != 0xFF { println!("  23128 CE: Port pin {}", pins.ce_23128); }
+        if pins.oe_23128 != 0xFF { println!("  23128 OE: Port pin {}", pins.oe_23128); }
+        if pins.x1 != 0xFF { println!("  Multi X1: Port pin {}", pins.x1); }
+        if pins.x2 != 0xFF { println!("  Multi X2: Port pin {}", pins.x2); }
+
+        println!();
+        println!("Image select pins:");
+        if pins.sel0 != 0xFF { println!("  SEL0: Pin {}", pins.sel0); }
+        if pins.sel1 != 0xFF { println!("  SEL1: Pin {}", pins.sel1); }
+        if pins.sel2 != 0xFF { println!("  SEL2: Pin {}", pins.sel2); }
+        if pins.sel3 != 0xFF { println!("  SEL3: Pin {}", pins.sel3); }
+
+        println!();
+    }
+
     println!("ROMs Summary:");
     println!("-------------");
     println!("Total sets: {}", info.rom_set_count);
@@ -196,10 +236,6 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
                 println!(
                     "    CS States: {}/{}/{}",
                     rom.cs1_state, rom.cs2_state, rom.cs3_state
-                );
-                println!(
-                    "    CS Lines:  {}/{}/{}",
-                    rom.cs1_line, rom.cs2_line, rom.cs3_line
                 );
             }
         }

@@ -167,6 +167,26 @@ impl RomImage {
                 None, // CS2
                 Some(9),
             ],
+            RomType::Rom23128 => {
+                // This is a 128K ROM, so it has a different mapping
+                // for the address pins.
+                [
+                    Some(7),
+                    Some(6),
+                    Some(5),
+                    Some(4),
+                    Some(1),
+                    Some(0),
+                    Some(2),
+                    Some(3),
+                    Some(12),
+                    Some(8),
+                    Some(9),
+                    Some(11),
+                    Some(10),
+                    Some(13),
+                ]
+            }
         };
 
         // Start with 0 result
@@ -319,7 +339,7 @@ impl RomSet {
         // Multiple ROMs: check CS line states to select responding ROM
         for (index, rom_in_set) in self.roms.iter().enumerate() {
             // Get the CS pin that controls this ROM's selection
-            let cs_pin = hw_rev.cs_pin_for_rom_in_set(index);
+            let cs_pin = hw_rev.cs_pin_for_rom_in_set(&rom_in_set.config.rom_type, index);
             let cs_active = if rom_in_set.config.cs_config.cs1 == CsLogic::ActiveHigh {
                  (address & (1 << cs_pin)) == 1
             } else {
@@ -390,10 +410,10 @@ impl RomSet {
         let mut masked_address = address;
         
         // Remove the CS selection bits - only mask bits that exist on this hardware
-        masked_address &= !(1 << hw_rev.pin_cs1());
-        
+        masked_address &= !(1 << hw_rev.pin_cs1(rom_type));
+
         // Only mask X1/X2 on hardware that has them (revision F)
-        if matches!(hw_rev, HwRev::F) {
+        if matches!(hw_rev, HwRev::F_24) {
             masked_address &= !(1 << hw_rev.pin_x1());
             masked_address &= !(1 << hw_rev.pin_x2());
         }
@@ -409,6 +429,9 @@ impl RomSet {
             },
             RomType::Rom2364 => {
                 // 2364 only uses CS1, no additional bits to remove
+            },
+            RomType::Rom23128 => {
+                // No additional bits to remove
             },
         }
         

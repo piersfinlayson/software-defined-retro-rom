@@ -7,6 +7,7 @@ pub enum RomType {
     Rom2316,
     Rom2332,
     Rom2364,
+    Rom23128,
 }
 
 impl RomType {
@@ -15,6 +16,7 @@ impl RomType {
             "2316" => Some(RomType::Rom2316),
             "2332" => Some(RomType::Rom2332),
             "2364" => Some(RomType::Rom2364),
+            "23128" => Some(RomType::Rom23128),
             _ => None,
         }
     }
@@ -24,6 +26,7 @@ impl RomType {
             RomType::Rom2316 => 2048, // 2KB
             RomType::Rom2332 => 4096, // 4KB
             RomType::Rom2364 => 8192, // 8KB
+            RomType::Rom23128 => 16384, // 16KB
         }
     }
 
@@ -32,6 +35,7 @@ impl RomType {
             RomType::Rom2316 => 3,
             RomType::Rom2332 => 2,
             RomType::Rom2364 => 1,
+            RomType::Rom23128 => 2,
         }
     }
 
@@ -40,6 +44,16 @@ impl RomType {
             RomType::Rom2316 => "2316",
             RomType::Rom2332 => "2332",
             RomType::Rom2364 => "2364",
+            RomType::Rom23128 => "23128",
+        }
+    }
+
+    pub fn c_enum(&self) -> &str {
+        match self {
+            RomType::Rom2316 => "ROM_TYPE_2316",
+            RomType::Rom2332 => "ROM_TYPE_2332",
+            RomType::Rom2364 => "ROM_TYPE_2364",
+            RomType::Rom23128 => "ROM_TYPE_23128",
         }
     }
 }
@@ -423,109 +437,176 @@ impl ServeAlg {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
 pub enum HwRev {
-    A, // F103R based
-    B, // F103R based
-    C, // F103R based
-    D, // F4 based
-    E, // F4 based
-    F, // F4 based
+    A_24, // F103R based
+    B_24, // F103R based
+    C_24, // F103R based
+    D_24, // F4 based
+    E_24, // F4 based
+    F_24, // F4 based
+    A_28, // F4 based, 28 pin
 }
 
 impl HwRev {
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
-            "A" | "a" => Some(HwRev::A),
-            "B" | "b" => Some(HwRev::B),
-            "C" | "c" => Some(HwRev::C),
-            "D" | "d" => Some(HwRev::D),
-            "E" | "e" => Some(HwRev::E),
-            "F" | "f" => Some(HwRev::F),
+            "A" | "a" | "24-A" | "24-a" | "24A" | "24a" => Some(HwRev::A_24),
+            "B" | "b" | "24-B" | "24-b" | "24B" | "24b" => Some(HwRev::B_24),
+            "C" | "c" | "24-C" | "24-c" | "24C" | "24c" => Some(HwRev::C_24),
+            "D" | "d" | "24-D" | "24-d" | "24D" | "24d" => Some(HwRev::D_24),
+            "E" | "e" | "24-E" | "24-e" | "24E" | "24e" => Some(HwRev::E_24),
+            "F" | "f" | "24-F" | "24-f" | "24F" | "24f" => Some(HwRev::F_24),
+            "28-A" | "28-a" | "28A" | "28a" => Some(HwRev::A_28),
             _ => None,
         }
     }
 
     pub fn c_enum_value(&self) -> &str {
         match self {
-            HwRev::A => "HW_REV_24_A",
-            HwRev::B => "HW_REV_24_B",
-            HwRev::C => "HW_REV_24_C",
-            HwRev::D => "HW_REV_24_D",
-            HwRev::E => "HW_REV_24_E",
-            HwRev::F => "HW_REV_24_F",
+            HwRev::A_24 => "HW_REV_24_A",
+            HwRev::B_24 => "HW_REV_24_B",
+            HwRev::C_24 => "HW_REV_24_C",
+            HwRev::D_24 => "HW_REV_24_D",
+            HwRev::E_24 => "HW_REV_24_E",
+            HwRev::F_24 => "HW_REV_24_F",
+            HwRev::A_28 => "HW_REV_28_A",
         }
     }
 
     pub fn define(&self) -> &str {
         match self {
-            HwRev::A => "#define HW_REV_A        1",
-            HwRev::B => "#define HW_REV_B        1",
-            HwRev::C => "#define HW_REV_C        1",
-            HwRev::D => "#define HW_REV_D        1",
-            HwRev::E => "#define HW_REV_E        1",
-            HwRev::F => "#define HW_REV_F        1",
+            HwRev::A_24 => "#define HW_REV_A        1",
+            HwRev::B_24 => "#define HW_REV_B        1",
+            HwRev::C_24 => "#define HW_REV_C        1",
+            HwRev::D_24 => "#define HW_REV_D        1",
+            HwRev::E_24 => "#define HW_REV_E        1",
+            HwRev::F_24 => "#define HW_REV_F        1",
+            HwRev::A_28 => "#define HW_REV_28_A     1",
         }
     }
 
     /// Return the pin number for the given CS line based on hardware revision
-    pub fn pin_cs1(&self) -> usize {
+    pub fn pin_cs1(&self, _rom_type: &RomType) -> usize {
         match self {
-            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
-            HwRev::D | HwRev::E | HwRev::F => 10,
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => 10,
+            HwRev::A_28 => 255,  // Not provided
         }
     }
 
     /// Return the pin number for the given CS line based on hardware revision
     pub fn pin_cs2(&self, rom_type: &RomType) -> usize {
         match self {
-            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
-            HwRev::D | HwRev::E | HwRev::F => match rom_type {
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
                     RomType::Rom2316 => 12,
                     RomType::Rom2332 => 9,
                     RomType::Rom2364 => unreachable!("CS2 not used for 2364 ROMs"),
+                    RomType::Rom23128 => unreachable!("CS2 not used for 23128 ROMs"),
                 }
-            }
+            HwRev::A_28 => 255,  // Not provided
+        }
     }
 
     /// Return the pin number for the given CS line based on hardware revision
     pub fn pin_cs3(&self, rom_type: &RomType) -> usize {
         match self {
-            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
-            HwRev::D | HwRev::E | HwRev::F => match rom_type {
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
                 RomType::Rom2316 => 9,
                 RomType::Rom2332 => unreachable!("CS3 not used for 2332 ROMs"),
                 RomType::Rom2364 => unreachable!("CS3 not used for 2364 ROMs"),
+                RomType::Rom23128 => unreachable!("CS3 not used for 23128 ROMs"),
             }
+            HwRev::A_28 => 255,  // Not provided
         }
     }
 
     /// Return the pin number for the given CS line based on hardware revision
     pub fn pin_x1(&self) -> usize {
         match self {
-            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
-            HwRev::D | HwRev::E => unreachable!("X1 pin not provided in D/E revisions"),
-            HwRev::F => 14,
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 => 255,
+            HwRev::F_24 => 14,
+            HwRev::A_28 => 255,  // Not provided
         }
     }
 
     /// Return the pin number for the given CS line based on hardware revision
     pub fn pin_x2(&self) -> usize {
         match self {
-            HwRev::A | HwRev::B | HwRev::C => unreachable!("STM32F1 no longer supported"),
-            HwRev::D | HwRev::E => unreachable!("X2 pin not provided in D/E revisions"),
-            HwRev::F => 15,
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 => 255,
+            HwRev::F_24 => 15,
+            HwRev::A_28 => 255,  // Not provided
+        }
+    }
+
+    pub fn pin_ce(&self, rom_type: &RomType) -> usize {
+        match self {
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
+                RomType::Rom2316 => 255,
+                RomType::Rom2332 => 255,
+                RomType::Rom2364 => 255,
+                RomType::Rom23128 => 255,
+            },
+            HwRev::A_28 => 15,
+        }
+    }
+
+    pub fn pin_oe(&self, rom_type: &RomType) -> usize {
+        match self {
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
+                RomType::Rom2316 => 255,
+                RomType::Rom2332 => 255,
+                RomType::Rom2364 => 255,
+                RomType::Rom23128 => 255,
+            },
+            HwRev::A_28 => 14,
+        }
+    }
+
+    pub fn pin_sel(&self, sel: u8) -> usize {
+        match self {
+            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
+            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match sel {
+                0 => 0,
+                1 => 1,
+                2 => 2,
+                3 => if self == &HwRev::F_24 { 3 } else { 255 },
+                _ => 255,
+            }
+            HwRev::A_28 => match sel {
+                0 => 4,
+                1 => 5,
+                2 => 6,
+                3 => 7,
+                _ => 255,
+            },
         }
     }
 
     /// Get which pin (bit) controls the CS line for a ROM in a set.
-    pub fn cs_pin_for_rom_in_set(&self, index: usize) -> usize {
+    pub fn cs_pin_for_rom_in_set(&self, rom_type: &RomType, index: usize) -> usize {
         // The 0th ROM in a set uses CS1, the 1st uses X1, and the 2nd uses X2
         match index {
-            0 => self.pin_cs1(),
+            0 => self.pin_cs1(rom_type),
             1 => self.pin_x1(),
             2 => self.pin_x2(),
             _ => unreachable!("Invalid ROM index for set (max 3): {}", index),
         }
+    }
+
+    pub fn is_28_pin(&self) -> bool {
+        matches!(self, HwRev::A_28)
+    }
+
+    #[allow(dead_code)]
+    pub fn is_24_pin(&self) -> bool {
+        !self.is_28_pin()
     }
 }
 
