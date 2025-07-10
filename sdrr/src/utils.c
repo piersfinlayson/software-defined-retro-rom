@@ -225,34 +225,7 @@ void log_init(void) {
     LOG("%s", log_divider);
     LOG("Hardware info ...");
     LOG("STM32%s", stm_variant);
-    char *hw_rev;
-    switch (sdrr_info.hw_rev) {
-        case HW_REV_24_A:
-            hw_rev = "24-A";
-            break;
-        case HW_REV_24_B:
-            hw_rev = "24-B";
-            break;
-        case HW_REV_24_C:
-            hw_rev = "24-C";
-            break;
-        case HW_REV_24_D:
-            hw_rev = "24-D";
-            break;
-        case HW_REV_24_E:
-            hw_rev = "24-E";
-            break;
-        case HW_REV_24_F:
-            hw_rev = "24-F";
-            break;
-        case HW_REV_28_A:
-            hw_rev = "28-A";
-            break;
-        default:
-            hw_rev = "??";
-            break;
-    }
-    LOG("PCB rev %s", hw_rev);
+    LOG("PCB rev %s", sdrr_info.hw_rev);
     uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
     uint32_t flash_kb = flash_bytes / 1024;
     if (flash_bytes % 1024 != 0) {

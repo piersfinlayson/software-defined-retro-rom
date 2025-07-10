@@ -16,6 +16,10 @@ pub const STM32F4_FLASH_BASE: u32 = 0x08000000;
 const HW_DEV_24: u32 = 0x00000000;
 const HW_DEV_28: u32 = 0x00000020;
 
+// Lengths of config_base.h structs
+const SDRR_PINS_T_LEN: usize = 60;
+const SDRR_INFO_T_LEN: usize = 56;
+
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SdrrHwRev {
@@ -332,6 +336,7 @@ pub struct SdrrPins {
     pub addr_port: SdrrStmPort,
     pub cs_port: SdrrStmPort,
     pub sel_port: SdrrStmPort,
+    pub data: [u8; 8],
     pub addr: [u8; 16],
     pub cs1_2364: u8,
     pub cs1_2332: u8,
@@ -389,7 +394,7 @@ pub struct SdrrInfo {
     pub build_number: u16,          // Offset: 10
     pub build_date: String,         // Offset: 12 (pointer resolved)
     pub commit: [u8; 8],            // Offset: 16
-    pub hw_rev: SdrrHwRev,          // Offset: 24
+    pub hw_rev: String,             // Offset: 24 (pointer resolved)
     pub stm_line: StmLine,          // Offset: 28
     pub stm_storage: StmStorage,    // Offset: 30
     pub freq: u16,                  // Offset: 32
@@ -403,6 +408,7 @@ pub struct SdrrInfo {
     pub rom_set_count: u8,          // Offset: 41
     pub rom_sets: Vec<SdrrRomSet>,  // Offset: 44 (pointer resolved)
     pub pins: SdrrPins,             // Offset: 48 (pointer resolved)
+    pub boot_config: [u8; 4],       // Offset: 52
 }
 
 impl SdrrInfo {
@@ -414,7 +420,7 @@ impl SdrrInfo {
         info_offset: usize,
         file_size: usize,
     ) -> Result<Self, String> {
-        if data.len() < 48 {
+        if data.len() < SDRR_INFO_T_LEN {
             return Err("Firmware data too small".into());
         }
 
@@ -463,9 +469,8 @@ impl SdrrInfo {
         commit.copy_from_slice(&data[16..24]);
 
         // Hardware revision
-        let hw_rev_val = u32::from_le_bytes([data[24], data[25], data[26], data[27]]);
-        let hw_rev = SdrrHwRev::from_u32(hw_rev_val)
-            .ok_or_else(|| format!("Unknown hardware revision {}", hw_rev_val))?;
+        let hw_rev_ptr = u32::from_le_bytes([data[24], data[25], data[26], data[27]]);
+        let hw_rev = Self::read_string_at_ptr(full_firmware, hw_rev_ptr, STM32F4_FLASH_BASE)?;
 
         // STM line and storage
         let stm_line_val = u16::from_le_bytes([data[28], data[29]]);
@@ -508,6 +513,11 @@ impl SdrrInfo {
         let pins_ptr = u32::from_le_bytes([data[48], data[49], data[50], data[51]]);
         let pins = Self::read_pins_at_ptr(full_firmware, pins_ptr, STM32F4_FLASH_BASE)?;
 
+        let boot_config = [u8::from_le(data[52]), 
+                           u8::from_le(data[53]),
+                           u8::from_le(data[54]),
+                           u8::from_le(data[55])];
+
         Ok(SdrrInfo {
             file_type,
             file_size,
@@ -532,6 +542,7 @@ impl SdrrInfo {
             rom_set_count,
             rom_sets,
             pins,
+            boot_config,
         })
     }
 
@@ -709,30 +720,16 @@ impl SdrrInfo {
         Ok(rom_infos)
     }
 
-    pub fn is_hw_rev_f(&self) -> bool {
-        matches!(self.hw_rev, SdrrHwRev::Rev24F)
-    }
-
     pub fn demangle_byte(&self, byte: u8) -> u8 {
-        match self.hw_rev {
-            SdrrHwRev::Rev24D | SdrrHwRev::Rev24E | SdrrHwRev::Rev24F | SdrrHwRev::Rev28A => {
-                // Bit 0 -> 7
-                // Bit 1 -> 6
-                // Bit 2 -> 5
-                // Bit 3 -> 4
-                // Bit 4 -> 3
-                // Bit 5 -> 2
-                // Bit 6 -> 1
-                // Bit 7 -> 0
-                byte.reverse_bits()
-            }
-            _ => {
-                panic!(
-                    "Unsupported hardware revision for demangling: {}",
-                    self.hw_rev
-                );
-            }
-        }
+        // Bit 0 -> 7
+        // Bit 1 -> 6
+        // Bit 2 -> 5
+        // Bit 3 -> 4
+        // Bit 4 -> 3
+        // Bit 5 -> 2
+        // Bit 6 -> 1
+        // Bit 7 -> 0
+        byte.reverse_bits()
     }
 
     #[allow(dead_code)]
@@ -746,13 +743,6 @@ impl SdrrInfo {
         x1: Option<bool>,
         x2: Option<bool>,
     ) -> u32 {
-        if self.hw_rev != SdrrHwRev::Rev24D
-            && self.hw_rev != SdrrHwRev::Rev24E
-            && self.hw_rev != SdrrHwRev::Rev24F
-        {
-            panic!("Mangle address is only supported for hardware revisions 24-D, 24-E and 24-F");
-        }
-
         let mut pin_to_addr_map = [
             Some(7),
             Some(6),
@@ -877,15 +867,15 @@ impl SdrrInfo {
 
     fn read_pins_at_ptr(data: &[u8], ptr: u32, base_addr: u32) -> Result<SdrrPins, String> {
         let offset = (ptr - base_addr) as usize;
-        if offset + 52 > data.len() {
+        if offset + SDRR_PINS_T_LEN > data.len() {
             return Err("Pins data out of bounds".into());
         }
         
-        Self::read_pins(&data[offset..offset + 52])
+        Self::read_pins(&data[offset..offset + SDRR_PINS_T_LEN])
     }
 
     fn read_pins(data: &[u8]) -> Result<SdrrPins, String> {
-        if data.len() < 52 {
+        if data.len() < SDRR_PINS_T_LEN {
             return Err("Pins data too small".into());
         }
 
@@ -898,29 +888,32 @@ impl SdrrInfo {
         let sel_port = SdrrStmPort::from_u8(data[3])
             .ok_or_else(|| format!("Invalid sel port {}", data[3]))?;
 
+        let mut data_pins = [0u8; 8];
+        data_pins.copy_from_slice(&data[8..16]);
         let mut addr = [0u8; 16];
-        addr.copy_from_slice(&data[8..24]);
+        addr.copy_from_slice(&data[16..32]);
 
         Ok(SdrrPins {
             data_port,
             addr_port,
             cs_port,
             sel_port,
+            data: data_pins,
             addr,
-            cs1_2364: data[28],
-            cs1_2332: data[29],
-            cs1_2316: data[30],
-            cs2_2332: data[31],
-            cs2_2316: data[32],
-            cs3_2316: data[33],
-            x1: data[34],
-            x2: data[35],
-            ce_23128: data[36],
-            oe_23128: data[37],
-            sel0: data[44],
-            sel1: data[45],
-            sel2: data[46],
-            sel3: data[47],
+            cs1_2364: data[36],
+            cs1_2332: data[37],
+            cs1_2316: data[38],
+            cs2_2332: data[39],
+            cs2_2316: data[40],
+            cs3_2316: data[41],
+            x1: data[42],
+            x2: data[43],
+            ce_23128: data[44],
+            oe_23128: data[45],
+            sel0: data[52],
+            sel1: data[53],
+            sel2: data[54],
+            sel3: data[55],
         })
     }
 }

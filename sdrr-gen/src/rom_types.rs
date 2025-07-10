@@ -2,7 +2,9 @@
 //
 // MIT License
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RomType {
     Rom2316,
     Rom2332,
@@ -60,13 +62,28 @@ impl RomType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StmFamily {
-    F1,
     F4,
+}
+
+impl StmFamily {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "f4" => Some(StmFamily::F4),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for StmFamily {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            StmFamily::F4 => write!(f, "F4"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StmProcessor {
-    F103,
     F401,
     F405,
     F411,
@@ -76,7 +93,6 @@ pub enum StmProcessor {
 impl StmProcessor {
     pub fn vco_min_mhz(&self) -> u32 {
         match self {
-            StmProcessor::F103 => 0,
             StmProcessor::F401 => 192,
             StmProcessor::F405 => 100,
             StmProcessor::F411 => 100,
@@ -90,7 +106,6 @@ impl StmProcessor {
 
     pub fn max_sysclk_mhz(&self) -> u32 {
         match self {
-            StmProcessor::F103 => 64,
             StmProcessor::F401 => 84,
             StmProcessor::F405 => 168,
             StmProcessor::F411 => 100,
@@ -168,13 +183,6 @@ impl StmProcessor {
     /// Check if target frequency is achievable with HSI PLL configuration
     pub fn is_frequency_valid(&self, target_freq_mhz: u32, overclock: bool) -> bool {
         match self {
-            StmProcessor::F103 => {
-                if target_freq_mhz >= 8 && target_freq_mhz <= 64 && !overclock {
-                    true
-                } else {
-                    false
-                }
-            }
             _ => {
                 // F4 family uses HSI PLL, check if target frequency is achievable
                 self.calculate_pll_hsi(target_freq_mhz, overclock).is_some()
@@ -185,8 +193,6 @@ impl StmProcessor {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StmVariant {
-    F103R8, // STM32F103R8 (6 or 7), 64-pins, 20KB SRAM, 64KB Flash
-    F103RB, // STM32F103RB (6 or 7), 64-pins, 20KB SRAM, 128KB Flash
     F446RC, // STM32F446RC (6 or 7), 64-pins, 128KB SRAM, 256KB Flash
     F446RE, // STM32F446RE (6 or 7), 64-pins, 128KB SRAM, 512KB Flash
     F411RC, // STM32F411RC (6 or 7), 64-pins, 128KB SRAM, 256KB Flash
@@ -200,8 +206,6 @@ pub enum StmVariant {
 impl StmVariant {
     pub fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
-            "f103r8" => Some(StmVariant::F103R8),
-            "f103rb" => Some(StmVariant::F103RB),
             "f446rc" => Some(StmVariant::F446RC),
             "f446re" => Some(StmVariant::F446RE),
             "f411rc" => Some(StmVariant::F411RC),
@@ -216,8 +220,6 @@ impl StmVariant {
 
     pub fn line_enum(&self) -> &str {
         match self {
-            StmVariant::F103R8 |
-            StmVariant::F103RB => "F103",
             StmVariant::F446RC => "STM32F446RCTx",
             StmVariant::F446RE => "F446",
             StmVariant::F411RC |
@@ -231,8 +233,6 @@ impl StmVariant {
 
     pub fn storage_enum(&self) -> &str {
         match self {
-            StmVariant::F103R8 => "STORAGE_8",
-            StmVariant::F103RB => "STORAGE_B",
             StmVariant::F446RC => "STORAGE_C",
             StmVariant::F446RE => "STORAGE_E",
             StmVariant::F411RC => "STORAGE_C",
@@ -250,8 +250,6 @@ impl StmVariant {
 
     pub fn flash_storage_kb(&self) -> usize {
         match self {
-            StmVariant::F103R8 => 64,
-            StmVariant::F103RB => 128,
             StmVariant::F446RC => 256,
             StmVariant::F446RE => 512,
             StmVariant::F411RC => 256,
@@ -265,8 +263,6 @@ impl StmVariant {
 
     pub fn ram_kb(&self) -> usize {
         match self {
-            StmVariant::F103R8 => 20,
-            StmVariant::F103RB => 20,
             StmVariant::F446RC | StmVariant::F446RE => 128,
             StmVariant::F411RC | StmVariant::F411RE => 128,
             StmVariant::F405RG => 128, // +64KB CCM RAM
@@ -300,7 +296,6 @@ impl StmVariant {
 
     pub fn define_var_sub_fam(&self) -> &str {
         match self {
-            StmVariant::F103R8 | StmVariant::F103RB => "#define STM32F103      1",
             StmVariant::F446RC | StmVariant::F446RE => "#define STM32F446      1",
             StmVariant::F411RC | StmVariant::F411RE => "#define STM32F411      1",
             StmVariant::F405RG => "#define STM32F405      1",
@@ -312,7 +307,6 @@ impl StmVariant {
 
     pub fn family(&self) -> StmFamily {
         match self {
-            StmVariant::F103R8 | StmVariant::F103RB => StmFamily::F1,
             StmVariant::F446RC
             | StmVariant::F446RE
             | StmVariant::F411RC
@@ -326,7 +320,6 @@ impl StmVariant {
 
     pub fn processor(&self) -> StmProcessor {
         match self {
-            StmVariant::F103R8 | StmVariant::F103RB => StmProcessor::F103,
             StmVariant::F446RC | StmVariant::F446RE => StmProcessor::F446,
             StmVariant::F411RC | StmVariant::F411RE => StmProcessor::F411,
             StmVariant::F405RG => StmProcessor::F405,
@@ -336,15 +329,12 @@ impl StmVariant {
 
     pub fn define_var_fam(&self) -> &str {
         match self.family() {
-            StmFamily::F1 => "#define STM32F1        1",
             StmFamily::F4 => "#define STM32F4        1",
         }
     }
 
     pub fn define_var_str(&self) -> &str {
         match self {
-            StmVariant::F103R8 => "#define STM_VARIANT    \"F103R8\"",
-            StmVariant::F103RB => "#define STM_VARIANT    \"F103RB\"",
             StmVariant::F446RC => "#define STM_VARIANT    \"F446RC\"",
             StmVariant::F446RE => "#define STM_VARIANT    \"F446RE\"",
             StmVariant::F411RC => "#define STM_VARIANT    \"F411RC\"",
@@ -365,8 +355,6 @@ impl StmVariant {
     /// Used to pass into sdrr Makefile as VARIANT
     pub fn makefile_var(&self) -> &str {
         match self {
-            StmVariant::F103R8 => "stm32f103r8",
-            StmVariant::F103RB => "stm32f103rb",
             StmVariant::F446RC => "stm32f446rc",
             StmVariant::F446RE => "stm32f446re",
             StmVariant::F411RC => "stm32f411rc",
@@ -381,8 +369,6 @@ impl StmVariant {
     /// Used to pass to probe-rs
     pub fn chip_id(&self) -> &str {
         match self {
-            StmVariant::F103R8 => "STM32F103R8Tx",
-            StmVariant::F103RB => "STM32F103RBTx",
             StmVariant::F446RC => "STM32F446RCTx",
             StmVariant::F446RE => "STM32F446RETx",
             StmVariant::F411RC => "STM32F411RCTx",
@@ -433,180 +419,6 @@ impl ServeAlg {
 
     pub fn c_value_multi_rom_set(&self) -> &str {
         "SERVE_ADDR_ON_ANY_CS"
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(non_camel_case_types)]
-pub enum HwRev {
-    A_24, // F103R based
-    B_24, // F103R based
-    C_24, // F103R based
-    D_24, // F4 based
-    E_24, // F4 based
-    F_24, // F4 based
-    A_28, // F4 based, 28 pin
-}
-
-impl HwRev {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "A" | "a" | "24-A" | "24-a" | "24A" | "24a" => Some(HwRev::A_24),
-            "B" | "b" | "24-B" | "24-b" | "24B" | "24b" => Some(HwRev::B_24),
-            "C" | "c" | "24-C" | "24-c" | "24C" | "24c" => Some(HwRev::C_24),
-            "D" | "d" | "24-D" | "24-d" | "24D" | "24d" => Some(HwRev::D_24),
-            "E" | "e" | "24-E" | "24-e" | "24E" | "24e" => Some(HwRev::E_24),
-            "F" | "f" | "24-F" | "24-f" | "24F" | "24f" => Some(HwRev::F_24),
-            "28-A" | "28-a" | "28A" | "28a" => Some(HwRev::A_28),
-            _ => None,
-        }
-    }
-
-    pub fn c_enum_value(&self) -> &str {
-        match self {
-            HwRev::A_24 => "HW_REV_24_A",
-            HwRev::B_24 => "HW_REV_24_B",
-            HwRev::C_24 => "HW_REV_24_C",
-            HwRev::D_24 => "HW_REV_24_D",
-            HwRev::E_24 => "HW_REV_24_E",
-            HwRev::F_24 => "HW_REV_24_F",
-            HwRev::A_28 => "HW_REV_28_A",
-        }
-    }
-
-    pub fn define(&self) -> &str {
-        match self {
-            HwRev::A_24 => "#define HW_REV_A        1",
-            HwRev::B_24 => "#define HW_REV_B        1",
-            HwRev::C_24 => "#define HW_REV_C        1",
-            HwRev::D_24 => "#define HW_REV_D        1",
-            HwRev::E_24 => "#define HW_REV_E        1",
-            HwRev::F_24 => "#define HW_REV_F        1",
-            HwRev::A_28 => "#define HW_REV_28_A     1",
-        }
-    }
-
-    /// Return the pin number for the given CS line based on hardware revision
-    pub fn pin_cs1(&self, _rom_type: &RomType) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => 10,
-            HwRev::A_28 => 255,  // Not provided
-        }
-    }
-
-    /// Return the pin number for the given CS line based on hardware revision
-    pub fn pin_cs2(&self, rom_type: &RomType) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
-                    RomType::Rom2316 => 12,
-                    RomType::Rom2332 => 9,
-                    RomType::Rom2364 => unreachable!("CS2 not used for 2364 ROMs"),
-                    RomType::Rom23128 => unreachable!("CS2 not used for 23128 ROMs"),
-                }
-            HwRev::A_28 => 255,  // Not provided
-        }
-    }
-
-    /// Return the pin number for the given CS line based on hardware revision
-    pub fn pin_cs3(&self, rom_type: &RomType) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
-                RomType::Rom2316 => 9,
-                RomType::Rom2332 => unreachable!("CS3 not used for 2332 ROMs"),
-                RomType::Rom2364 => unreachable!("CS3 not used for 2364 ROMs"),
-                RomType::Rom23128 => unreachable!("CS3 not used for 23128 ROMs"),
-            }
-            HwRev::A_28 => 255,  // Not provided
-        }
-    }
-
-    /// Return the pin number for the given CS line based on hardware revision
-    pub fn pin_x1(&self) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 => 255,
-            HwRev::F_24 => 14,
-            HwRev::A_28 => 255,  // Not provided
-        }
-    }
-
-    /// Return the pin number for the given CS line based on hardware revision
-    pub fn pin_x2(&self) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 => 255,
-            HwRev::F_24 => 15,
-            HwRev::A_28 => 255,  // Not provided
-        }
-    }
-
-    pub fn pin_ce(&self, rom_type: &RomType) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
-                RomType::Rom2316 => 255,
-                RomType::Rom2332 => 255,
-                RomType::Rom2364 => 255,
-                RomType::Rom23128 => 255,
-            },
-            HwRev::A_28 => 15,
-        }
-    }
-
-    pub fn pin_oe(&self, rom_type: &RomType) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match rom_type {
-                RomType::Rom2316 => 255,
-                RomType::Rom2332 => 255,
-                RomType::Rom2364 => 255,
-                RomType::Rom23128 => 255,
-            },
-            HwRev::A_28 => 14,
-        }
-    }
-
-    pub fn pin_sel(&self, sel: u8) -> usize {
-        match self {
-            HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => unreachable!("STM32F1 no longer supported"),
-            HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => match sel {
-                0 => 0,
-                1 => 1,
-                2 => 2,
-                3 => if self == &HwRev::F_24 { 3 } else { 255 },
-                _ => 255,
-            }
-            HwRev::A_28 => match sel {
-                0 => 4,
-                1 => 5,
-                2 => 6,
-                3 => 7,
-                _ => 255,
-            },
-        }
-    }
-
-    /// Get which pin (bit) controls the CS line for a ROM in a set.
-    pub fn cs_pin_for_rom_in_set(&self, rom_type: &RomType, index: usize) -> usize {
-        // The 0th ROM in a set uses CS1, the 1st uses X1, and the 2nd uses X2
-        match index {
-            0 => self.pin_cs1(rom_type),
-            1 => self.pin_x1(),
-            2 => self.pin_x2(),
-            _ => unreachable!("Invalid ROM index for set (max 3): {}", index),
-        }
-    }
-
-    pub fn is_28_pin(&self) -> bool {
-        matches!(self, HwRev::A_28)
-    }
-
-    #[allow(dead_code)]
-    pub fn is_24_pin(&self) -> bool {
-        !self.is_28_pin()
     }
 }
 

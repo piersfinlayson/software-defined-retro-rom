@@ -9,38 +9,22 @@
 // access time of the fastest 2332/2364 ROMs.  (Slower ROMs supported 350ns and
 // 450ns access times.)
 //
-// TBC what access times it achieves.  HW_REV_A appears to achieve between
-// 420-480ns access times (too slow).
+// HW_REV_D with the STM32F411 at 100MHz is fast enough to replace kernal
+// basic, and character ROMs.  The character ROM is a 350ns ROM.
 //
 // This implementation achieves its aims by
-// - running the STM32F103 at its fastest possible clock speed from HSI/2 using
-//   the maximum PLL multiplier of 16, hence ~64MHz
-// - using the HSI trimming function to increase the HSI by 15x40KHz (600KHz),
-//   which in turn gives a final clock speed of ~68.8MHz
+// - running the STM32F4 at its fastest possible clock speed from the PLL
 // - implementing the main loop in assembly (this module)
+// - assigning data/CS pins to the same port, starting at pin 0, and data pins
+//   contiguously from pin 0 on the same port
+// - remapping "mangling" the addresses of the data bytes of the ROM images
+//   stored on flash, and the data bytes themselves, to map the hardware pin
+//   layout
 // - preloading as much as possible into registers before the main work loop,
 //   so subsequent operations within the loop take as few instructions as
 //   possible
 //
-// Subsequent versions of the hardware needed a few modifications to improve
-// performance further:
-// - CS2 (used by the 2332) needs to be connected to the same port as CS1, in
-//   order to avoid 2 cycles reading it from a different port register, and 
-//   an additional test cycle
-// - CS3 (2316 if supported) needs to be connected to the same port as CS1 for
-//   the same reason
-// - all data pins connected to port C to be in either the lower or upper half
-//   of the bank, to avoid both CRH and CRL manipulation, saving 1 cycle.
-//
-// HW_REV_B has all CS lines on port C (PC10-12).
-//
-// HW_REV_C has all data lines on port A (PA8-PA15), plus CS lines PC10-12.
-//
-// HW_REV_D may be necessary using an STM32F401 or STM32F411 to increase speed
-// further.  In addition to faster clocks and better flash access times, these
-// processors also support 5V on all GPIOs, so saving a cycle shifting the
-// read address right by two to skip PB0/1 (and the requirement to avoid PB5).
-
+// See the various technical documents in [/docs](/docs) for more information.
 #include "include.h"
 
 #if !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
@@ -64,20 +48,6 @@ extern uint32_t _ram_rom_image_end[];
 //
 // Defines for assembly routine
 //
-
-// Data output enable mask for PA0-7.
-//
-// Also, ensure PA13/PA14 are in alternate function mode, so SWD programming
-// (and logging if MAIN_LOOP_LOGGING enabled) work.
-//
-// In the MCO case, ensure PA8 set to alternate function.
-#if !defined(MCO)
-#define DATA_OUTPUT_MASK 0x28005555
-#define DATA_INPUT_MASK 0x28000000
-#else // MCO
-#define DATA_OUTPUT_MASK 0x28025555
-#define DATA_INPUT_MASK 0x28020000
-#endif // MCO
 
 // CPU registers - we prefer low registers (r0-r7) to high registers as
 // instructions using the low registers tend to be 16-bit vs 32-bit, which
@@ -159,16 +129,16 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
     // Set up serve mode
     sdrr_serve_t serve_mode = set->serve;
-    if (sdrr_info.hw_rev == HW_REV_24_F) {
-        // Warn if serve mode is incorrectly set for multiple ROM images
-        if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
-            ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set - rectifying");
-            serve_mode = SERVE_ADDR_ON_ANY_CS;
-        } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
-            ROM_IMPL_LOG("!!! Single ROM image, but serve mode is incorrectly set - setting to default");
-            serve_mode = SERVE_TWO_CS_ONE_ADDR;
-        }
+
+    // Warn if serve mode is incorrectly set for multiple ROM images
+    if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
+        ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set - rectifying");
+        serve_mode = SERVE_ADDR_ON_ANY_CS;
+    } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
+        ROM_IMPL_LOG("!!! Single ROM image, but serve mode is incorrectly set - setting to default");
+        serve_mode = SERVE_TWO_CS_ONE_ADDR;
     }
+
     ROM_IMPL_DEBUG("Serve ROM: %s via mode: %d", rom->filename, serve_mode);
 
     // Set up CS pins.  These are the same values for:
@@ -187,7 +157,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     uint8_t pin_x1 = 14;
     uint8_t pin_x2 = 15;
 
-    if ((sdrr_info.hw_rev == HW_REV_24_F) && (serve_mode == SERVE_ADDR_ON_ANY_CS))
+    if (serve_mode == SERVE_ADDR_ON_ANY_CS)
     {
         if (set->rom_count == 2)
         {
@@ -283,16 +253,14 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         GPIOC_PUPDR = 0xA0000000;
     }
     else {
-        if (sdrr_info.hw_rev == HW_REV_24_F) {
-            // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
-            // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
-            if (set->rom_count == 2) {
-                // Set pull-down on PC15, as PC14 used to select the second ROM image
-                GPIOC_PUPDR = 0x80000000;
-            } else if (set->rom_count == 3) {
-                // No pull-downs - PC14/PC15 used to select second and third ROM images
-                GPIOC_PUPDR = 0;
-            }
+        // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
+        // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
+        if (set->rom_count == 2) {
+            // Set pull-down on PC15, as PC14 used to select the second ROM image
+            GPIOC_PUPDR = 0x80000000;
+        } else if (set->rom_count == 3) {
+            // No pull-downs - PC14/PC15 used to select second and third ROM images
+            GPIOC_PUPDR = 0;
         } else {
             // Handle gracefully by assuming one ROM image 
             ROM_IMPL_LOG("!!! Unsupported ROM count: %d", set->rom_count);
@@ -308,14 +276,25 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     serve_mode = SERVE_TWO_CS_ONE_ADDR;
 #endif
 
+    // Data output enable mask for port A.  Leave SWD enabled.
+    register uint32_t data_output_mask asm(R_DATA_OUT_MASK);
+    register uint32_t data_input_mask asm(R_DATA_IN_MASK);
+    if (sdrr_info.mco_enabled) {
+        // PA8 is AF, PA0-7 are inputs
+        data_output_mask = 0x28025555;
+        data_input_mask = 0x28020000;
+    } else {
+        // PA0-7 are inputs
+        data_output_mask = 0x28005555;
+        data_input_mask = 0x28000000;
+    }
+
     // Preload registers with their values
     register uint32_t cs_invert_mask_reg asm(R_CS_INVERT_MASK) = cs_invert_mask;
     register uint32_t cs_check_mask_reg asm(R_CS_CHECK_MASK) = cs_check_mask;
     register uint32_t gpioc_idr asm(R_GPIO_ADDR_CS_IDR) = VAL_GPIOC_IDR; 
     register uint32_t gpioa_odr asm(R_GPIO_DATA_ODR) = VAL_GPIOA_ODR;
     register uint32_t gpioa_moder asm(R_GPIO_DATA_MODER) = VAL_GPIOA_MODER;
-    register uint32_t data_output_mask asm(R_DATA_OUT_MASK) = DATA_OUTPUT_MASK;
-    register uint32_t data_input_mask asm(R_DATA_IN_MASK) = DATA_INPUT_MASK;
 
     register uint32_t rom_table asm(R_ROM_TABLE);
     if (sdrr_info.preload_image_to_ram) {

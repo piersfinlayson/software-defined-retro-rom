@@ -1,13 +1,7 @@
-# STM32F103 Makefile
+# SDRR firmware Makefile
 
-# To specify the target variant, use:
-# ```bash
-# make VARIANT=stm32f103x8
-# ```
-#
-# Available variants:
-# - stm32f103xb (default)
-# - stm32f103x8
+# To build, use the top-level /Makefile, which generates the required files and
+# configuration to build SDRR, then calls this Makefile.
 
 # sdrr-gen Output directory
 OUTPUT_DIR := ../output
@@ -23,7 +17,7 @@ $(error sdrr-gen generated.mk Makefile fragment not found. Please run the sdrr-g
 endif
 
 # Default variant - this is set in generated.mk
-# VARIANT := stm32f103xb
+# VARIANT := stm32f411xb
 
 # Build directory
 BUILD_DIR := build
@@ -61,9 +55,7 @@ ifeq ($(filter clean clean-% distclean,$(MAKECMDGOALS)),)
 LDSCRIPT=$(OUTPUT_DIR)/linker.ld
 
 # Flags
-ifeq ($(findstring stm32f103,$(VARIANT)),stm32f103)
-	COMMON_FLAGS := -mcpu=cortex-m3 -mthumb -mfloat-abi=soft 
-else ifeq ($(findstring stm32f4,$(VARIANT)),stm32f4)
+ifeq ($(findstring stm32f4,$(VARIANT)),stm32f4)
 	COMMON_FLAGS := -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ffast-math
 #	COMMON_FLAGS := -mcpu=cortex-m4 -mthumb -mfloat-abi=soft
 else
@@ -126,14 +118,6 @@ $(BIN): $(ELF)
 size: $(ELF)
 	$(SIZE) $(ELF)
 	@ls -ltr $(BIN) 
-
-# Flash target
-flash: $(ELF)
-	probe-rs download --chip STM32F103C8Tx $<
-
-# Run target
-run: $(ELF)
-	probe-rs run --chip STM32F103C8Tx $<
 
 # Clean segger
 clean-segger-src:

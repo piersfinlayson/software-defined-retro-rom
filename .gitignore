@@ -7,6 +7,8 @@ segger-rtt/
 build-test/
 builds/
 test/build
+sdrr-hw-config/user/*
+!sdrr-hw-config/user/README.md
 
 output/
 

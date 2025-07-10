@@ -6,14 +6,15 @@ mod config;
 mod generator;
 mod preprocessor;
 mod rom_types;
+mod hardware;
 
 use crate::config::{Config, CsConfig, SizeHandling};
 use crate::generator::generate_files;
 use crate::rom_types::{CsLogic, RomType, StmVariant, ServeAlg};
+use crate::hardware::HwConfig;
 use anyhow::{Context, Result};
 use clap::Parser;
 use preprocessor::RomImage;
-use rom_types::HwRev;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use tempfile::{NamedTempFile, TempPath};
@@ -28,12 +29,12 @@ use zip::ZipArchive;
 )]
 struct Args {
     /// ROM configuration (file=path,type=2364,cs1=0)
-    #[clap(long, required = true)]
+    #[clap(long, required_unless_present = "list_hw_revs")]
     rom: Vec<String>,
 
     /// STM32 variant (f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc)
-    #[clap(long, value_parser = parse_stm_variant)]
-    stm: StmVariant,
+    #[clap(long, required_unless_present = "list_hw_revs", value_parser = parse_stm_variant)]
+    stm: Option<StmVariant>,
 
     /// Enable SWD
     #[clap(long)]
@@ -75,9 +76,9 @@ struct Args {
     #[clap(long, conflicts_with = "hsi")]
     hse: bool,
 
-    /// Hardware revision (24-d, 24-e, 24-f, 28-f)
-    #[clap(long, value_parser = parse_hw_rev)]
-    hw_rev: Option<HwRev>,
+    /// Hardware revision (use --list-hw-revs for options)
+    #[clap(long, alias= "hw-rev", value_parser = parse_hw_rev, required_unless_present = "list_hw_revs")]
+    hw: Option<HwConfig>,
 
     /// Target frequency in MHz (default: max for the variant)
     #[clap(long)]
@@ -104,8 +105,12 @@ struct Args {
     yes: bool,
 
     /// Byte serving algorithm to choose (default, a = 2 CS 1 Addr, b = Addr on CS)
-    #[clap(long, value_parser = perse_serve_alg)]
+    #[clap(long, value_parser = parse_serve_alg)]
     serve_alg: Option<ServeAlg>,
+
+    /// List available hardware revisions
+    #[clap(long, default_value = "false")]
+    list_hw_revs: bool,
 }
 
 fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
@@ -113,26 +118,29 @@ fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
         .ok_or_else(|| format!("Invalid STM32 variant: {}. Valid values are: f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc", s))
 }
 
-fn parse_hw_rev(s: &str) -> Result<HwRev, String> {
-    let result = HwRev::from_str(s).ok_or_else(|| {
-        format!(
-            "Invalid hardware revision: {}. Valid values are: 24-d, 24-e, 24-f, 28-a",
-            s
-        )
-    });
+fn parse_hw_rev(hw_rev: &str) -> Result<HwConfig, String> {
+    // Special case d, e and f for backwards compatibility
+    let hw_rev = match hw_rev {
+        "d" => "24-d",
+        "e" => "24-e",
+        "f" => "24-f",
+        _ => hw_rev,
+    };
 
-    if let Ok(hw_rev) = &result {
-        if hw_rev.is_28_pin() {
-            return Err("28-pin hardware revisions are not yet supported".to_string());
-        } else {
-            result
-        }
-    } else {
-        return result
+    let hw_config = hardware::get_hw_config(hw_rev)
+        .map_err(|e| format!("Failed to get hardware config: {} - use --list-hw-revs for options", e))?;
+
+    if hw_config.rom.pins.quantity != 24 {
+        return Err(format!(
+            "{}: ROM pins quantity must currently be 24, found {}",
+            hw_rev, hw_config.rom.pins.quantity
+        ));
     }
+    
+    Ok(hw_config)
 }
 
-fn perse_serve_alg(s: &str) -> Result<ServeAlg, String> {
+fn parse_serve_alg(s: &str) -> Result<ServeAlg, String> {
     ServeAlg::from_str(s).ok_or_else(|| {
         format!(
             "Invalid serve algorithm: {}. Valid values are: default, a (2 CS 1 Addr), b (Addr on CS)",
@@ -436,6 +444,20 @@ fn confirm_licences(config: &Config) -> Result<()> {
 fn main() -> Result<()> {
     let args = Args::parse();
 
+    if args.list_hw_revs {
+        // List available hardware revisions
+        let hw_revs = hardware::list_available_configs()?;
+        if hw_revs.is_empty() {
+            println!("No hardware revisions found.");
+        } else {
+            println!("Available hardware revisions:");
+            for (name, description) in hw_revs {
+                println!("  {}: {}", name, description);
+            }
+        }
+        return Ok(());
+    }
+
     // Parse ROM configurations
     let mut all_temp_handles = Vec::new();
     let mut roms = Vec::new();
@@ -453,14 +475,17 @@ fn main() -> Result<()> {
     }
 
     // Set the frequency based on the STM32 variant or user input
+    let stm_variant = args
+        .stm
+        .expect("Default STM32 variant must be valid");
     let freq = args
         .freq
-        .unwrap_or_else(|| args.stm.processor().max_sysclk_mhz());
+        .unwrap_or_else(|| stm_variant.processor().max_sysclk_mhz());
 
     // Create configuration
     let mut config = Config {
         roms,
-        stm_variant: args.stm,
+        stm_variant,
         output_dir: args.output,
         swd: args.swd,
         mco: args.mco,
@@ -470,7 +495,7 @@ fn main() -> Result<()> {
         debug_logging: args.debug_logging,
         overwrite: args.overwrite,
         hse: args.hse,
-        hw_rev: args.hw_rev,
+        hw: args.hw.unwrap(),
         freq,
         status_led: args.status_led,
         overclock: args.overclock,

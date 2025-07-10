@@ -3,7 +3,7 @@
 // MIT License
 
 use crate::config::Config;
-use crate::rom_types::{CsLogic, StmFamily, RomType};
+use crate::rom_types::{CsLogic, RomType};
 use crate::preprocessor::RomSet;
 use anyhow::{Context, Result};
 use std::fs;
@@ -20,11 +20,6 @@ pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
                 config.output_dir.display()
             )
         })?;
-    }
-
-    let family = config.stm_variant.family();
-    if family == StmFamily::F1 {
-        return Err(anyhow::anyhow!("F1 family is no longer supported"));
     }
 
     // Generate roms.h
@@ -307,7 +302,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
     writeln!(file)?;
 
     // Generate ROM set data arrays
-    let hw_rev = config.hw_rev.unwrap();
+    let hw = &config.hw;
     for rom_set in rom_sets {
         // Determine image size based on number of ROMs in the set
         let image_size = if rom_set.roms.len() == 1 {
@@ -359,7 +354,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                 write!(file, "    ")?;
             }
 
-            let byte = rom_set.get_byte(address, &family, hw_rev);
+            let byte = rom_set.get_byte(address, &family, &hw);
             write!(file, "0x{:02x}, ", byte)?;
         }
 
@@ -399,7 +394,11 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
     writeln!(file, "{}", config.stm_variant.define_ram_size_kb())?;
     writeln!(file)?;
     writeln!(file, "// SDRR hardware variant")?;
-    writeln!(file, "{}", config.hw_rev.unwrap().define())?;
+    if config.hw.rom.pins.quantity == 24 {
+        writeln!(file, "#define SDRR_24_PIN  1")?;
+    } else {
+        unreachable!("Only 24-pin SDRR hardware is supported");
+    }
     writeln!(file)?;
     if !config.bootloader {
         writeln!(
@@ -551,7 +550,7 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "#include \"roms.h\"")?;
     writeln!(file)?;
 
-    let hw_rev = config.hw_rev.expect("SDRR hardware revision is not set");
+    let hw = &config.hw;
 
     // Pin definitions
     writeln!(file, "// Pin definitions")?;
@@ -561,27 +560,45 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "    .cs_port = PORT_C,")?;
     writeln!(file, "    .sel_port = PORT_B,")?;
     writeln!(file, "    .reserved1 = {{0, 0, 0, 0}},")?;
-    writeln!(file, "    .addr = {{5, 4, 6, 7, 3, 2, 1, 0, 8, 13, 11, 12, 9, 255, 255, 255}},")?;
+
+    let data_pins = hw.stm.pins.data.clone();
+    let data_pins_str = data_pins
+        .iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    writeln!(file, "    .data = {{ {} }},", data_pins_str)?;
+
+    let mut addr_pins = hw.stm.pins.addr.clone();
+    addr_pins.resize(16, 255);
+    let addr_pins_str = addr_pins
+        .iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    writeln!(file, "    .addr = {{ {} }},", addr_pins_str)?;
+
     writeln!(file, "    .reserved2 = {{0, 0, 0, 0}},")?;
-    writeln!(file, "    .cs1_2364 = {},", hw_rev.pin_cs1(&RomType::Rom2364))?;
-    writeln!(file, "    .cs1_2332 = {},", hw_rev.pin_cs1(&RomType::Rom2332))?;
-    writeln!(file, "    .cs1_2316 = {},", hw_rev.pin_cs1(&RomType::Rom2316))?;
-    writeln!(file, "    .cs2_2332 = {},", hw_rev.pin_cs2(&RomType::Rom2332))?;
-    writeln!(file, "    .cs2_2316 = {},", hw_rev.pin_cs2(&RomType::Rom2316))?;
-    writeln!(file, "    .cs3_2316 = {},", hw_rev.pin_cs3(&RomType::Rom2316))?;
-    writeln!(file, "    .x1 = {},", hw_rev.pin_x1())?;
-    writeln!(file, "    .x2 = {},", hw_rev.pin_x2())?;
-    writeln!(file, "    .ce_23128 = {},", hw_rev.pin_ce(&RomType::Rom23128))?;
-    writeln!(file, "    .oe_23128 = {},", hw_rev.pin_oe(&RomType::Rom23128))?;
+    writeln!(file, "    .cs1_2364 = {},", hw.pin_cs1(&RomType::Rom2364))?;
+    writeln!(file, "    .cs1_2332 = {},", hw.pin_cs1(&RomType::Rom2332))?;
+    writeln!(file, "    .cs1_2316 = {},", hw.pin_cs1(&RomType::Rom2316))?;
+    writeln!(file, "    .cs2_2332 = {},", hw.pin_cs2(&RomType::Rom2332))?;
+    writeln!(file, "    .cs2_2316 = {},", hw.pin_cs2(&RomType::Rom2316))?;
+    writeln!(file, "    .cs3_2316 = {},", hw.pin_cs3(&RomType::Rom2316))?;
+    writeln!(file, "    .x1 = {},", hw.pin_x1())?;
+    writeln!(file, "    .x2 = {},", hw.pin_x2())?;
+    writeln!(file, "    .ce_23128 = {},", hw.pin_ce(&RomType::Rom23128))?;
+    writeln!(file, "    .oe_23128 = {},", hw.pin_oe(&RomType::Rom23128))?;
     writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
-    writeln!(file, "    .sel0 = {},", hw_rev.pin_sel(0))?;
-    writeln!(file, "    .sel1 = {},", hw_rev.pin_sel(1))?;
-    writeln!(file, "    .sel2 = {},", hw_rev.pin_sel(2))?;
-    writeln!(file, "    .sel3 = {},", hw_rev.pin_sel(3))?;
+    writeln!(file, "    .sel = {{ {}, {}, {}, {} }},", hw.pin_sel(0), hw.pin_sel(1), hw.pin_sel(2), hw.pin_sel(3))?;
     writeln!(file, "    .reserved4 = {{0, 0, 0, 0}},")?;
 
     writeln!(file, "}};")?;
     writeln!(file)?;
+
+    // Hardware revision string
+    writeln!(file, "// Hardware revision string - {}", hw.description)?;
+    writeln!(file, "static const char sdrr_hw_rev[] = \"{}\";", hw.name)?;
 
     // Main info structure
     writeln!(file, "// Main SDRR information structure, located at known point in flash")?;
@@ -603,7 +620,7 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "    .commit = SDRR_GIT_COMMIT,")?;
     
     // Hardware revision
-    writeln!(file, "    .hw_rev = {},", config.hw_rev.unwrap().c_enum_value())?;
+    writeln!(file, "    .hw_rev = sdrr_hw_rev,")?;
     
     // STM32 info
     writeln!(file, "    .stm_line = {},", config.stm_variant.line_enum())?;
@@ -626,6 +643,9 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "    .pad2 = {{0, 0}},")?;
     writeln!(file, "    .rom_sets = rom_set,")?;
     writeln!(file, "    .pins = &sdrr_pins,")?;
+
+    // Boot configuration - reserved for future use, set to 0xff
+    writeln!(file, "    .boot_config = {{0xff, 0xff, 0xff, 0xff}},")?;
     
     writeln!(file, "}};")?;
 

@@ -10,19 +10,6 @@
 
 #include <stdint.h>
 
-#define HW_DEV_24  0x00000000
-#define HW_DEV_28  0x00000020
-typedef enum uint32_t {
-    HW_REV_NONE = 0xFFFFFFFF,
-    HW_REV_24_A = HW_DEV_24 | 0x00,
-    HW_REV_24_B = HW_DEV_24 | 0x01,
-    HW_REV_24_C = HW_DEV_24 | 0x02,
-    HW_REV_24_D = HW_DEV_24 | 0x03,
-    HW_REV_24_E = HW_DEV_24 | 0x04,
-    HW_REV_24_F = HW_DEV_24 | 0x05,
-    HW_REV_28_A = HW_DEV_28 | 0x00,
-} sdrr_hw_rev_t;
-
 typedef enum {
     F401 = 0x0000,
     F405 = 0x0001,
@@ -65,14 +52,19 @@ typedef struct {
     sdrr_stm_port_t sel_port;   // Image select jumpers
     uint8_t reserved1[4];
 
-    // Up to 16 address lines.  0xFF indicates unused line.
+    // 8 data lines
     // Offset: 8
+    // 8 bytes
+    uint8_t data[8];
+
+    // Up to 16 address lines.  0xFF indicates unused line.
+    // Offset: 16
     // 20 x 1 byte = 20 bytes
     uint8_t addr[16];
     uint8_t reserved2[4];
 
     // Chip select lines for supported variants
-    // Offset: 28
+    // Offset: 36
     // 16 x 1 byte = 16 bytes
     uint8_t cs1_2364;
     uint8_t cs1_2332;
@@ -87,15 +79,12 @@ typedef struct {
     uint8_t reserved3[6];
 
     // Image select lines
-    // Offset: 44
-    // 8 x 1 byte = 8 bytes
-    uint8_t sel0;
-    uint8_t sel1;
-    uint8_t sel2;
-    uint8_t sel3;
+    // Offset: 52
+    // 8 x 4 bytes = 8 bytes
+    uint8_t sel[4];
     uint8_t reserved4[4];
 
-    // Length: 52
+    // Length: 60
 } sdrr_pins_t;
 
 // Forward declarations
@@ -126,10 +115,10 @@ typedef struct {
     // 8 bytes
     char commit[8];
 
-    // Hardware revision
+    // Hardware revision - pointer to string
     // Offset: 24
     // 4 bytes
-    const sdrr_hw_rev_t hw_rev;
+    const char* hw_rev;
 
     // STM32 product line
     // Offset: 28
@@ -173,7 +162,18 @@ typedef struct {
     // 4 bytes
     const sdrr_pins_t *pins;
 
-    // Length: 52
+    // Boot configuration.  This is for future use.  For example, an external
+    // programmer may change this value, and the SDRR firmware check it on
+    // boot, and decide to pre-select an image based on it, rather than the
+    // sel jumpers.
+    // 
+    // As such this is reserved and must be set to 0xff.
+    //
+    // Offset: 52
+    // 4 bytes
+    const uint8_t boot_config[4];
+
+    // Length: 56
 } sdrr_info_t;
 
 // ROM image sizes by type (F1 family)

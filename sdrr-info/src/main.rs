@@ -161,19 +161,29 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         "false"
     };
     println!("MCO enabled:      {}", mco);
+    println!("Boot config:      {}, {}, {}, {} - Reserved, should be 255",
+        info.boot_config[0], info.boot_config[1], info.boot_config[2], info.boot_config[3]);
     println!();
 
     if args.detail {
         let pins = &info.pins;
         println!("Pin Configuration");
         println!("-----------------");
-        println!("Data port:    {:?}", pins.data_port);
-        println!("Address port: {:?}", pins.addr_port);
-        println!("CS port:      {:?}", pins.cs_port);
-        println!("Select port:  {:?}", pins.sel_port);
+        println!("Data port:    {}", pins.data_port);
+        println!("Address port: {}", pins.addr_port);
+        println!("CS port:      {}", pins.cs_port);
+        println!("Select port:  {}", pins.sel_port);
         
         println!();
-        println!("Address pin mapping:");
+        println!("Data pin mapping - port {}:", pins.data_port);
+        for (ii, &pin) in pins.data.iter().enumerate() {
+            if pin != 0xFF {
+                println!("  D{}: {}Port pin {}", ii, if ii < 10 { " " } else { "" }, pin);
+            }
+        }
+
+        println!();
+        println!("Address pin mapping - port {}:", pins.addr_port);
         for (ii, &pin) in pins.addr.iter().enumerate() {
             if pin != 0xFF {
                 println!("  A{}: {}Port pin {}", ii, if ii < 10 { " " } else { "" }, pin);
@@ -181,7 +191,7 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         }
         
         println!();
-        println!("Chip select pins:");
+        println!("Chip select pins - port {}:", pins.cs_port);
         if pins.cs1_2364 != 0xFF { println!("  2364 CS1: Port pin {}", pins.cs1_2364); }
         if pins.cs1_2332 != 0xFF { println!("  2332 CS1: Port pin {}", pins.cs1_2332); }
         if pins.cs2_2332 != 0xFF { println!("  2332 CS2: Port pin {}", pins.cs2_2332); }
@@ -194,7 +204,7 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         if pins.x2 != 0xFF { println!("  Multi X2: Port pin {}", pins.x2); }
 
         println!();
-        println!("Image select pins:");
+        println!("Image select pins - port {}:", pins.sel_port);
         if pins.sel0 != 0xFF { println!("  SEL0: Pin {}", pins.sel0); }
         if pins.sel1 != 0xFF { println!("  SEL1: Pin {}", pins.sel1); }
         if pins.sel2 != 0xFF { println!("  SEL2: Pin {}", pins.sel2); }

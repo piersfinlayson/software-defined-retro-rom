@@ -41,8 +41,6 @@ CONFIG ?= configs/blank.mk
 # f401re - F401 512KB flash version
 # f401rb - F401 128KB flash version
 # f401rc - F401 256KB flash version
-# f103r8 - F103 64KB flash version (no longer supported)
-# f103rb - F103 128KB flash version (no longer supported)
 
 # STM ?= f446rc
 # STM ?= f446re
@@ -54,18 +52,21 @@ CONFIG ?= configs/blank.mk
 # STM ?= f401rc
 STM ?= f411re
 
-# HW revision
+# Hardware revision
 #
-# F103 boards - a, b, c 
-# F4xx boards - d, e, f
-
-# HW_REV ?= a (no longer supported)
-# HW_REV ?= b (no longer supported)
-# HW_REV ?= c (no longer supported)
-# HW_REV ?= 24-d  # 24-pin rev D
-# HW_REV ?= 24-e  # 24-pin rev E
-# HW_REV ?= 24-f  # 24-pin rev F
-# HW_REV ?= 28-a  # 28-pin rev A - not yet supported
+# Hardware revisions are contained in sdrr-hw-config and sub-directories, and
+# are defined as .json files.  The value to use here is the filename, without
+# the .json extension.
+#
+# 24-d, 24-e and 24-f are all variants of the 24 pin (23xx ROM) board
+# 28-a is a variant of the 28 pin (2364 ROM) board, and is not yet supported.
+# 
+# Values d, e and f from v0.1.0 are still supported and map to 24-d, 24-e and
+# 24-f respectively.
+#
+# You can add your own hardware revisions by creating the appropriate file in
+# sdrr-hw-config/user, or, if you plan to submit a pull request for it and your
+# hardware files, sdrr-hw-config/third-party. 
 HW_REV ?= 24-d
 
 # ROM configurations - each ROM can have its own type and CS settings
@@ -106,11 +107,6 @@ ROM_CONFIGS ?= \
 #
 # If you are using an STM32F4xx series chip it is recommended to leave SWD
 # enabled, as it makes it easier to reprogram the chip with new images.
-#
-# If you are using an STM32F1xx series chip, you will want to disable SWD
-# unless you are debugging, because the SWD pins are shared with the ROM's
-# data pins, hence two of the data lines won't work, and invalid data will be
-# read from the ROM.
 #
 # SWD is required for the logging options to work.
 
@@ -161,22 +157,18 @@ DEBUG_LOGGING ?= 0
 # MCO - Microcontroller Clock Output
 #
 # The MCO options output STM32 clocks on specific pins:
-# - MCO (STM32F1xx)/MCO1 (STM32F4xx) is output on pin PA8.
-# - MCO2 (STM32F4xx) is output on pin PC9.
+# - MCO is output on pin PA8.
+# - MCO2 is output on pin PC9.
 #
 # This is useful to debugging the clock configuration of the STM32, and 
 # ensuring it is being clocked at the correct frequency.
 #
-# MCO is used for MCO on STM32F1xx series chips, and MCO1 on STM32F4xx series
-# chips.
+# MCO is used for MCO1 on STM32F4xx series chips.
 # MCO2 is used for MCO2 on STM32F4xx series chips.
-#
-# On the STM32F1xx chip, PA8 is used for one of the ROM data lines, so enabling
-# MCO should only be done during debugging.
 #
 # On the STM32F4xx chip, PA8 is not used for ROM data, so MCO can be enabled
 # relatively safely - although having a high frequency signal on the board may
-# cause interference with other sigansl.
+# cause interference with other signals.
 #
 # MCO2 (STM32F4xx only) uses PC9, which is an address line, so enabling this
 # should only be done during debugging.

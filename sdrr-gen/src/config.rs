@@ -2,8 +2,9 @@
 //
 // MIT License
 
-use crate::rom_types::{CsLogic, HwRev, RomType, ServeAlg, StmFamily, StmProcessor, StmVariant};
+use crate::rom_types::{CsLogic, RomType, ServeAlg, StmVariant};
 use crate::preprocessor::{RomImage, RomSet};
+use crate::hardware::HwConfig;
 use std::path::PathBuf;
 use std::collections::BTreeMap;
 
@@ -20,7 +21,7 @@ pub struct Config {
     pub debug_logging: bool,
     pub overwrite: bool,
     pub hse: bool,
-    pub hw_rev: Option<HwRev>,
+    pub hw: HwConfig,
     pub freq: u32,
     pub status_led: bool,
     pub overclock: bool,
@@ -143,51 +144,17 @@ impl Config {
             }
         }
 
-        if let Some(hw_rev) = self.hw_rev {
-            match hw_rev {
-                HwRev::A_24 | HwRev::B_24 | HwRev::C_24 => {
-                    if self.stm_variant != StmVariant::F103RB
-                        && self.stm_variant != StmVariant::F103R8
-                    {
-                        return Err(
-                            "Hardware revision A, B, and C only support STM32F103".to_string()
-                        );
-                    }
-                }
-                HwRev::D_24 | HwRev::E_24 | HwRev::F_24 => {
-                    if self.stm_variant.family() != StmFamily::F4 {
-                        return Err("Hardware revision D, E, and F only supports STM32F4 family"
-                            .to_string());
-                    }
-                }
-                HwRev::A_28 => {
-                    unreachable!("Hardware revision A_28 not yet supported");
-                }
-            }
-        } else {
-            match self.stm_variant.family() {
-                StmFamily::F1 => {
-                    self.hw_rev = Some(HwRev::A_24);
-                }
-                StmFamily::F4 => {
-                    self.hw_rev = Some(HwRev::D_24);
-                }
-            }
+        // Validate processor against family
+        if self.stm_variant.family() != self.hw.stm.family {
+            return Err(format!(
+                "STM32 variant {} does not match hardware family {}",
+                self.stm_variant.makefile_var(),
+                self.hw.stm.family
+            ));
         }
 
         // Validate and set frequency
         match self.stm_variant.processor() {
-            StmProcessor::F103 => {
-                if !self
-                    .stm_variant
-                    .is_frequency_valid(self.freq, self.overclock)
-                {
-                    return Err(format!(
-                        "Frequency {}MHz is not valid for STM32F103. Valid range 8-64MHz",
-                        self.freq
-                    ));
-                }
-            }
             _ => {
                 if !self
                     .stm_variant
@@ -230,10 +197,6 @@ impl Config {
     }
 
     pub fn create_rom_sets(&self, rom_images: &[RomImage]) -> Result<Vec<RomSet>, String> {
-        let hw_rev = self.hw_rev.ok_or(
-            "Hardware revision must be specified".to_string()
-        )?;
-        
         // Collect all sets
         let sets: Vec<usize> = self.roms.iter()
             .filter_map(|rom| rom.set)
@@ -256,7 +219,7 @@ impl Config {
             return Ok(rom_sets);
         }
 
-        if hw_rev != HwRev::F_24 {
+        if !self.hw.supports_multi_rom_sets() {
             return Err("Multiple ROMs per set is only supported on hardware revision F".to_string());
         }
 
