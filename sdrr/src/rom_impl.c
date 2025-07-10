@@ -122,43 +122,76 @@ extern uint32_t _ram_rom_image_end[];
 #define LABEL(X)        #X ": \n"
 
 void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t *set) {
-    uint32_t cs_invert_mask = 0;
-    uint32_t cs_check_mask;
+#ifdef MAIN_LOOP_LOGGING
+    // Do a bunch of checking things are as we need them.  There's not much
+    // point in doing this until MAIN_LOOP_LOGGING is defined, as no-one
+    // will hear us if we scream ...
+    // Note that sdrr-gen should have got this stuff right.
+    if (sdrr_info.pins->data_port != PORT_A) {
+        ROM_IMPL_LOG("!!! Data pins not using port A");
+    }
+    if (sdrr_info.pins->addr_port != PORT_C) {
+        ROM_IMPL_LOG("!!! Address pins not using port C");
+    }
+    if (sdrr_info.pins->cs_port != PORT_C) {
+        ROM_IMPL_LOG("!!! Chip select pins not using port C");
+    }
+    if (sdrr_info.pins->rom_pins != 24) {
+        ROM_IMPL_LOG("!!! Have been told to emulate unsupported %d pin ROM", sdrr_info.pins->rom_pins);
+    }
+    for (int ii = 0; ii < 13; ii++) {
+        if (sdrr_info.pins->addr[ii] > 13) {
+            ROM_IMPL_LOG("!!! Address line A%d invalid", ii);
+        }
+    }
+    for (int ii = 0; ii < 8; ii++) {
+        if (sdrr_info.pins->data[ii] > 7) {
+            ROM_IMPL_LOG("!!! ROM line D%d invalid", ii);
+        }
+    }
+    if (set->rom_count > 1) {
+        if (sdrr_info.pins->x1 > 15) {
+            ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X1 invalid");
+        }
+        if (sdrr_info.pins->x2 > 15) {
+            ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X2 invalid");
+        }
+        if (sdrr_info.pins->x1 == sdrr_info.pins->x2) {
+            ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X1=X2");
+        }
+    }
+#endif
 
-    const sdrr_rom_info_t *rom = set->roms[0];
+    //
+    // Set up serving algorithm
+    //
 
     // Set up serve mode
     sdrr_serve_t serve_mode = set->serve;
 
     // Warn if serve mode is incorrectly set for multiple ROM images
     if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
-        ROM_IMPL_LOG("!!! Mutliple ROM images, but serve mode is incorrectly set - rectifying");
+        ROM_IMPL_LOG("!!! Mutliple ROM images - wrong serve mode - rectifying");
         serve_mode = SERVE_ADDR_ON_ANY_CS;
     } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
-        ROM_IMPL_LOG("!!! Single ROM image, but serve mode is incorrectly set - setting to default");
+        ROM_IMPL_LOG("!!! Single ROM image - wrong serve mode - defaulting");
         serve_mode = SERVE_TWO_CS_ONE_ADDR;
     }
 
+    const sdrr_rom_info_t *rom = set->roms[0];
     ROM_IMPL_DEBUG("Serve ROM: %s via mode: %d", rom->filename, serve_mode);
 
-    // Set up CS pins.  These are the same values for:
-    // - HW_REV_24_D
-    // - HW_REV_24_E
-    // - HW_REV_24_F 
     //
-    // HW_REV_28_A requires different logic and hasn't been implemented yet
+    // Set up CS pin masks, using CS values from sdrr_info.
     //
-    // We could (should?) read the pin number from the rom_set.
-    //
-    // Note that X1 and X2 are hard-coded into the pull-down code below.
-    uint8_t pin_cs = 10;
-    uint8_t pin_cs2 = 12;
-    uint8_t pin_cs3 = 9;
-    uint8_t pin_x1 = 14;
-    uint8_t pin_x2 = 15;
+    uint32_t cs_invert_mask = 0;
+    uint32_t cs_check_mask;
 
     if (serve_mode == SERVE_ADDR_ON_ANY_CS)
     {
+        uint8_t pin_cs = sdrr_info.pins->cs1_2364;
+        uint8_t pin_x1 = sdrr_info.pins->x1;
+        uint8_t pin_x2 = sdrr_info.pins->x2;
         if (set->rom_count == 2)
         {
             cs_check_mask = (1 << pin_cs) | (1 << pin_x1);
@@ -174,45 +207,51 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     } else {
         switch (rom->rom_type) {
             case ROM_TYPE_2316:
-                ROM_IMPL_DEBUG("ROM type: 2316");
-                cs_check_mask = (1 << pin_cs) | (1 << pin_cs2) | (1 << pin_cs3);
-                if (rom->cs1_state == CS_ACTIVE_LOW) {
-                    ROM_IMPL_DEBUG("CS1 active low");
-                } else {
-                    ROM_IMPL_DEBUG("CS1 active high");
-                    cs_invert_mask |= (1 << pin_cs);
-                }
-                if (rom->cs2_state == CS_ACTIVE_LOW) {
-                    ROM_IMPL_DEBUG("CS2 active low");
-                } else {
-                    ROM_IMPL_DEBUG("CS2 active high");
-                    cs_invert_mask |= (1 << pin_cs2);
-                }
-                if (rom->cs3_state == CS_ACTIVE_LOW) {
-                    ROM_IMPL_DEBUG("CS3 active low");
-                } else {
-                    ROM_IMPL_DEBUG("CS3 active high");
-                    cs_invert_mask |= (1 << pin_cs3);
+                {
+                    ROM_IMPL_DEBUG("ROM type: 2316");
+                    uint8_t pin_cs = sdrr_info.pins->cs1_2316;
+                    uint8_t pin_cs2 = sdrr_info.pins->cs2_2316;
+                    uint8_t pin_cs3 = sdrr_info.pins->cs3_2316;
+                    cs_check_mask = (1 << pin_cs) | (1 << pin_cs2) | (1 << pin_cs3);
+                    if (rom->cs1_state == CS_ACTIVE_LOW) {
+                        ROM_IMPL_DEBUG("CS1 active low");
+                    } else {
+                        ROM_IMPL_DEBUG("CS1 active high");
+                        cs_invert_mask |= (1 << pin_cs);
+                    }
+                    if (rom->cs2_state == CS_ACTIVE_LOW) {
+                        ROM_IMPL_DEBUG("CS2 active low");
+                    } else {
+                        ROM_IMPL_DEBUG("CS2 active high");
+                        cs_invert_mask |= (1 << pin_cs2);
+                    }
+                    if (rom->cs3_state == CS_ACTIVE_LOW) {
+                        ROM_IMPL_DEBUG("CS3 active low");
+                    } else {
+                        ROM_IMPL_DEBUG("CS3 active high");
+                        cs_invert_mask |= (1 << pin_cs3);
+                    }
                 }
                 break;
 
             case ROM_TYPE_2332:
-                // 2332 CS2 actually uses the same pin as 2316 CS3
-                // In roms.c/h it is called cs2_state
-                // Here is is called CS3 
-                ROM_IMPL_DEBUG("ROM type: 2332");
-                cs_check_mask = (1 << pin_cs) | (1 << pin_cs3);
-                if (rom->cs1_state == CS_ACTIVE_LOW) {
-                    ROM_IMPL_DEBUG("CS1 active low");
-                } else {
-                    ROM_IMPL_DEBUG("CS1 active high");
-                    cs_invert_mask |= (1 << pin_cs);
-                }
-                if (rom->cs2_state == CS_ACTIVE_LOW) {
-                    ROM_IMPL_DEBUG("CS2(3) active low");
-                } else {
-                    ROM_IMPL_DEBUG("CS2(3) active high");
-                    cs_invert_mask |= (1 << pin_cs3);
+                {
+                    ROM_IMPL_DEBUG("ROM type: 2332");
+                    uint8_t pin_cs = sdrr_info.pins->cs1_2332;
+                    uint8_t pin_cs2 = sdrr_info.pins->cs2_2332;
+                    cs_check_mask = (1 << pin_cs) | (1 << pin_cs2);
+                    if (rom->cs1_state == CS_ACTIVE_LOW) {
+                        ROM_IMPL_DEBUG("CS1 active low");
+                    } else {
+                        ROM_IMPL_DEBUG("CS1 active high");
+                        cs_invert_mask |= (1 << pin_cs);
+                    }
+                    if (rom->cs2_state == CS_ACTIVE_LOW) {
+                        ROM_IMPL_DEBUG("CS2 active low");
+                    } else {
+                        ROM_IMPL_DEBUG("CS2 active high");
+                        cs_invert_mask |= (1 << pin_cs2);
+                    }
                 }
                 break;
 
@@ -220,25 +259,35 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 ROM_IMPL_LOG("Unsupported ROM type: %d", rom->rom_type);
                 __attribute__((fallthrough));
             case ROM_TYPE_2364:
-                ROM_IMPL_DEBUG("ROM type: 2364");
-                cs_check_mask = (1 << pin_cs);
-                if (rom->cs1_state == CS_ACTIVE_LOW) {
-                    ROM_IMPL_DEBUG("CS1 active low");
-                } else {
-                    ROM_IMPL_DEBUG("CS1 active high");
-                    cs_invert_mask |= 1 << pin_cs;
+                {
+                    ROM_IMPL_DEBUG("ROM type: 2364");
+                    uint8_t pin_cs = sdrr_info.pins->cs1_2364;
+                    cs_check_mask = (1 << pin_cs);
+                    if (rom->cs1_state == CS_ACTIVE_LOW) {
+                        ROM_IMPL_DEBUG("CS1 active low");
+                    } else {
+                        ROM_IMPL_DEBUG("CS1 active high");
+                        cs_invert_mask |= 1 << pin_cs;
+                    }
                 }
                 break;
         }
     }
 
+    //
     // Set up the GPIOs
+    //
 
     // Enable GPIO clocks for the ports with address and data lines
     RCC_AHB1ENR |= (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN);
     
     // Configure PA0-7 as inputs initially (00 in MODER), no pull-up/down
-    // Also PC10-12 are duplicate CS lines so set as inputs no PU/PD.
+    // Also PA10-12 are duplicate CS lines on some hw so set as inputs no
+    // PU/PD.
+    // We could theoretically check here that D0-7 uses PA0-7, but there's
+    // checks like this above, and in sdrr-gen, so little point.  It's
+    // required that they use 0-7 on a port, to avoid any bit shifting when
+    // applying the value.
     GPIOA_MODER &= ~0x00FCFFFF; // Clear bits 0-15 (PA0-7, 10-12 as inputs)
     GPIOA_PUPDR &= ~0x00FCFFFF; // Clear pull-up/down for PA0-7, 10-12)
     GPIOA_OSPEEDR &= ~0xFFFF;   // Clear output speed for PA0-7
@@ -246,18 +295,20 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                                 // ensure V(OL) is max 0.4V
 
     // Port C for address and CS lines - set all pins as inputs
-    // Rev D - CS = 10, for testing purposes, not rev D, CS = 13 
     GPIOC_MODER = 0;  // Set all pins as inputs
     if (set->rom_count == 1) {
-        // Set pull-downs on PC14/15 only, so RAM lookup only takes 16KB
+        // Set pull-downs on PC14/15 only, so RAM lookup only takes 16KB.
+        // We checked the address lines are lines 0-13 above, and in sdrr-gen
+        // so this is reasonable.
         GPIOC_PUPDR = 0xA0000000;
     }
     else {
         // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
         // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
         if (set->rom_count == 2) {
-            // Set pull-down on PC15, as PC14 used to select the second ROM image
-            GPIOC_PUPDR = 0x80000000;
+            // It's theoretically possible to set X2 to 14 and X1 to 15,
+            // so choosing the right value here.
+            GPIOC_PUPDR = (0b10 << (sdrr_info.pins->x2 * 2));
         } else if (set->rom_count == 3) {
             // No pull-downs - PC14/PC15 used to select second and third ROM images
             GPIOC_PUPDR = 0;
@@ -276,17 +327,26 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     serve_mode = SERVE_TWO_CS_ONE_ADDR;
 #endif
 
-    // Data output enable mask for port A.  Leave SWD enabled.
+    //
+    // Preload all registers with their required values
+    //
+
+    // Data output enable mask for port A.
     register uint32_t data_output_mask asm(R_DATA_OUT_MASK);
     register uint32_t data_input_mask asm(R_DATA_IN_MASK);
     if (sdrr_info.mco_enabled) {
         // PA8 is AF, PA0-7 are inputs
-        data_output_mask = 0x28025555;
-        data_input_mask = 0x28020000;
+        data_output_mask = 0x00025555;
+        data_input_mask = 0x00020000;
     } else {
         // PA0-7 are inputs
-        data_output_mask = 0x28005555;
-        data_input_mask = 0x28000000;
+        data_output_mask = 0x00005555;
+        data_input_mask = 0x00000000;
+    }
+    if (sdrr_info.swd_enabled) {
+        // Ensure PA13/14 remain AF (SWD enabled)
+        data_output_mask |= 0x28000000;
+        data_input_mask |= 0x28000000;
     }
 
     // Preload registers with their values
@@ -307,12 +367,12 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         setup_status_led();
     }
 
-#if defined(MAIN_LOOP_LOGGING)
     // Log some useful information before entering the main loop
-    ROM_IMPL_LOG("CS check mask: 0x%08X", cs_check_mask);
-    ROM_IMPL_LOG("CS invert mask: 0x%08X", cs_invert_mask);
-    ROM_IMPL_LOG("GPIOC_PUPDR: 0x%08X", GPIOC_PUPDR);
-#endif // MAIN_LOOP_LOGGING
+    ROM_IMPL_DEBUG("CS check mask: 0x%08X", cs_check_mask);
+    ROM_IMPL_DEBUG("CS invert mask: 0x%08X", cs_invert_mask);
+    ROM_IMPL_DEBUG("Data output mask: 0x%08X", data_output_mask);
+    ROM_IMPL_DEBUG("Data input mask: 0x%08X", data_input_mask);
+    ROM_IMPL_DEBUG("GPIOC_PUPDR: 0x%08X", GPIOC_PUPDR);
 
 #if defined(MAIN_LOOP_LOGGING)
     uint32_t byte;
@@ -606,10 +666,21 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 uint8_t get_rom_set_index(void) {
     uint8_t rom_sel, rom_index;
 
-    // Read the ROM image selection bits PB0 (LSB) to PB2, and PB7 (MSB).
-    rom_sel = GPIOB_IDR;
-    rom_sel = (rom_sel & 0x07) | ((rom_sel & 0x80) >> 4);  // Get bits 0-2 and 7, shift PB7 to bit 3
-    RCC_AHB1ENR &= ~RCC_AHB1ENR_GPIOBEN;  // Disable GPIOB clock
+    uint32_t sel_pins, sel_mask;
+    sel_pins = check_sel_pins(&sel_mask);
+
+    // Shift the sel pins to read from 0.  Do this by shifting each present
+    // bit (usig sel_mask) the appropriate number of bits right
+    rom_sel = 0;
+    int bit_pos = 0;
+    for (int ii = 0; ii < 32; ii++) {
+        if (sel_mask & (1 << ii)) {
+            if (sel_pins & (1 << ii)) {
+                rom_sel |= (1 << bit_pos);
+            }
+            bit_pos++;
+        }
+    }
 
     // Calculate the ROM image index based on the selection bits and number of
     // images installed in this firmware.  For example, if image 4 was selected

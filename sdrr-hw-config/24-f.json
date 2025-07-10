@@ -11,7 +11,8 @@
         "data_port": "A",
         "addr_port": "C",
         "cs_port": "C",
-        "sel_port": "B"
+        "sel_port": "B",
+        "status_port": "B"
     },
     "pins": {
         "data": [7, 6, 5, 4, 3, 2, 1, 0],
@@ -30,7 +31,8 @@
         },
         "x1": 14,
         "x2": 15,
-        "sel": [0, 1, 2, 7]
+        "sel": [0, 1, 2, 7],
+        "status": 15
     }
   }
 }

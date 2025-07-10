@@ -7,6 +7,54 @@
 #include "include.h"
 #include "roms.h"
 
+uint32_t check_sel_pins(uint32_t *sel_mask) {
+    if (sdrr_info.pins->sel_port != PORT_B) {
+        // sel_mask of 0 means invalid response
+        LOG("!!! Sel port not B - not using");
+        *sel_mask = 0;
+        return 0;
+    }
+
+    // Set the GPIO peripheral clock
+    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN;  // Port B
+
+    // Set sel port mask
+    uint32_t sel_1bit_mask = 0;
+    uint32_t sel_2bit_mask = 0;
+    uint32_t pull_downs = 0;
+    for (int ii = 0; ii < 4; ii++) {
+        uint8_t pin = sdrr_info.pins->sel[ii];
+        if (pin < 255) {
+            // Pin is present, so set the mask
+            if (pin <= 15) {
+                sel_1bit_mask = 1 << pin;
+                sel_2bit_mask |= (11 << (pin * 2));
+                pull_downs |= (10 << (pin * 2));
+            } else {
+                LOG("!!! Sel pin 15 < %d < 255 - not using", ii);
+            }
+        }
+    }
+
+    // Set pins as inputs
+    GPIOB_MODER &= ~sel_2bit_mask;  // Set sel pins as inputs
+    GPIOB_PUPDR &= ~sel_2bit_mask;  // Clear pull-up/down on sel inputs
+    GPIOB_PUPDR |= pull_downs;    // Set pull-down on sel inputs
+
+    // Add short delay to allow GPIOB to allow the pull-downs to settle.
+    for(volatile int i = 0; i < 10; i++);
+
+    // Read pins
+    uint32_t pins = GPIOB_IDR;
+
+    // Disable peripheral clock for port again.
+    RCC_AHB1ENR &= ~(1 << 1);
+
+    // Return sel_mask as well as the value of the pins
+    *sel_mask = sel_1bit_mask;
+    return (pins & sel_1bit_mask);
+}
+
 // Sets up the MCO (clock output) on PA8, to the value provided
 void setup_mco(uint8_t mco) {
     // Enable GPIOA clock
@@ -345,16 +393,25 @@ void execute_ram_func(uint32_t ram_addr) {
 
 // Common setup for stauts LED output using PB15 (inverted logic: 0=on, 1=off)
 void setup_status_led(void) {
+    if (sdrr_info.pins->status_port != PORT_B) {
+        LOG("!!! Status port not B - not using");
+        return;
+    }
+    if (sdrr_info.pins->status > 15) {
+        LOG("!!! Status pin %d > 15 - not using", sdrr_info.pins->status);
+        return;
+    }
     if (sdrr_info.status_led_enabled) {
         RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN; // Enable GPIOB clock
         
-        GPIOB_MODER &= ~(0x3 << (15 * 2));  // Clear bits for PB15
-        GPIOB_MODER |= (0x1 << (15 * 2));   // Set as output
-        GPIOB_OSPEEDR |= (0x3 << (15 * 2)); // Set speed to high speed
-        GPIOB_OTYPER &= ~(0x1 << 15);       // Set as push-pull
-        GPIOB_PUPDR &= ~(0x3 << (15 * 2));  // No pull-up/down
+        uint8_t pin = sdrr_info.pins->status;
+        GPIOB_MODER &= ~(0x3 << (pin * 2));  // Clear bits for PB15
+        GPIOB_MODER |= (0x1 << (pin * 2));   // Set as output
+        GPIOB_OSPEEDR |= (0x3 << (pin * 2)); // Set speed to high speed
+        GPIOB_OTYPER &= ~(0x1 << pin);       // Set as push-pull
+        GPIOB_PUPDR &= ~(0x3 << (pin * 2));  // No pull-up/down
         
-        GPIOB_BSRR = (1 << 15); // Start with LED off (PB15 high)
+        GPIOB_BSRR = (1 << pin); // Start with LED off (PB15 high)
     }
 }
 
@@ -365,11 +422,12 @@ void delay(volatile uint32_t count) {
 
 // Blink pattern: on_time, off_time, repeat_count
 void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
-    if (sdrr_info.status_led_enabled) {
+    if (sdrr_info.status_led_enabled && sdrr_info.pins->status_port == PORT_B && sdrr_info.pins->status <= 15) {
+        uint8_t pin = sdrr_info.pins->status;
         for(uint8_t i = 0; i < repeats; i++) {
-            GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
+            GPIOB_BSRR = (1 << (pin + 16)); // LED on (PB15 low)
             delay(on_time);
-            GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
+            GPIOB_BSRR = (1 << pin);        // LED off (PB15 high)
             delay(off_time);
         }
     }

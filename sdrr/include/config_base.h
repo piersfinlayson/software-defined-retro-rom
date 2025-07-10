@@ -50,7 +50,9 @@ typedef struct {
     sdrr_stm_port_t addr_port;  // Address lines
     sdrr_stm_port_t cs_port;    // Chip select/enable lines
     sdrr_stm_port_t sel_port;   // Image select jumpers
-    uint8_t reserved1[4];
+    sdrr_stm_port_t status_port; // Status LED
+    uint8_t rom_pins;           // Number of pins this ROM is emulating 
+    uint8_t reserved1[2];
 
     // 8 data lines
     // Offset: 8
@@ -84,7 +86,13 @@ typedef struct {
     uint8_t sel[4];
     uint8_t reserved4[4];
 
-    // Length: 60
+    // Status LED line
+    // Offset: 60
+    // 4x1 byte = 4 byte
+    uint8_t status;
+    uint8_t reserved5[3];
+
+    // Length: 64
 } sdrr_pins_t;
 
 // Forward declarations

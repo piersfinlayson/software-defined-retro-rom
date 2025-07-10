@@ -220,7 +220,7 @@ impl StmVariant {
 
     pub fn line_enum(&self) -> &str {
         match self {
-            StmVariant::F446RC => "STM32F446RCTx",
+            StmVariant::F446RC |
             StmVariant::F446RE => "F446",
             StmVariant::F411RC |
             StmVariant::F411RE => "F411",

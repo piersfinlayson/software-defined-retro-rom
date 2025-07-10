@@ -5,7 +5,7 @@ ENTRY(Reset_Handler)
 _Min_Stack_Size = 0x400;    /* 1KB */
 
 /* Space for storing functions in RAM */
-_Ram_Func_Size = 0x400; /* 1KB */
+_Ram_Func_Size = 0x800; /* 1KB */
 
 SECTIONS
 {

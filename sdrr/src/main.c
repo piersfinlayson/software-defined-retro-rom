@@ -145,47 +145,13 @@ void enter_bootloader(void) {
 // This must be done before we set up the PLL, peripheral clocks, etc, as
 // those must be disabled for the bootloader.
 void check_enter_bootloader(void) {
-    if (sdrr_info.pins->sel_port != PORT_B) {
-        LOG("!!! Sel port not B - not using");
+    uint32_t sel_pins, sel_mask;
+    sel_pins = check_sel_pins(&sel_mask);
+    if (sel_mask == 0) {
+        // Failure - no sel pins
         return;
     }
-
-    // Set the GPIO peripheral clock
-    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN;  // Port B
-
-    // Set sel port mask
-    uint32_t sel_mask = 0;
-    uint32_t sel_2bit_mask = 0;
-    uint32_t pull_downs = 0;
-    for (int ii = 0; ii < 4; ii++) {
-        uint8_t pin = sdrr_info.pins->sel[ii];
-        if (pin < 255) {
-            // Pin is present, so set the mask
-            if (pin <= 15) {
-                sel_mask = 1 << pin;
-                sel_2bit_mask |= (11 << (pin * 2));
-                pull_downs |= (10 << (pin * 2));
-            } else {
-                LOG("!!! Sel pin 15 < %d < 255 - not using", ii);
-            }
-        }
-    }
-
-    // Set pins as inputs
-    GPIOB_MODER &= ~sel_2bit_mask;  // Set sel pins as inputs
-    GPIOB_PUPDR &= ~sel_2bit_mask;  // Clear pull-up/down on sel inputs
-    GPIOB_PUPDR |= pull_downs;    // Set pull-down on sel inputs
-
-    // Add short delay to allow GPIOB to allow the pull-downs to settle.
-    for(volatile int i = 0; i < 10; i++);
-
-    // Read pins
-    uint32_t pins = GPIOB_IDR;
-
-    // Disable peripheral clock for port again.
-    RCC_AHB1ENR &= ~(1 << 1);
-
-    if ((pins & sel_mask) == sel_mask) {
+    if ((sel_pins & sel_mask) == sel_mask) {
         // SEL pins are all high - enter the bootloader
         enter_bootloader();
     }

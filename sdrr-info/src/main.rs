@@ -140,6 +140,7 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
     println!();
     println!("Configurable Options");
     println!("--------------------");
+    println!("ROM emulation:    {} pin ROM", info.pins.rom_pins);
     let preload = if info.preload_image_to_ram {
         "RAM"
     } else {
@@ -161,7 +162,7 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         "false"
     };
     println!("MCO enabled:      {}", mco);
-    println!("Boot config:      {}, {}, {}, {} - Reserved, should be 255",
+    println!("Boot config:      0x{:2X}{:2X}{:2X}{:2X} - Reserved, should be 0xFFFFFFFF",
         info.boot_config[0], info.boot_config[1], info.boot_config[2], info.boot_config[3]);
     println!();
 
@@ -169,47 +170,46 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         let pins = &info.pins;
         println!("Pin Configuration");
         println!("-----------------");
-        println!("Data port:    {}", pins.data_port);
-        println!("Address port: {}", pins.addr_port);
-        println!("CS port:      {}", pins.cs_port);
-        println!("Select port:  {}", pins.sel_port);
         
         println!();
-        println!("Data pin mapping - port {}:", pins.data_port);
+        println!("Data pin mapping:");
         for (ii, &pin) in pins.data.iter().enumerate() {
             if pin != 0xFF {
-                println!("  D{}: {}Port pin {}", ii, if ii < 10 { " " } else { "" }, pin);
+                println!("  D{}: {}P{}{}", ii, if ii < 10 { " " } else { "" }, pins.data_port, pin);
             }
         }
 
         println!();
-        println!("Address pin mapping - port {}:", pins.addr_port);
+        println!("Address pin mapping:");
         for (ii, &pin) in pins.addr.iter().enumerate() {
             if pin != 0xFF {
-                println!("  A{}: {}Port pin {}", ii, if ii < 10 { " " } else { "" }, pin);
+                println!("  A{}: {}P{}{}", ii, if ii < 10 { " " } else { "" }, pins.addr_port, pin);
             }
         }
         
         println!();
-        println!("Chip select pins - port {}:", pins.cs_port);
-        if pins.cs1_2364 != 0xFF { println!("  2364 CS1: Port pin {}", pins.cs1_2364); }
-        if pins.cs1_2332 != 0xFF { println!("  2332 CS1: Port pin {}", pins.cs1_2332); }
-        if pins.cs2_2332 != 0xFF { println!("  2332 CS2: Port pin {}", pins.cs2_2332); }
-        if pins.cs1_2316 != 0xFF { println!("  2316 CS1: Port pin {}", pins.cs1_2316); }
-        if pins.cs2_2316 != 0xFF { println!("  2316 CS2: Port pin {}", pins.cs2_2316); }
-        if pins.cs3_2316 != 0xFF { println!("  2316 CS3: Port pin {}", pins.cs3_2316); }
-        if pins.ce_23128 != 0xFF { println!("  23128 CE: Port pin {}", pins.ce_23128); }
-        if pins.oe_23128 != 0xFF { println!("  23128 OE: Port pin {}", pins.oe_23128); }
-        if pins.x1 != 0xFF { println!("  Multi X1: Port pin {}", pins.x1); }
-        if pins.x2 != 0xFF { println!("  Multi X2: Port pin {}", pins.x2); }
+        println!("Chip select pins:");
+        if pins.cs1_2364 != 0xFF { println!("  2364 CS1: P{}{}", pins.cs_port, pins.cs1_2364); }
+        if pins.cs1_2332 != 0xFF { println!("  2332 CS1: P{}{}", pins.cs_port, pins.cs1_2332); }
+        if pins.cs2_2332 != 0xFF { println!("  2332 CS2: P{}{}", pins.cs_port, pins.cs2_2332); }
+        if pins.cs1_2316 != 0xFF { println!("  2316 CS1: P{}{}", pins.cs_port, pins.cs1_2316); }
+        if pins.cs2_2316 != 0xFF { println!("  2316 CS2: P{}{}", pins.cs_port, pins.cs2_2316); }
+        if pins.cs3_2316 != 0xFF { println!("  2316 CS3: P{}{}", pins.cs_port, pins.cs3_2316); }
+        if pins.ce_23128 != 0xFF { println!("  23128 CE: P{}{}", pins.cs_port, pins.ce_23128); }
+        if pins.oe_23128 != 0xFF { println!("  23128 OE: P{}{}", pins.cs_port, pins.oe_23128); }
+        if pins.x1 != 0xFF { println!("  Multi X1: P{}{}", pins.cs_port, pins.x1); }
+        if pins.x2 != 0xFF { println!("  Multi X2: P{}{}", pins.cs_port, pins.x2); }
 
         println!();
-        println!("Image select pins - port {}:", pins.sel_port);
-        if pins.sel0 != 0xFF { println!("  SEL0: Pin {}", pins.sel0); }
-        if pins.sel1 != 0xFF { println!("  SEL1: Pin {}", pins.sel1); }
-        if pins.sel2 != 0xFF { println!("  SEL2: Pin {}", pins.sel2); }
-        if pins.sel3 != 0xFF { println!("  SEL3: Pin {}", pins.sel3); }
+        println!("Image select pins:");
+        if pins.sel0 != 0xFF { println!("  SEL0: P{}{}", pins.sel_port, pins.sel0); }
+        if pins.sel1 != 0xFF { println!("  SEL1: P{}{}", pins.sel_port, pins.sel1); }
+        if pins.sel2 != 0xFF { println!("  SEL2: P{}{}", pins.sel_port, pins.sel2); }
+        if pins.sel3 != 0xFF { println!("  SEL3: P{}{}", pins.sel_port, pins.sel3); }
 
+        println!();
+        println!("Status LED pin:");
+        println!("  Pin: P{}{}", pins.status_port, pins.status);
         println!();
     }
 

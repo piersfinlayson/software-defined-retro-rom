@@ -17,7 +17,7 @@ const HW_DEV_24: u32 = 0x00000000;
 const HW_DEV_28: u32 = 0x00000020;
 
 // Lengths of config_base.h structs
-const SDRR_PINS_T_LEN: usize = 60;
+const SDRR_PINS_T_LEN: usize = 64;
 const SDRR_INFO_T_LEN: usize = 56;
 
 #[repr(u32)]
@@ -336,6 +336,8 @@ pub struct SdrrPins {
     pub addr_port: SdrrStmPort,
     pub cs_port: SdrrStmPort,
     pub sel_port: SdrrStmPort,
+    pub status_port: SdrrStmPort,
+    pub rom_pins: u8,
     pub data: [u8; 8],
     pub addr: [u8; 16],
     pub cs1_2364: u8,
@@ -352,6 +354,7 @@ pub struct SdrrPins {
     pub sel1: u8,
     pub sel2: u8,
     pub sel3: u8,
+    pub status: u8,
 }
 
 // ROM image size constants
@@ -887,6 +890,9 @@ impl SdrrInfo {
             .ok_or_else(|| format!("Invalid cs port {}", data[2]))?;
         let sel_port = SdrrStmPort::from_u8(data[3])
             .ok_or_else(|| format!("Invalid sel port {}", data[3]))?;
+        let status_port = SdrrStmPort::from_u8(data[4])
+            .ok_or_else(|| format!("Invalid status port {}", data[4]))?;
+        let rom_pins = u8::from_le(data[5]);
 
         let mut data_pins = [0u8; 8];
         data_pins.copy_from_slice(&data[8..16]);
@@ -898,6 +904,8 @@ impl SdrrInfo {
             addr_port,
             cs_port,
             sel_port,
+            status_port,
+            rom_pins,
             data: data_pins,
             addr,
             cs1_2364: data[36],
@@ -914,6 +922,7 @@ impl SdrrInfo {
             sel1: data[53],
             sel2: data[54],
             sel3: data[55],
+            status: data[60],
         })
     }
 }

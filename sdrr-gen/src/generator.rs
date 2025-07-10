@@ -555,11 +555,13 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     // Pin definitions
     writeln!(file, "// Pin definitions")?;
     writeln!(file, "static const sdrr_pins_t sdrr_pins = {{")?;
-    writeln!(file, "    .data_port = PORT_A,")?;
-    writeln!(file, "    .addr_port = PORT_C,")?;
-    writeln!(file, "    .cs_port = PORT_C,")?;
-    writeln!(file, "    .sel_port = PORT_B,")?;
-    writeln!(file, "    .reserved1 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .data_port = {},", hw.port_data())?;
+    writeln!(file, "    .addr_port = {},", hw.port_addr())?;
+    writeln!(file, "    .cs_port = {},", hw.port_cs())?;
+    writeln!(file, "    .sel_port = {},", hw.port_sel())?;
+    writeln!(file, "    .status_port = {},", hw.port_status())?;
+    writeln!(file, "    .rom_pins = {},", hw.rom.pins.quantity)?;
+    writeln!(file, "    .reserved1 = {{0, 0}},")?;
 
     let data_pins = hw.stm.pins.data.clone();
     let data_pins_str = data_pins
@@ -592,6 +594,8 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
     writeln!(file, "    .sel = {{ {}, {}, {}, {} }},", hw.pin_sel(0), hw.pin_sel(1), hw.pin_sel(2), hw.pin_sel(3))?;
     writeln!(file, "    .reserved4 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .status = {},", hw.pin_status())?;
+    writeln!(file, "    .reserved5 = {{0, 0, 0}},")?;
 
     writeln!(file, "}};")?;
     writeln!(file)?;

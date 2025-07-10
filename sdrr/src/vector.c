@@ -127,11 +127,15 @@ void Default_Handler(void) {
     if (sdrr_info.status_led_enabled) {
         setup_status_led();
         
-        while(1) {
-            GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-            delay(50000);
-            GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)  
-            delay(50000);
+        if (sdrr_info.pins->status_port == PORT_B && sdrr_info.pins->status <= 15) {
+            while(1) {
+                GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
+                delay(50000);
+                GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)  
+                delay(50000);
+            }
+        } else {
+            while (1);
         }
     }
 }

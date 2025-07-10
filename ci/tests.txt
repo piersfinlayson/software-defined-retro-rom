@@ -30,14 +30,19 @@ test-ieee-diag-f411re:STM=f411re,CONFIG=config/ieee-diag.mk
 test-pet-4-40-50-f411re:STM=f411re,CONFIG=config/pet-4-40-50.mk
 test-vic20-pal-f411re:STM=f411re,CONFIG=config/vic20-pal.mk
 
-# Test each set config - HW_REV=f only
-test-set-c64-f411re:HW_REV=f,STM=f411re,CONFIG=config/set-c64.mk
-test-set-vic20-pal-f411re:HW_REV=f,STM=f411re,CONFIG=config/set-vic20-pal.mk
+# Test old config set letters
+test-hw-rev-D:HW_REV=d,STM=f411re,CONFIG=config/test-sdrr-0.mk
+test-hw-rev-E:HW_REV=e,STM=f411re,CONFIG=config/test-sdrr-0.mk
+test-hw-rev-F:HW_REV=f,STM=f411re,CONFIG=config/test-sdrr-0.mk
+
+# Test each set config - HW_REV=24-f only
+test-set-c64-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-c64.mk
+test-set-vic20-pal-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-vic20-pal.mk
 
 # Test different hardware revisions
-hw-rev-d:HW_REV=d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-hw-rev-e:HW_REV=e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-hw-rev-f:HW_REV=f,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+hw-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+hw-rev-e:HW_REV=24-e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+hw-rev-f:HW_REV=24-f,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Enable MCO, one of each STM32F4 variant
 mco-f401rb:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
@@ -52,8 +57,8 @@ no-boot-logging-f401rb:BOOT_LOGGING=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 no-boot-logging-no-swd-f401rb:BOOT_LOGGING=0,SWD=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # PCB revisions
-pcb-rev-d:HW_REV=d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-pcb-rev-e:HW_REV=d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-e:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Enable DEBUG_LOGGING
 debug-logging-f401rb:DEBUG_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
@@ -65,7 +70,7 @@ main-loop-logging-f401rb:MAIN_LOOP_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-
 disable-preload-to-ram-f401rb:DISABLE_PRELOAD_TO_RAM=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Disable status LED, PCB revision E
-disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=24-e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Custom frequencies
 freq-50hz-f401rb:FREQ=50,STM=f401rb,CONFIG=config/test-sdrr-0.mk

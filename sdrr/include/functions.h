@@ -11,7 +11,7 @@
 extern int main(void);
 
 // stm_utils.c
-extern void setup_swd(void);
+extern uint32_t check_sel_pins(uint32_t *sel_mask);
 extern void setup_mco(uint8_t mco);
 void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q);
 extern void setup_pll_src(uint8_t src);

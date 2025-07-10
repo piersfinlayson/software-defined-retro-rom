@@ -26,6 +26,7 @@ pub const HW_CONFIG_SUB_DIRS: [&str; 2] = ["user", "third-party"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Port {
+    None,
     A,
     B,
     C,
@@ -39,7 +40,20 @@ impl Port {
             "B" => Some(Port::B),
             "C" => Some(Port::C),
             "D" => Some(Port::D),
+            "NONE" => Some(Port::None),
             _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Port {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Port::None => write!(f, "PORT_NONE"),
+            Port::A => write!(f, "PORT_A"),
+            Port::B => write!(f, "PORT_B"),
+            Port::C => write!(f, "PORT_C"),
+            Port::D => write!(f, "PORT_D"),
         }
     }
 }
@@ -51,7 +65,7 @@ impl<'de> Deserialize<'de> for Port {
     {
         let s = String::deserialize(deserializer)?;
         Port::from_str(&s).ok_or_else(|| {
-            serde::de::Error::custom(format!("Invalid port: {}, must be A, B, C, or D", s))
+            serde::de::Error::custom(format!("Invalid port: {}, must be None, A, B, C, or D", s))
         })
     }
 }
@@ -62,6 +76,7 @@ pub struct StmPorts {
     pub addr_port: Port,
     pub cs_port: Port,
     pub sel_port: Port,
+    pub status_port: Port,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -91,6 +106,7 @@ pub struct StmPins {
     #[serde(default, deserialize_with = "deserialize_rom_map")]
     pub oe: HashMap<RomType, u8>,
     pub sel: Vec<u8>,
+    pub status: u8,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -142,6 +158,30 @@ pub struct HwConfig {
 }
 
 impl HwConfig {
+    pub fn port_data(&self) -> Port {
+        self.stm.ports.data_port
+    }
+
+    pub fn port_addr(&self) -> Port {
+        self.stm.ports.addr_port
+    }
+
+    pub fn port_cs(&self) -> Port {
+        self.stm.ports.cs_port
+    }
+
+    pub fn port_sel(&self) -> Port {
+        self.stm.ports.sel_port
+    }
+
+    pub fn port_status(&self) -> Port {
+        self.stm.ports.status_port
+    }
+
+    pub fn pin_status(&self) -> u8 {
+        self.stm.pins.status
+    }
+
     pub fn pin_cs1(&self, rom_type: &RomType) -> u8 {
         self.stm.pins.cs1.get(&rom_type).copied().unwrap_or(255)
     }
@@ -232,6 +272,21 @@ fn validate_pin_array(pins: &[u8], pin_type: &str, config_name: &str, max_pins: 
     Ok(())
 }
 
+fn validate_pin_values(pins: &[u8], pin_type: &str, config_name: &str, min_valid: usize, valid_value: u8) -> Result<()> {
+    let mut ii = 0;
+    for &pin in pins {
+        if ii >= min_valid {
+            break;
+        }
+        if pin > valid_value {
+            bail!("{}: invalid pin value {} in {} array, must be 0-{}",
+                  config_name, pin, pin_type, valid_value);
+        }
+        ii += 1
+    }
+    Ok(())
+}
+
 fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
     // Only support 24 pins ROMS, currently
     if config.rom.pins.quantity != 24 {
@@ -243,10 +298,21 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
         bail!("{}: data pins must be exactly 8, found {}", name, config.stm.pins.data.len());
     }
     
-    // Validate pin arrays
+    // Validate pins consistent within pin arrays
     validate_pin_array(&config.stm.pins.data, "data", name, 8)?;
     validate_pin_array(&config.stm.pins.addr, "addr", name, 16)?;
     validate_pin_array(&config.stm.pins.sel, "sel", name, 4)?;
+
+    // Validate values in pin arrays are within valid ranges, with minimum
+    // numbers
+    validate_pin_values(&config.stm.pins.data, "data", name, 8, 7)?;
+    if config.rom.pins.quantity == 24 {
+        // For 24-pin ROMs, we expect address pins A0-12 to be <= 13
+        // Because 14/15 used for X1/X2 and require larger RAM image
+        validate_pin_values(&config.stm.pins.addr, "addr", name, 13, 13)?;
+    } else {
+        bail!("{}: unsupported ROM type {}, expected 24-pin ROM", name, config.rom.pins.quantity);
+    }
     
     // Validate ROM type mappings
     validate_rom_types(&config.stm.pins.cs1, "cs1", name)?;
@@ -340,6 +406,10 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
                  .or_default()
                  .push(("oe", pin));
     }
+    let pin = config.stm.pins.status;
+    port_pins.entry(config.stm.ports.status_port)
+                .or_default()
+                .push(("status", pin));
 
     // Check for conflicts within each port
     for (port, pins) in port_pins {
