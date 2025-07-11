@@ -253,7 +253,8 @@ build_combination() {
 #
 execute_test() {
     local test_line="$1"
-    
+    local test_num="$2"
+
     # Parse test name and variables
     IFS=':' read -r test_name test_vars <<< "$test_line"
     
@@ -281,7 +282,7 @@ execute_test() {
         return 1
     fi
     
-    echo "Running test: $test_name (STM=$stm_variant)"
+    echo "- Running test $test_num: $test_name (STM=$stm_variant)"
     
     # Clean previous build artifacts
     make clean-firmware-build clean-gen > /dev/null 2>&1 || true
@@ -294,7 +295,7 @@ execute_test() {
     if [[ -n "$config_param" ]]; then
         make_cmd="$make_cmd $config_param"
     fi
-    echo "- command: $make_cmd make test"
+    echo "  - Command: $make_cmd make test"
     make_cmd="$make_cmd make test"
     
     # Execute the build
@@ -441,7 +442,7 @@ main() {
         for test_line in "${tests[@]}"; do
             total_tests=$((total_tests + 1))
             
-            if execute_test "$test_line"; then
+            if execute_test "$test_line" "$total_tests"; then
                 # Test succeeded, organize the output files for verification
                 # Extract STM variant from test line for organizing files
                 IFS=':' read -r test_name test_vars <<< "$test_line"
