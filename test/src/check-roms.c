@@ -164,15 +164,19 @@ int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int 
         
         uint8_t num_roms = rom_set[set_idx].rom_count;
         if (num_roms == 1) {
+            int loaded_rom_idx = overall_rom_idx;
+
+            printf("  Testing ROM %d in set %d\n    Type: %s, Name: %s\n", 0, set_idx, configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
+
             // Single ROM: all CS lines pulled down (0,0,0), test 16KB
             for (uint16_t logical_addr = 0; logical_addr < 16384; logical_addr++) {
+
                 uint16_t mangled_addr = create_mangled_address(logical_addr, 0, 0, 0);
                 
                 uint8_t compiled_byte = lookup_rom_byte(set_idx, mangled_addr);
                 uint8_t demangled_byte = demangle_byte(compiled_byte);
                 
                 // Find the loaded ROM for this set
-                int loaded_rom_idx = overall_rom_idx;
                 uint16_t original_addr = logical_addr % loaded_roms[loaded_rom_idx].size;
                 uint8_t expected_byte = loaded_roms[loaded_rom_idx].data[original_addr];
                 
@@ -189,14 +193,14 @@ int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int 
         } else {
             // Multi-ROM set: test each ROM with appropriate CS combinations  
             for (int rom_idx = 0; rom_idx < rom_set[set_idx].rom_count; rom_idx++) {
-                printf("  Testing ROM %d in set %d...\n", rom_idx, set_idx);
-                
                 // Find corresponding loaded ROM
                 int loaded_rom_idx = overall_rom_idx;
                 if (loaded_rom_idx >= count) {
                     printf("  Internal error - ran out of ROMs");
                     continue;
                 }
+                
+                printf("  Testing ROM %d in set %d\n    Type: %s, Name: %s\n", rom_idx, set_idx, configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
                 
                 // Determine CS values for this ROM
                 int cs1, x1, x2;
@@ -242,7 +246,13 @@ int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int 
             }
         }
         
-        printf("Set %d: %d ROMs, %d addresses checked, %d errors\n", set_idx, num_roms, checked, errors);
+        char *roms;
+        if (num_roms > 1) {
+            roms = "ROMs";
+        } else {
+            roms = "ROM";
+        }
+        printf("  Result: Set %d: %d %s, %d addresses checked, %d errors\n", set_idx, num_roms, roms, checked, errors);
         total_errors += errors;
         total_checked += checked;
     }

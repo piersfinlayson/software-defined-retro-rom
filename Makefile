@@ -296,6 +296,12 @@ SERVE_ALG ?= default
 # build process.
 GEN_OUTPUT_DIR ?= output
 
+# Cargo profile
+#
+# Whether to run cargo as release or debug.
+# Needs to be blank for debug, because cargo.
+CARGO_PROFILE ?= release
+
 #
 # End of settings
 #
@@ -469,6 +475,16 @@ else
   exit 1
 endif
 
+# Set up CARGO_TARGET_DIR
+ifeq ($(CARGO_PROFILE),)
+  CARGO_TARGET_DIR := target/debug
+else
+  CARGO_TARGET_DIR := target/$(CARGO_PROFILE)
+endif
+ifneq ($(SUPPRESS_OUTPUT),1)
+$(info - CARGO_TARGET_DIR=$(CARGO_TARGET_DIR))
+endif
+
 ifneq ($(ARGS),)
 ifneq ($(SUPPRESS_OUTPUT),1)
 $(info - ARGS=$(ARGS))
@@ -526,7 +542,7 @@ ifeq ($(WARNINGS),0)
 endif
 endif
 
-.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen clean-sdrr-info sdrr-info info info-detail firmware run run-actual flash flash-actual test sdrr-gen/target/release/sdrr-gen
+.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen clean-sdrr-info sdrr-info info info-detail firmware run run-actual flash flash-actual test sdrr-gen/$(CARGO_TARGET_DIR)/sdrr-gen
 
 all: firmware info
 	@echo "=========================================="
@@ -544,11 +560,11 @@ sdrr-gen:
 	@echo "- retrieve ROM data"
 	@echo "- process ROM data into SDRR firmware files"
 	@echo "-----"
-	@cd sdrr-gen && cargo build --release
+	@cd sdrr-gen && cargo build --$(CARGO_PROFILE)
 
-sdrr-gen/target/release/sdrr-gen: sdrr-gen
+sdrr-gen/$(CARGO_TARGET_DIR)/sdrr-gen: sdrr-gen
 
-gen: sdrr-gen/target/release/sdrr-gen
+gen: sdrr-gen/$(CARGO_TARGET_DIR)/sdrr-gen
 	@echo "=========================================="
 	@echo "Running sdrr-gen, to:"
 	@echo "- generate firmware settings"
@@ -556,7 +572,7 @@ gen: sdrr-gen/target/release/sdrr-gen
 	@echo "- process ROM data into SDRR firmware files"
 	@echo "-----"
 	@mkdir -p $(GEN_OUTPUT_DIR)
-	@sdrr-gen/target/release/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output $(GEN_OUTPUT_DIR)
+	@sdrr-gen/$(CARGO_TARGET_DIR)/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output $(GEN_OUTPUT_DIR)
 
 sdrr-info:
 	@echo "=========================================="
@@ -564,7 +580,7 @@ sdrr-info:
 	@echo "- Validate SDRR firmware"
 	@echo "- Extract key SDRR firmware properties"
 	@echo "-----"
-	cd sdrr-info && cargo build --release
+	cd sdrr-info && cargo build --$(CARGO_PROFILE)
 
 info: sdrr-info firmware
 	@echo "=========================================="
@@ -572,7 +588,7 @@ info: sdrr-info firmware
 	@echo "- Validate SDRR firmware"
 	@echo "- Extract key SDRR firmware properties"
 	@echo "-----"
-	@sdrr-info/target/release/sdrr-info info sdrr/build/sdrr-stm32$(STM).bin
+	@sdrr-info/$(CARGO_TARGET_DIR)/sdrr-info info sdrr/build/sdrr-stm32$(STM).bin
 	@echo "-----"
 	@echo "Use <SAME_ARGS> make info-detail to see more details about the firmware"
 
@@ -583,7 +599,7 @@ info-detail: sdrr-info firmware
 	@echo "- Extract key SDRR firmware properties"
 	@echo "- Show detailed SDRR firmware properties"
 	@echo "-----"
-	@sdrr-info/target/release/sdrr-info info -d sdrr/build/sdrr-stm32$(STM).bin
+	@sdrr-info/$(CARGO_TARGET_DIR)/sdrr-info info -d sdrr/build/sdrr-stm32$(STM).bin
 	@echo "=========================================="
 
 firmware: gen
@@ -592,7 +608,7 @@ firmware: gen
 	@echo "- MCU variant: STM32$(shell echo $(STM) | tr '[:lower:]' '[:upper:]')"
 	@echo "- HW revision: $(HW_REV)"
 	@echo "-----"
-	@make --no-print-directory -C sdrr
+	@GEN_OUTPUT_DIR=$(GEN_OUTPUT_DIR) make --no-print-directory -C sdrr
 
 # Call make run-actual - this causes a new instance of make to be invoked and generated.mk exists, so it can load PROBE_RS_CHIP_ID
 run: firmware
@@ -612,7 +628,7 @@ test: firmware
 	@echo "Building tests to:"
 	@echo "- verify generated firmware ROM images"
 	@echo "-----"
-	@make --no-print-directory -C test
+	@GEN_OUTPUT_DIR=$(GEN_OUTPUT_DIR) make --no-print-directory -C test
 	@echo "=========================================="
 	@echo "Running tests to:"
 	@echo "- verify generated firmware ROM images"

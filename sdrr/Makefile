@@ -4,7 +4,8 @@
 # configuration to build SDRR, then calls this Makefile.
 
 # sdrr-gen Output directory
-OUTPUT_DIR := ../output
+GEN_OUTPUT_DIR ?= output
+OUTPUT_DIR := ../$(GEN_OUTPUT_DIR)
 
 # Include the auto-generated Makefile fragment
 # Only include generated.mk if we're not doing a clean target

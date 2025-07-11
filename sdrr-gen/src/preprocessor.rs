@@ -181,16 +181,28 @@ pub struct RomSet {
 }
 
 impl RomSet {
-    pub fn get_byte(&self, address: usize, hw: &HwConfig, phys_pin_to_addr_map: &[Option<usize>], phys_pin_to_data_map: &[usize]) -> u8 {
-        // Backward compatibility: single ROM uses existing behavior
+    pub fn get_byte(&self, address: usize, hw: &HwConfig) -> u8 {
+        let phys_pin_to_data_map = hw.get_phys_pin_to_data_map();
+
+            // Backward compatibility: single ROM uses existing behavior
         if self.roms.len() == 1 {
-            return self.roms[0].image.get_byte(address, phys_pin_to_addr_map, phys_pin_to_data_map);
+            let num_addr_lines = self.roms[0].config.rom_type.num_addr_lines();
+            let phys_pin_to_addr_map = hw.get_phys_pin_to_addr_map(num_addr_lines);
+
+            return self.roms[0].image.get_byte(address, &phys_pin_to_addr_map, &phys_pin_to_data_map);
         }
-        
+
         // Multiple ROMs: check CS line states to select responding ROM
         for (index, rom_in_set) in self.roms.iter().enumerate() {
+            // Get the physical addr and data pin mappings.  We have to
+            // retrieve this for each ROM in the set, as each ROM may be
+            // a different type (size).
+            let num_addr_lines = rom_in_set.config.rom_type.num_addr_lines();
+            let phys_pin_to_addr_map = hw.get_phys_pin_to_addr_map(num_addr_lines);
+
             // Get the CS pin that controls this ROM's selection
             let cs_pin = hw.cs_pin_for_rom_in_set(&rom_in_set.config.rom_type, index);
+            assert!(cs_pin <= 15, "Internal error: CS pin is > 15");
             let cs_active = if rom_in_set.config.cs_config.cs1 == CsLogic::ActiveHigh {
                  (address & (1 << cs_pin)) == 1
             } else {
@@ -208,7 +220,7 @@ impl RomSet {
             }
         }
 
-        RomImage::transform_byte(0xAA, phys_pin_to_data_map) // No ROM selected
+        RomImage::transform_byte(0xAA, &phys_pin_to_data_map) // No ROM selected
     }
 
     fn check_rom_cs_requirements(&self, rom_in_set: &RomInSet, address: usize, hw: &HwConfig) -> bool {

@@ -23,6 +23,15 @@ impl RomType {
         }
     }
 
+    pub fn num_addr_lines(&self) -> usize {
+        match self {
+            RomType::Rom2316 => 11, // 2^11 = 2048 bytes
+            RomType::Rom2332 => 12, // 2^12 = 4096 bytes
+            RomType::Rom2364 => 13, // 2^13 = 8192 bytes
+            RomType::Rom23128 => 14, // 2^14 = 16384 bytes
+        }
+    }
+
     pub fn size_bytes(&self) -> usize {
         match self {
             RomType::Rom2316 => 2048, // 2KB

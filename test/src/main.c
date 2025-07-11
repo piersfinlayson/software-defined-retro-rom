@@ -8,6 +8,7 @@
 
 int main(void) {
     printf("Starting ROM image test...\n");
+    printf("-----");
 
     // Load original ROM configurations
     rom_config_t *configs;
