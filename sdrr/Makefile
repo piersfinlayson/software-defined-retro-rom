@@ -85,38 +85,47 @@ segger-rtt:
 
 # sdrr object files
 $(BUILD_DIR)/%.o: src/%.c ../Makefile | $(BUILD_DIR) segger-rtt
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 # roms.o is built from roms.c from a different directory
 $(ROMS_OBJ): $(ROMS_SRC) ../Makefile 
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 # sdrr_config.o is built from sdrr_config.c from a different directory
 $(SDRR_CONFIG_OBJ): $(SDRR_CONFIG_SRC) ../Makefile 
-	$(CC) $(CFLAGS) -DSDRR_VERSION_MAJOR=$(VERSION_MAJOR) -DSDRR_VERSION_MINOR=$(VERSION_MINOR) -DSDRR_VERSION_PATCH=$(VERSION_PATCH) -DSDRR_BUILD_NUMBER=$(BUILD_NUMBER) -DSDRR_GIT_COMMIT=\"$(GIT_COMMIT)\" -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -DSDRR_VERSION_MAJOR=$(VERSION_MAJOR) -DSDRR_VERSION_MINOR=$(VERSION_MINOR) -DSDRR_VERSION_PATCH=$(VERSION_PATCH) -DSDRR_BUILD_NUMBER=$(BUILD_NUMBER) -DSDRR_GIT_COMMIT=\"$(GIT_COMMIT)\" -c $< -o $@
 
 # Explicit rules for SEGGER files
 $(BUILD_DIR)/SEGGER_RTT.o: segger-rtt/RTT/SEGGER_RTT.c ../Makefile  | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/SEGGER_RTT_printf.o: segger-rtt/RTT/SEGGER_RTT_printf.c ../Makefile | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 segger-rtt/RTT/SEGGER_RTT.c segger-rtt/RTT/SEGGER_RTT_printf.c: segger-rtt
 
 # Link
 $(ELF): $(OBJS) $(ROMS_OBJ) $(SDRR_CONFIG_OBJ) $(SEGGER_OBJS) $(LDSCRIPT) | $(BUILD_DIR)
-	$(CC) $(LDFLAGS) -T $(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) $(SDRR_CONFIG_OBJ) -o $@
+	@echo "- Linking object files to create ELF -> sdrr/$@"
+	@$(CC) $(LDFLAGS) -T $(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) $(SDRR_CONFIG_OBJ) -o $@
 
 # Generate binary
 $(BIN): $(ELF)
-	$(OBJCOPY) -O binary $< $@
-	$(OBJDUMP) -D -S -t -h $< > $(DISASM)
-	@echo "Build complete: $@"
+	@echo "- Generating binary from sdrr/$< -> sdrr/$@"
+	@$(OBJCOPY) -O binary $< $@
+	@$(OBJDUMP) -D -S -t -h $< > $(DISASM)
+	@echo "----"
+	@echo "Build complete:"
 
 # Size information
 size: $(ELF)
-	$(SIZE) $(ELF)
+	@$(SIZE) $(ELF)
+	@ls -ltr $(ELF) 
 	@ls -ltr $(BIN) 
 
 # Clean segger

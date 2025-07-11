@@ -304,16 +304,24 @@ COLOUR_YELLOW := $(shell echo -e '\033[33m')
 COLOUR_RESET := $(shell echo -e '\033[0m')
 COLOUR_RED := $(shell echo -e '\033[31m')
 
-$(info ==========================================)
-$(info SDRR Makefile env settings:)
+ifneq ($(SUPPRESS_OUTPUT),1)
+  $(info ==========================================)
+  $(info Building SDRR)
+  $(info ==========================================)
+  $(info SDRR Makefile env settings:)
+endif
 
 ifneq ($(CONFIG),)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - CONFIG=$(CONFIG))
+endif
 endif
 
 # Set hardware revision flag
 ifneq ($(HW_REV),)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - HW_REV=$(HW_REV))
+endif
   HW_REV_FLAG = --hw-rev $(HW_REV)
 else
   $(info - $(COLOUR_RED)HW_REV not set$(COLOUR_RESET) - please set it to a valid value, e.g. d or e)
@@ -322,7 +330,9 @@ endif
 
 # Set swd flag based on SWD variable
 ifeq ($(SWD), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - SWD=$(SWD))
+endif
   SWD_FLAG = --swd
 else
   SWD_FLAG =
@@ -330,7 +340,9 @@ endif
 
 # Set boot logging flag based on BOOT_LOGGING variable
 ifeq ($(BOOT_LOGGING), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - BOOT_LOGGING=$(BOOT_LOGGING))
+endif
   BOOT_LOGGING_FLAG = --boot-logging
 else
   BOOT_LOGGING_FLAG = 
@@ -338,7 +350,9 @@ endif
 
 # Set main loop logging flag based on MAIN_LOOP_LOGGING variable
 ifeq ($(MAIN_LOOP_LOGGING), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - MAIN_LOOP_LOGGING=$(MAIN_LOOP_LOGGING))
+endif
   MAIN_LOOP_LOGGING_FLAG = --main-loop-logging
 else
   MAIN_LOOP_LOGGING_FLAG = 
@@ -346,7 +360,9 @@ endif
 
 # Set debug logging flag based on DEBUG_LOGGING variable
 ifeq ($(DEBUG_LOGGING), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - DEBUG_LOGGING=$(DEBUG_LOGGING))
+endif
   DEBUG_LOGGING_FLAG = --debug-logging
 else
   DEBUG_LOGGING_FLAG =
@@ -354,7 +370,9 @@ endif
 
 # Set mco flag based on MCO variable
 ifeq ($(MCO), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - MCO=$(MCO))
+endif
   MCO_FLAG = --mco
 else
   MCO_FLAG = 
@@ -362,7 +380,9 @@ endif
 
 # Set mco2 flag based on MCO2 variable
 ifeq ($(MCO2), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - MCO2=$(MCO2))
+endif
   MCO2_FLAG = --mco2
 else
   MCO2_FLAG =
@@ -370,7 +390,9 @@ endif
 
 # Set oscillator flag based on OSC variable
 ifeq ($(OSC), HSE)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - OSC=$(OSC))
+endif
   OSC_FLAG = --hse
 else
   OSC_FLAG = --hsi
@@ -380,13 +402,17 @@ endif
 ifeq ($(FREQ),)
   FREQ_FLAG =
 else
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - FREQ=$(FREQ))
+endif
   FREQ_FLAG = --freq $(FREQ)
 endif
 
 # Set OVERCLOCK_FLAG based on OVERCLOCK variable
 ifeq ($(OVERCLOCK), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - OVERCLOCK=$(OVERCLOCK))
+endif
   OVERCLOCK_FLAG = --overclock
 else
   OVERCLOCK_FLAG =
@@ -394,7 +420,9 @@ endif
 
 # Set STATUS_LED_FLAG based on STATUS_LED variable
 ifeq ($(STATUS_LED), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - STATUS_LED=$(STATUS_LED))
+endif
   STATUS_LED_FLAG = --status-led
 else
   STATUS_LED_FLAG = 
@@ -402,7 +430,9 @@ endif
 
 # Set BOOTLOADER_FLAG based on BOOTLOADER variable
 ifeq ($(BOOTLOADER), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - BOOTLOADER=$(BOOTLOADER))
+endif
   BOOTLOADER_FLAG = --bootloader
 else
   BOOTLOADER_FLAG =
@@ -410,7 +440,9 @@ endif
 
 # Set DISABLE_PRELOAD_TO_RAM_FLAG based on DISABLE_PRELOAD_TO_RAM variable
 ifeq ($(DISABLE_PRELOAD_TO_RAM), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - "DISABLE_PRELOAD_TO_RAM=$(DISABLE_PRELOAD_TO_RAM)")
+endif
   DISABLE_PRELOAD_TO_RAM_FLAG = --disable-preload-to-ram
 else
   DISABLE_PRELOAD_TO_RAM_FLAG =
@@ -418,13 +450,19 @@ endif
 
 # Set SERVE_ALG_FLAG based on SERVE_ALG variable
 ifeq ($(SERVE_ALG), b)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - SERVE_ALG=$(SERVE_ALG))
+endif
   SERVE_ALG_FLAG = --serve-alg b
 else ifeq ($(SERVE_ALG), a)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - SERVE_ALG=$(SERVE_ALG))
+endif
   SERVE_ALG_FLAG = --serve-alg a
 else ifeq ($(SERVE_ALG), default)
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - SERVE_ALG=$(SERVE_ALG))
+endif
   SERVE_ALG_FLAG =
 else
   $(info - $(COLOUR_RED)Invalid SERVE_ALG value$(COLOUR_RESET) - please set it to a valid value, e.g. a or b)
@@ -432,17 +470,23 @@ else
 endif
 
 ifneq ($(ARGS),)
+ifneq ($(SUPPRESS_OUTPUT),1)
 $(info - ARGS=$(ARGS))
+endif
 endif
 
 ifeq ($(ROM_CONFIGS),)
   $(info - $(COLOUR_RED)ROM_CONFIGS not set$(COLOUR_RESET) - please set it to a valid value, or use the CONFIG variable to include a config file)
   exit 1
 else
+ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - ROM_CONFIGS=$(ROM_CONFIGS))
 endif
+endif
 
-$(info ==========================================)
+ifneq ($(SUPPRESS_OUTPUT),1)
+$(info -----)
+endif
 
 # Convert ROM_CONFIGS to --rom arguments, adjusting local file paths only
 #
@@ -462,12 +506,15 @@ $(if $(findstring http://,$(1)),
 )
 endef
 ROM_ARGS = $(foreach config,$(ROM_CONFIGS),--rom $(strip $(call process_rom_config,$(config))))
-$(info ROM_ARGS = $(ROM_ARGS))
-
-$(info ==========================================)
+ifneq ($(SUPPRESS_OUTPUT),1)
+$(info Generated ROM_ARGS required by sdrr-gen:)
+$(info - ROM_ARGS=$(ROM_ARGS))
+$(info -----)
+endif
 
 WARNINGS=0
 
+ifneq ($(SUPPRESS_OUTPUT),1)
 $(info SDRR Build Warnings: )
 ifneq ($(SWD), 1)
   $(info - $(COLOUR_YELLOW)SWD is disabled$(COLOUR_RESET) - this will prevent you from reprogramming the device via SWD after flashing with this image)
@@ -477,76 +524,110 @@ endif
 ifeq ($(WARNINGS),0)
   $(info - None)
 endif
+endif
 
-.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen clean-sdrr-info sdrr-info info info-detail firmware run test sdrr-gen/target/release/sdrr-gen
+.PHONY: all clean clean-firmware clean-firmware-build clean-gen clean-sdrr-gen sdrr-gen gen clean-sdrr-info sdrr-info info info-detail firmware run run-actual flash flash-actual test sdrr-gen/target/release/sdrr-gen
 
 all: firmware info
 	@echo "=========================================="
-	@echo "SDRR firmware build complete - firmware files are in sdrr/build/"
+	@echo "SDRR firmware build complete:"
+	@echo "- firmware files are in sdrr/build/"
+	@echo "-----"
 	@ls -ltr sdrr/build/sdrr-stm32$(STM).elf
 	@ls -ltr sdrr/build/sdrr-stm32$(STM).bin
 	@echo "=========================================="
 
 sdrr-gen:
 	@echo "=========================================="
-	@echo "Building sdrr-gen, to generate firmware settings and retrieve and process ROM data"
-	@echo "=========================================="
-	cd sdrr-gen && cargo build --release
+	@echo "Building sdrr-gen, to:"
+	@echo "- generate firmware settings"
+	@echo "- retrieve ROM data"
+	@echo "- process ROM data into SDRR firmware files"
+	@echo "-----"
+	@cd sdrr-gen && cargo build --release
 
 sdrr-gen/target/release/sdrr-gen: sdrr-gen
 
 gen: sdrr-gen/target/release/sdrr-gen
 	@echo "=========================================="
-	@echo "Generating firmware settings and retrieving and processing ROM data"
-	@echo "=========================================="
-	mkdir -p $(GEN_OUTPUT_DIR)
-	sdrr-gen/target/release/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output $(GEN_OUTPUT_DIR)
+	@echo "Running sdrr-gen, to:"
+	@echo "- generate firmware settings"
+	@echo "- retrieve ROM data"
+	@echo "- process ROM data into SDRR firmware files"
+	@echo "-----"
+	@mkdir -p $(GEN_OUTPUT_DIR)
+	@sdrr-gen/target/release/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output $(GEN_OUTPUT_DIR)
 
 sdrr-info:
+	@echo "=========================================="
+	@echo "Building sdrr-info, to:"
+	@echo "- Validate SDRR firmware"
+	@echo "- Extract key SDRR firmware properties"
+	@echo "-----"
 	cd sdrr-info && cargo build --release
 
 info: sdrr-info firmware
 	@echo "=========================================="
-	@echo "Validating SDRR firmware and extracting its key properties"
-	@echo "=========================================="
+	@echo "Running sdrr-info, to:"
+	@echo "- Validate SDRR firmware"
+	@echo "- Extract key SDRR firmware properties"
+	@echo "-----"
 	@sdrr-info/target/release/sdrr-info info sdrr/build/sdrr-stm32$(STM).bin
-	@echo "=========================================="
+	@echo "-----"
 	@echo "Use <SAME_ARGS> make info-detail to see more details about the firmware"
 
 info-detail: sdrr-info firmware
 	@echo "=========================================="
-	@echo "Detailed firmware information"
-	@echo "=========================================="
+	@echo "Running sdrr-info, to:"
+	@echo "- Validate SDRR firmware"
+	@echo "- Extract key SDRR firmware properties"
+	@echo "- Show detailed SDRR firmware properties"
+	@echo "-----"
 	@sdrr-info/target/release/sdrr-info info -d sdrr/build/sdrr-stm32$(STM).bin
 	@echo "=========================================="
 
 firmware: gen
 	@echo "=========================================="
-	@echo "Building SDRR firmware for STM32$(STM) with HW revision $(HW_REV)"
-	@echo "=========================================="
-	+cd sdrr && make OUTPUT_DIR=../$(GEN_OUTPUT_DIR)
-	@echo "=========================================="
-	@echo "SDRR firmware build complete - firmware files are in sdrr/build/"
-	@ls -ltr sdrr/build/*.bin
+	@echo "Building SDRR firmware for:"
+	@echo "- MCU variant: STM32$(shell echo $(STM) | tr '[:lower:]' '[:upper:]')"
+	@echo "- HW revision: $(HW_REV)"
+	@echo "-----"
+	@make --no-print-directory -C sdrr
 
 # Call make run-actual - this causes a new instance of make to be invoked and generated.mk exists, so it can load PROBE_RS_CHIP_ID
 run: firmware
-	make run-actual
+	@echo "=========================================="
+	@echo "Flash SDRR firmware to device and attach to logging:"
+	@echo "-----"
+	@SUPPRESS_OUTPUT=1 make --no-print-directory run-actual
+
+flash: firmware
+	@echo "=========================================="
+	@echo "Flash SDRR firmware to device:"
+	@echo "-----"
+	@SUPPRESS_OUTPUT=1 make --no-print-directory flash-actual
 
 test: firmware
 	@echo "=========================================="
-	@echo "Building tests to verify generated ROMs"
+	@echo "Building tests to:"
+	@echo "- verify generated firmware ROM images"
+	@echo "-----"
+	@make --no-print-directory -C test
 	@echo "=========================================="
-	+cd test && make
-	@echo "=========================================="
-	@echo "Running tests to verify generated ROMs"
-	@echo "=========================================="
-	ROM_CONFIGS="$(ROM_CONFIGS)" test/build/image-test
+	@echo "Running tests to:"
+	@echo "- verify generated firmware ROM images"
+	@echo "-----"
+	@ROM_CONFIGS="$(ROM_CONFIGS)" test/build/image-test
+	@echo "-----"
+	@echo "Tests completed"
 
 -include $(GEN_OUTPUT_DIR)/generated.mk
 
 run-actual:
-	probe-rs run --chip $(PROBE_RS_CHIP_ID) sdrr/build/sdrr-stm32$(STM).elf
+	@probe-rs run --chip $(PROBE_RS_CHIP_ID) sdrr/build/sdrr-stm32$(STM).elf
+
+flash-actual:
+	@probe-rs download --chip $(PROBE_RS_CHIP_ID) sdrr/build/sdrr-stm32$(STM).bin
 
 clean-firmware-build:
 	+cd sdrr && make clean-build

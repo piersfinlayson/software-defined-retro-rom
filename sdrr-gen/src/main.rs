@@ -554,7 +554,7 @@ fn main() -> Result<()> {
     generate_files(&config, &rom_sets).with_context(|| "Failed to generate output files")?;
 
     println!(
-        "Successfully transformed ROM images and generated output files in {}",
+        "Successfully transformed ROM images and generated output files in `{}/`",
         config.output_dir.display()
     );
 

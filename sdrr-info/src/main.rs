@@ -41,7 +41,7 @@ use std::path::Path;
 use std::fs::metadata;
 use chrono::{DateTime, Local};
 
-use symbols::SdrrInfo;
+use symbols::{SdrrInfo, SdrrStmPort};
 use load::load_sdrr_firmware;
 use args::{Args, Command, parse_args};
 use utils::add_commas;
@@ -54,7 +54,7 @@ pub const STM32F4_FLASH_BASE: u32 = 0x08000000;
 
 pub fn print_header() {
     println!("Software Defined Retro ROM - Firmware Information");
-    println!("=================================================");
+    println!("-------------------------------------------------");
 }
 
 // Example usage function
@@ -97,7 +97,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
+    print_header();
     println!();
+
     println!("Core Firmware Properties");
     println!("------------------------");
     println!("File name:     {}", 
@@ -209,7 +211,11 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
 
         println!();
         println!("Status LED pin:");
-        println!("  Pin: P{}{}", pins.status_port, pins.status);
+        if pins.status_port == SdrrStmPort::None {
+            println!("  Pin: None");
+        } else {
+            println!("  Pin: P{}{}", pins.status_port, pins.status);
+        }
         println!();
     }
 

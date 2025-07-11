@@ -3,7 +3,7 @@
 // MIT License
 
 use crate::config::{SizeHandling, RomInSet};
-use crate::rom_types::{RomType, StmFamily, CsLogic};
+use crate::rom_types::{RomType, CsLogic};
 use crate::hardware::HwConfig;
 use anyhow::{Context, Result};
 use std::fs;
@@ -76,84 +76,19 @@ impl RomImage {
         Ok(Self { data: final_data })
     }
 
-
-    fn transform_address_f4(address: usize, rom_type: &RomType) -> usize {
-        let pin_to_addr_map = match rom_type {
-            RomType::Rom2364 => [
-                Some(7),
-                Some(6),
-                Some(5),
-                Some(4),
-                Some(1),
-                Some(0),
-                Some(2),
-                Some(3),
-                Some(8),
-                Some(12),
-                None, // CS1
-                Some(10),
-                Some(11),
-                Some(9),
-            ],
-            RomType::Rom2332 => [
-                Some(7),
-                Some(6),
-                Some(5),
-                Some(4),
-                Some(1),
-                Some(0),
-                Some(2),
-                Some(3),
-                Some(8),
-                None, // CS2
-                None, // CS1
-                Some(10),
-                Some(11),
-                Some(9),
-            ],
-            RomType::Rom2316 => [
-                Some(7),
-                Some(6),
-                Some(5),
-                Some(4),
-                Some(1),
-                Some(0),
-                Some(2),
-                Some(3),
-                Some(8),
-                None, // CS3
-                None, // CS1
-                Some(10),
-                None, // CS2
-                Some(9),
-            ],
-            RomType::Rom23128 => {
-                // This is a 128K ROM, so it has a different mapping
-                // for the address pins.
-                [
-                    Some(7),
-                    Some(6),
-                    Some(5),
-                    Some(4),
-                    Some(1),
-                    Some(0),
-                    Some(2),
-                    Some(3),
-                    Some(12),
-                    Some(8),
-                    Some(9),
-                    Some(11),
-                    Some(10),
-                    Some(13),
-                ]
-            }
-        };
-
+    /// Transforms from a physical address (based on the hardware pins) to
+    /// a logical ROM address, so we store the physical ROM mapping, rather
+    /// than the logical one.
+    pub fn transform_address(
+        &self,
+        address: usize,
+        phys_pin_to_addr_map: &[Option<usize>]
+    ) -> usize {
         // Start with 0 result
         let mut result = 0;
 
-        for pin in 0..pin_to_addr_map.len() {
-            if let Some(addr_bit) = pin_to_addr_map[pin] {
+        for pin in 0..phys_pin_to_addr_map.len() {
+            if let Some(addr_bit) = phys_pin_to_addr_map[pin] {
                 // Check if this pin is set in the original address
                 if (address & (1 << pin)) != 0 {
                     // Set the corresponding address bit in the result
@@ -163,20 +98,6 @@ impl RomImage {
         }
 
         result
-    }
-
-    /// Transforms from a physical address (based on the hardware pins) to
-    /// a logical ROM address, so we store the physical ROM mapping, rather
-    /// than the logical one.
-    pub fn transform_address(
-        &self,
-        address: usize,
-        family: &StmFamily,
-        rom_type: &RomType,
-    ) -> usize {
-        match family {
-            StmFamily::F4 => Self::transform_address_f4(address, rom_type),
-        }
     }
 
     /// Transforms a data byte by rearranging its bit positions to match the hardware's
@@ -196,12 +117,7 @@ impl RomImage {
     ///
     /// This transformation ensures that when the hardware reads a byte through its
     /// data pins, it gets the correct bit values despite the non-standard connections.
-    pub fn transform_byte(byte: u8, family: &StmFamily) -> u8 {
-        // This array maps each original bit position to its new position
-        let bit_posn_map = match family {
-            StmFamily::F4 => [7, 6, 5, 4, 3, 2, 1, 0],
-        };
-
+    pub fn transform_byte(byte: u8, phys_pin_to_data_map: &[usize]) -> u8 {
         // Start with 0 result
         let mut result = 0;
 
@@ -210,7 +126,7 @@ impl RomImage {
             // Check if this bit is set in the original byte
             if (byte & (1 << bit_pos)) != 0 {
                 // Get the new position for this bit
-                let new_pos = bit_posn_map[bit_pos];
+                let new_pos = phys_pin_to_data_map[bit_pos];
                 // Set the bit in the result at its new position
                 result |= 1 << new_pos;
             }
@@ -231,11 +147,11 @@ impl RomImage {
     /// This ensures that when the hardware reads from a certain address
     /// through its GPIO pins, it gets the correct byte value with bits
     /// arranged according to its data pin connections.
-    pub fn get_byte(&self, address: usize, family: &StmFamily, rom_type: &RomType) -> u8 {
+    pub fn get_byte(&self, address: usize, phys_pin_to_addr_map: &[Option<usize>], phys_pin_to_data_map: &[usize]) -> u8 {
         // We have been passed a physical address based on the hardware pins,
         // so we need to transform it to a logical address based on the ROM
         // image.
-        let transformed_address = self.transform_address(address, family, rom_type);
+        let transformed_address = self.transform_address(address, phys_pin_to_addr_map);
 
         // Sanity check that we did get a logical address, which must by
         // definition fit within the actual ROM size.
@@ -254,7 +170,7 @@ impl RomImage {
 
         // Now transform the byte, as the physical data lines are not in the
         // expected order (0-7).
-        Self::transform_byte(byte, &family)
+        Self::transform_byte(byte, phys_pin_to_data_map)
     }
 }
 
@@ -265,10 +181,10 @@ pub struct RomSet {
 }
 
 impl RomSet {
-    pub fn get_byte(&self, address: usize, family: &StmFamily, hw: &HwConfig) -> u8 {
+    pub fn get_byte(&self, address: usize, hw: &HwConfig, phys_pin_to_addr_map: &[Option<usize>], phys_pin_to_data_map: &[usize]) -> u8 {
         // Backward compatibility: single ROM uses existing behavior
         if self.roms.len() == 1 {
-            return self.roms[0].image.get_byte(address, family, &self.roms[0].config.rom_type);
+            return self.roms[0].image.get_byte(address, phys_pin_to_addr_map, phys_pin_to_data_map);
         }
         
         // Multiple ROMs: check CS line states to select responding ROM
@@ -287,12 +203,12 @@ impl RomSet {
                     // This ROM responds - mask out CS selection bits and get data
                     //let masked_address = self.mask_cs_selection_bits(address, &rom_in_set.config.rom_type, hw_rev);
                     //return rom_in_set.image.get_byte(masked_address, family, &rom_in_set.config.rom_type);
-                    return rom_in_set.image.get_byte(address, family, &rom_in_set.config.rom_type);
+                    return rom_in_set.image.get_byte(address, &phys_pin_to_addr_map, &phys_pin_to_data_map);
                 }
             }
         }
-        
-        RomImage::transform_byte(0xAA, &family) // No ROM selected
+
+        RomImage::transform_byte(0xAA, phys_pin_to_data_map) // No ROM selected
     }
 
     fn check_rom_cs_requirements(&self, rom_in_set: &RomInSet, address: usize, hw: &HwConfig) -> bool {

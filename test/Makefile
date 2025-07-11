@@ -7,11 +7,12 @@ SOURCES = src/main.c src/check-roms.c src/load-config.c src/query-roms.c ../outp
 
 # Create build directory and build target
 $(BUILD_DIR)/$(TARGET): $(SOURCES) include/roms-test.h ../output/roms.h ../output/sdrr_config.h | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -o $@ $(SOURCES) -lcurl -lzip
+	@echo "- Building $@"
+	@$(CC) $(CFLAGS) -o $@ $(SOURCES) -lcurl -lzip
 
 # Create build directory
 $(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
 
 # Convenience target
 $(TARGET): $(BUILD_DIR)/$(TARGET)
@@ -22,7 +23,8 @@ clean:
 
 # Run tests
 test: $(BUILD_DIR)/$(TARGET)
-	./$
+	@echo "- Running tests..."
+	@./$
 
 # Force rebuild if output files change
 ../output/roms.c ../output/roms.h:

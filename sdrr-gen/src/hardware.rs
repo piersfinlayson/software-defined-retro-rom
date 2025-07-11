@@ -155,9 +155,67 @@ pub struct HwConfig {
     pub description: String,
     pub rom: Rom,
     pub stm: Stm,
+    #[serde(skip)]
+    phys_pin_to_addr_map: Vec<Option<usize>>,
+    #[serde(skip)]
+    phys_pin_to_data_map: [usize; 8],
 }
 
 impl HwConfig {
+    pub fn new(json: &str, name: &str) -> Result<Self> {
+        let mut config: HwConfig = serde_json::from_str(json)?;
+        config.name = normalize_name(name);
+        validate_config(&config.name, &config)?;
+        
+        // Create pin maps for quick access
+        let num_phys_addr_pins = if config.rom.pins.quantity == 24 {
+            14 // 24-pin ROMs have maximum 13 address lines + 1 CS
+        } else if config.rom.pins.quantity == 28 {
+            16 // 28 pin ROMs have 14 address lines + 2 CS
+        } else {
+            bail!("Unsupported ROM type {}, expected 24 or 28-pin ROM", config.rom.pins.quantity);
+        };
+
+        // Create address pin map.
+        // config.stm.pins.addr is indexed by address line (Ax).  We need the
+        // index phys_pin_to_addr_map to be indexed by physical pin (PCy).
+        // Any pin that's unused (values 16-255) are set to None.
+        config.phys_pin_to_addr_map = vec![None; num_phys_addr_pins];
+        for (addr_line, &phys_pin) in config.stm.pins.addr.iter().enumerate() {
+            if phys_pin < 16 {
+                config.phys_pin_to_addr_map[phys_pin as usize] = Some(addr_line);
+            }
+        }
+
+        // Do the same for data lines
+        config.phys_pin_to_data_map = [0; 8];
+        for (data_line, &phys_pin) in config.stm.pins.data.iter().enumerate() {
+            if phys_pin < 16 {
+                config.phys_pin_to_data_map[phys_pin as usize] = data_line;
+            } else {
+                bail!("Missing data pin {} in config {}", phys_pin, config.name);
+            }
+        }
+        
+        Ok(config)
+    }
+
+    pub fn get_phys_pin_to_addr_map(&self, num_addr_lines: usize) -> Vec<Option<usize>> {
+        let mut map = self.phys_pin_to_addr_map.clone();
+        for pin in &mut map {
+            if let Some(addr) = pin {
+                if *addr >= num_addr_lines {
+                    *pin = None;
+                }
+            }
+        }
+        map
+    }
+
+    pub fn get_phys_pin_to_data_map(&self) -> [usize; 8] {
+        self.phys_pin_to_data_map
+    }
+
     pub fn port_data(&self) -> Port {
         self.stm.ports.data_port
     }
@@ -228,7 +286,7 @@ impl HwConfig {
         if let Some(x1) = self.stm.pins.x1 {
             if let Some(x2) = self.stm.pins.x2 {
                 if x1 < 255 && x2 < 255 {
-                    assert!(x1 < 15 && x2 < 15, "X1 and X2 pins must be less than 15");
+                    assert!(x1 <= 15 && x2 <= 15, "X1 and X2 pins must be less than 15");
                     return true
                 }
             }
@@ -271,7 +329,8 @@ fn validate_pin_array(pins: &[u8], pin_type: &str, config_name: &str, max_pins: 
     }
     Ok(())
 }
-
+/// min_valid - minimum number of valid pins expected in the array.
+/// valid_value - maximum valid pin value
 fn validate_pin_values(pins: &[u8], pin_type: &str, config_name: &str, min_valid: usize, valid_value: u8) -> Result<()> {
     let mut ii = 0;
     for &pin in pins {
@@ -288,11 +347,6 @@ fn validate_pin_values(pins: &[u8], pin_type: &str, config_name: &str, min_valid
 }
 
 fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
-    // Only support 24 pins ROMS, currently
-    if config.rom.pins.quantity != 24 {
-        bail!("{}: ROM pins quantity must currently be 24, found {}", name, config.rom.pins.quantity);
-    }
-    
     // Check data pins are exactly 8
     if config.stm.pins.data.len() != 8 {
         bail!("{}: data pins must be exactly 8, found {}", name, config.stm.pins.data.len());
@@ -306,12 +360,18 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
     // Validate values in pin arrays are within valid ranges, with minimum
     // numbers
     validate_pin_values(&config.stm.pins.data, "data", name, 8, 7)?;
-    if config.rom.pins.quantity == 24 {
-        // For 24-pin ROMs, we expect address pins A0-12 to be <= 13
-        // Because 14/15 used for X1/X2 and require larger RAM image
-        validate_pin_values(&config.stm.pins.addr, "addr", name, 13, 13)?;
-    } else {
-        bail!("{}: unsupported ROM type {}, expected 24-pin ROM", name, config.rom.pins.quantity);
+    match config.rom.pins.quantity {
+        24 => {
+            // For 24-pin ROMs, we expect address pins A0-12 to be <= 13
+            // Because 14/15 used for X1/X2 and require larger RAM image
+            validate_pin_values(&config.stm.pins.addr, "addr", name, 13, 13)?
+        }
+        28 => {
+            // For 28-pin ROMs, need 14 address lines, and 14/15 can be
+            // used for an address line - CE/OE can be anywhere in the port
+            validate_pin_values(&config.stm.pins.addr, "addr", name, 14, 15)?
+        }
+        _ => bail!("{}: unsupported ROM type {}, expected 24 or 28-pin ROM", name, config.rom.pins.quantity),
     }
     
     // Validate ROM type mappings
@@ -489,9 +549,9 @@ pub fn list_available_configs() -> Result<Vec<(String, String)>> {
                 
                 // Parse JSON to get description
                 let content = fs::read_to_string(&path)?;
-                let mut config: HwConfig = serde_json::from_str(&content)?;
-                config.name = normalized.clone();
-                            
+                let config = HwConfig::new(&content, &normalized)
+                    .with_context(|| format!("Failed to parse hardware config: {}", path.display()))?;
+
                 configs.push((filename.to_string(), config.description));
             }
         }
@@ -520,11 +580,8 @@ pub fn get_hw_config(name: &str) -> Result<HwConfig> {
         
         match fs::read_to_string(&config_path) {
             Ok(content) => {
-                let mut config: HwConfig = serde_json::from_str(&content)
-                    .with_context(|| format!("Failed to parse JSON in: {}", config_path.display()))?;
-
-                config.name = normalized.clone();
-                validate_config(&normalized, &config)?;
+                let config = HwConfig::new(&content, &normalized)
+                    .with_context(|| format!("Failed to parse hardware config '{}'", config_path.display()))?;
                 
                 return Ok(config);
             }

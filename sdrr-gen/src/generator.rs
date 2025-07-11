@@ -139,8 +139,6 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
     writeln!(file, "#include \"roms.h\"")?;
     writeln!(file)?;
 
-    let family = config.stm_variant.family();
-
     // Generate filename strings (debug only)
     writeln!(file, "// ROM filenames (BOOT_LOGGING only)")?;
     writeln!(file, "#if defined(BOOT_LOGGING)")?;
@@ -326,6 +324,16 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                 .join(" ")
         }
 
+        // Get the physical addr and data pin mappings
+        let num_addr_lines = match rom_set.roms[0].config.rom_type {
+            RomType::Rom2364 => 13,
+            RomType::Rom2332 => 12,
+            RomType::Rom2316 => 11,
+            RomType::Rom23128 => 14,
+        };
+        let phys_pin_to_addr_map = hw.get_phys_pin_to_addr_map(num_addr_lines);
+        let phys_pin_to_data_map = hw.get_phys_pin_to_data_map();
+
         for address in 0..image_size {
             if address % 256 == 0 {
                 // Comment address every 256 bytes
@@ -354,7 +362,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                 write!(file, "    ")?;
             }
 
-            let byte = rom_set.get_byte(address, &family, &hw);
+            let byte = rom_set.get_byte(address, &hw, &phys_pin_to_addr_map, &phys_pin_to_data_map);
             write!(file, "0x{:02x}, ", byte)?;
         }
 
