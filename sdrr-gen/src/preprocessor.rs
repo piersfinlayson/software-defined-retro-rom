@@ -200,21 +200,48 @@ impl RomSet {
             let num_addr_lines = rom_in_set.config.rom_type.num_addr_lines();
             let phys_pin_to_addr_map = hw.get_phys_pin_to_addr_map(num_addr_lines);
 
+            // All of CS1/X1/X2 have to have the same active low/high status
+            // so we retrieve that from CS1 (as X1/X2 aren't specifically
+            // configured in the rom sets).
+            let pins_active_high = rom_in_set.config.cs_config.cs1 == CsLogic::ActiveHigh;
+
             // Get the CS pin that controls this ROM's selection
             let cs_pin = hw.cs_pin_for_rom_in_set(&rom_in_set.config.rom_type, index);
             assert!(cs_pin <= 15, "Internal error: CS pin is > 15");
-            let cs_active = if rom_in_set.config.cs_config.cs1 == CsLogic::ActiveHigh {
-                 (address & (1 << cs_pin)) == 1
-            } else {
-                (address & (1 << cs_pin)) == 0
-            };
+
+            fn is_pin_active(active_high: bool, address: usize, pin: u8) -> bool {
+                if active_high {
+                    (address & (1 << pin)) != 0
+                } else {
+                    (address & (1 << pin)) == 0
+                }
+            }
+
+            let cs_active = is_pin_active(pins_active_high, address, cs_pin);
             
             if cs_active {
-                // Check if this ROM's CS2/CS3 requirements are met
-                if self.check_rom_cs_requirements(rom_in_set, address, hw) {
-                    // This ROM responds - mask out CS selection bits and get data
-                    //let masked_address = self.mask_cs_selection_bits(address, &rom_in_set.config.rom_type, hw_rev);
-                    //return rom_in_set.image.get_byte(masked_address, family, &rom_in_set.config.rom_type);
+                // Verify exactly one CS pin is active
+                let cs1_pin = hw.pin_cs1(&rom_in_set.config.rom_type);
+                let x1_pin = hw.pin_x1();
+                let x2_pin = hw.pin_x2();
+
+                let cs1_is_active = is_pin_active(pins_active_high, address, cs1_pin);
+                let x1_is_active = is_pin_active(
+                    pins_active_high,
+                    address,
+                    x1_pin
+                );
+                let x2_is_active = is_pin_active(
+                    pins_active_high,
+                    address,
+                    x2_pin
+                );
+
+                let active_count = [cs1_is_active, x1_is_active, x2_is_active].iter().filter(|&&x| x).count();
+                
+                // Only return the byte for a single CS active, otherwise
+                // it'll get 0xAA
+                if active_count == 1 && self.check_rom_cs_requirements(rom_in_set, address, hw) {
                     return rom_in_set.image.get_byte(address, &phys_pin_to_addr_map, &phys_pin_to_data_map);
                 }
             }
@@ -240,7 +267,7 @@ impl RomSet {
                 },
                 CsLogic::ActiveHigh => {
                     let cs2_pin = hw.pin_cs2(rom_type);
-                    let cs2_active = (address & (1 << cs2_pin)) == 1;
+                    let cs2_active = (address & (1 << cs2_pin)) != 0;
                     if cs2_active { return false; }
                 },
             }
@@ -259,7 +286,7 @@ impl RomSet {
                 },
                 CsLogic::ActiveHigh => {
                     let cs3_pin = hw.pin_cs3(rom_type);
-                    let cs3_active = (address & (1 << cs3_pin)) == 1;
+                    let cs3_active = (address & (1 << cs3_pin)) != 0;
                     if cs3_active { return false; }
                 },
             }

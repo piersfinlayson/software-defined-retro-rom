@@ -139,6 +139,4 @@ void print_compiled_rom_info(void) {
         }
         printf("\n");
     }
-    
-    printf("\n");
 }

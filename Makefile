@@ -22,8 +22,13 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 export VERSION_MAJOR VERSION_MINOR VERSION_PATCH BUILD_NUMBER GIT_COMMIT
 
 # Allow specifying config file to override the below settings
-CONFIG ?= configs/blank.mk
--include $(CONFIG)
+# CONFIG ?= configs/blank.mk
+ifdef CONFIG
+ifeq ($(wildcard $(CONFIG)),)
+$(error CONFIG file $(CONFIG) does not exist)
+endif
+include $(CONFIG)
+endif
 
 #
 # Settings
@@ -492,8 +497,7 @@ endif
 endif
 
 ifeq ($(ROM_CONFIGS),)
-  $(info - $(COLOUR_RED)ROM_CONFIGS not set$(COLOUR_RESET) - please set it to a valid value, or use the CONFIG variable to include a config file)
-  exit 1
+  $(error - $(COLOUR_RED)ROM_CONFIGS not set$(COLOUR_RESET) - please set it to a valid value, or use the CONFIG variable to include a config file)
 else
 ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - ROM_CONFIGS=$(ROM_CONFIGS))
