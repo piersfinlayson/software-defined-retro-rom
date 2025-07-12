@@ -19,6 +19,17 @@ static const char* sub_dirs[] = {"third-party/", "user/"};
 static char* normalize_filename(const char* hw_rev) {
     size_t len = strlen(hw_rev);
     char* normalized = malloc(len + 6);
+
+    if (!strcmp(hw_rev, "d")) {
+        strcpy(normalized, "24-d.json");
+        return normalized;
+    } else if (!strcmp(hw_rev, "e")) {
+        strcpy(normalized, "24-e.json");
+        return normalized;
+    } else if (!strcmp(hw_rev, "f")) {
+        strcpy(normalized, "24-f.json");
+        return normalized;
+    }
     
     for (size_t i = 0; i < len; i++) {
         if (hw_rev[i] == '_') {
