@@ -31,10 +31,10 @@
 
     If you install using the package manager, you will need to update the `TOOLCHAIN` environment variable or variable in the [Makefile](sdrr/Makefile) to point to the correct compiler binary directory.  It should probably `/usr/bin` or similar.
 
-3. Install libcurl and libzip development packages (required for tests):
+3. Install curl, zip and json-x development packages (required for tests):
 
     ```bash
-    sudo apt install libcurl4-openssl-dev libzip-dev
+    sudo apt install libcurl4-openssl-dev libzip-dev libjson-c-dev
     ```
 
     If you are using a different package manager, the package name may vary slightly, e.g., `libcurl-devel` on Fedora.

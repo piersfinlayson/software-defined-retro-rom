@@ -637,7 +637,7 @@ test: firmware
 	@echo "Running tests to:"
 	@echo "- verify generated firmware ROM images"
 	@echo "-----"
-	@ROM_CONFIGS="$(ROM_CONFIGS)" test/build/image-test
+	@ROM_CONFIGS="$(ROM_CONFIGS)" HW_REV=$(HW_REV) test/build/image-test
 	@echo "-----"
 	@echo "Tests completed"
 

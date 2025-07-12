@@ -5,151 +5,15 @@
 // MIT License
 
 #include "roms-test.h"
+#include "json-config.h"
 
-void validate_single_rom_set(loaded_rom_t *loaded_roms, rom_config_t *configs, int count) {
-    (void)configs;  // Suppress unused warning
-    
-    // Verify we have exactly one ROM set with one ROM
-    if (sdrr_rom_set_count != 1) {
-        printf("Error: Expected 1 ROM set, got %d\n", sdrr_rom_set_count);
-        return;
-    }
-    
-    if (rom_set[0].rom_count != 1) {
-        printf("Error: Expected 1 ROM in set, got %d\n", rom_set[0].rom_count);
-        return;
-    }
-    
-    if (count != 1) {
-        printf("Error: Expected 1 loaded ROM, got %d\n", count);
-        return;
-    }
-    
-    if (rom_set[0].size != 16384) {
-        printf("Error: Expected 16KB ROM set, got %u bytes\n", rom_set[0].size);
-        return;
-    }
-    
-    printf("=== Validating Single ROM Set ===\n");
-    printf("Original ROM: %zu bytes\n", loaded_roms[0].size);
-    printf("Compiled ROM: %u bytes\n", rom_set[0].size);
-    
-    int errors = 0;
-    int total_checked = 0;
-    
-    // Test every byte in the 16KB compiled ROM
-    for (uint16_t logical_addr = 0; logical_addr < 16384; logical_addr++) {
-        // Create mangled address with CS1 active (single ROM)
-        uint16_t mangled_addr = create_mangled_address(logical_addr, 0, 0, 0);  // CS1=0 (active), X1=0, X2=0 (pulled down)
-        
-        // Get byte from compiled ROM and demangle it
-        uint8_t compiled_byte = lookup_rom_byte(0, mangled_addr);
-        uint8_t demangled_byte = demangle_byte(compiled_byte);
-        
-        // Calculate expected byte from original ROM (with duplication)
-        uint16_t original_addr = logical_addr % loaded_roms[0].size;
-        uint8_t expected_byte = loaded_roms[0].data[original_addr];
-        
-        // Compare
-        if (demangled_byte != expected_byte) {
-            if (errors < 10) {  // Limit error spam
-                printf("MISMATCH at logical 0x%04X (mangled 0x%04X): "
-                       "expected 0x%02X, got 0x%02X (compiled 0x%02X)\n", 
-                       logical_addr, mangled_addr, expected_byte, demangled_byte, compiled_byte);
-            }
-            errors++;
-        }
-        
-        total_checked++;
-    }
-    
-    printf("Validation complete:\n");
-    printf("  Total addresses checked: %d\n", total_checked);
-    printf("  Errors found: %d\n", errors);
-    
-    if (errors == 0) {
-        printf("  Result: PASS ✓\n");
-    } else {
-        printf("  Result: FAIL ✗\n");
-    }
-}
-
-// Determine which ROM should respond at a given address, or -1 if none
-int find_responding_rom(uint16_t address, rom_config_t *configs, int count) {
-    // Extract CS line states from address (active low)
-    int cs1_active = ((address & (1 << 10)) == 0);
-    int x1_active = ((address & (1 << 14)) == 0);
-    int x2_active = ((address & (1 << 15)) == 0);
-    
-    // For single ROM, only CS1 matters
-    if (count == 1) {
-        return cs1_active ? 0 : -1;
-    }
-    
-    // For multi-ROM sets, check each ROM
-    for (int i = 0; i < count; i++) {
-        int rom_selected = 0;
-        
-        // Check which CS line this ROM uses (based on position in set)
-        switch (i) {
-            case 0: rom_selected = cs1_active; break;
-            case 1: rom_selected = x1_active; break;
-            case 2: rom_selected = x2_active; break;
-            default: continue;
-        }
-        
-        if (rom_selected) {
-            // Check CS2/CS3 requirements for this ROM
-            rom_config_t *config = &configs[i];
-            
-            // Check CS2 if specified
-            if (config->cs2 != -1 && config->cs2 != 2) {  // Not unspecified and not ignore
-                int cs2_bit = (strcmp(config->type, "2332") == 0) ? 9 : 12;  // 2332->bit9, 2316->bit12
-                int cs2_active = ((address & (1 << cs2_bit)) == 0);
-                
-                if ((config->cs2 == 0 && !cs2_active) || (config->cs2 == 1 && cs2_active)) {
-                    continue;  // CS2 requirement not met
-                }
-            }
-            
-            // Check CS3 if specified (only for 2316)
-            if (config->cs3 != -1 && config->cs3 != 2) {  // Not unspecified and not ignore
-                if (strcmp(config->type, "2316") == 0) {
-                    int cs3_active = ((address & (1 << 9)) == 0);  // CS3 always bit 9 for 2316
-                    
-                    if ((config->cs3 == 0 && !cs3_active) || (config->cs3 == 1 && cs3_active)) {
-                        continue;  // CS3 requirement not met
-                    }
-                }
-            }
-            
-            return i;  // This ROM responds
-        }
-    }
-    
-    return -1;  // No ROM responds
-}
-
-// Calculate logical address by removing CS selection bits
-uint16_t get_logical_address(uint16_t address) {
-    uint16_t logical = address;
-    
-    // Remove CS selection bits
-    logical &= ~(1 << 10);  // Remove CS1
-    logical &= ~(1 << 14);  // Remove X1
-    logical &= ~(1 << 15);  // Remove X2
-    
-    // Remove CS2/CS3 bits (simplified - could be more precise based on ROM type)
-    logical &= ~(1 << 9);   // Remove CS3/CS2 bit 9
-    logical &= ~(1 << 12);  // Remove CS2 bit 12
-    
-    // Keep only lower 13 bits (8KB max ROM)
-    return logical & 0x1FFF;
-}
-
-int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int count) {
+int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms, rom_config_t *configs, int count) {
     printf("\n=== Validating All ROM Sets ===\n");
-    
+
+    assert(json_config != NULL);
+    create_address_mangler(json_config);
+    create_byte_demangler(json_config);
+
     int total_errors = 0;
     int total_checked = 0;
 

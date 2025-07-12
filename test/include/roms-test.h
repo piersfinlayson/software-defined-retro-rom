@@ -19,6 +19,8 @@
 #include "config_base.h"
 #include "roms.h"
 
+#include "json-config.h"
+
 //
 // Types
 //
@@ -52,6 +54,8 @@ typedef struct {
 //
 
 // query-roms.c
+extern void create_address_mangler(json_config_t* config);
+extern void create_byte_demangler(json_config_t* config);
 extern uint16_t create_mangled_address(uint16_t logical_addr, int cs1_active, int x1_active, int x2_active);
 extern uint8_t lookup_rom_byte(uint8_t set, uint16_t mangled_addr);
 extern uint8_t demangle_byte(uint8_t mangled_byte);
@@ -60,7 +64,7 @@ extern const char* cs_state_to_string(int cs_state);
 extern size_t get_expected_rom_size(int rom_type);
 extern void print_compiled_rom_info(void);
 
-// load-config.c
+// roms-config.c
 extern int parse_rom_configs(const char *configs, rom_config_t **roms);
 extern void free_rom_configs(rom_config_t *roms, int count);
 extern int load_rom_file(rom_config_t *config, uint8_t **data, size_t *size);
@@ -69,7 +73,10 @@ extern void free_all_roms(loaded_rom_t *loaded_roms, int count);
 extern void print_loaded_rom_analysis(loaded_rom_t *loaded_roms, rom_config_t *configs, int count);
 
 // check-roms.c
-extern void validate_single_rom_set(loaded_rom_t *loaded_roms, rom_config_t *configs, int count);
-extern int validate_all_rom_sets(loaded_rom_t *loaded_roms, rom_config_t *configs, int count);
+extern int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms, rom_config_t *configs, int count);
+
+// json-config.c
+extern json_config_t* load_json_config(const char* hw_rev);
+extern void free_json_config(json_config_t* config);
 
 #endif // ROMS_TEST_H

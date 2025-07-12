@@ -5,52 +5,79 @@
 // MIT License
 
 #include "roms-test.h"
+#include "json-config.h"
+
+static struct {
+    uint8_t addr_pins[MAX_ADDR_LINES];
+    uint8_t cs1_pin;
+    uint8_t x1_pin;
+    uint8_t x2_pin;
+    int initialized;
+} address_mangler = {0};
+
+void create_address_mangler(json_config_t* config) {
+    // Assert CS1 is same for all ROM types
+    assert(config->stm.pins.cs1.pin_2364 == config->stm.pins.cs1.pin_2332);
+    assert(config->stm.pins.cs1.pin_2332 == config->stm.pins.cs1.pin_2316);
+    assert(config->stm.pins.cs1.pin_2364 != 255);
+    
+    memcpy(address_mangler.addr_pins, config->stm.pins.addr, sizeof(address_mangler.addr_pins));
+    address_mangler.cs1_pin = config->stm.pins.cs1.pin_2364;
+    address_mangler.x1_pin = config->stm.pins.x1;
+    address_mangler.x2_pin = config->stm.pins.x2;
+    address_mangler.initialized = 1;
+}
+
+static struct {
+    uint8_t data_pins[NUM_DATA_LINES];
+    int initialized;
+} byte_demangler = {0};
+
+void create_byte_demangler(json_config_t* config) {
+    memcpy(byte_demangler.data_pins, config->stm.pins.data, sizeof(byte_demangler.data_pins));
+    byte_demangler.initialized = 1;
+}
 
 // lookup_rom_byte - Simulates the lookup of a byte from the ROM image based on the mangled address
 uint8_t lookup_rom_byte(uint8_t set, uint16_t mangled_addr) {  // Removed unused CS parameters
     return rom_set[set].data[mangled_addr];
 }
 
-// Convert logical address + CS states to mangled address for lookup
 uint16_t create_mangled_address(uint16_t logical_addr, int cs1, int x1, int x2) {
+    assert(address_mangler.initialized);
+    assert(address_mangler.cs1_pin <= 15);
+    assert(address_mangler.x1_pin <= 15);
+    assert(address_mangler.x2_pin <= 15);
+    
     uint16_t mangled = 0;
     
     // Set CS selection bits (active low)
-    if (cs1) mangled |= (1 << 10);  // CS1 -> PC10
-    if (x1)  mangled |= (1 << 14);  // CX1 -> PC14  
-    if (x2)  mangled |= (1 << 15);  // CX2 -> PC15
+    if (cs1) mangled |= (1 << address_mangler.cs1_pin);
+    if (x1)  mangled |= (1 << address_mangler.x1_pin);  
+    if (x2)  mangled |= (1 << address_mangler.x2_pin);
     
-    // Map logical address bits to scrambled GPIO positions
-    if (logical_addr & (1 << 0))  mangled |= (1 << 5);   // A0 -> PC5
-    if (logical_addr & (1 << 1))  mangled |= (1 << 4);   // A1 -> PC4
-    if (logical_addr & (1 << 2))  mangled |= (1 << 6);   // A2 -> PC6
-    if (logical_addr & (1 << 3))  mangled |= (1 << 7);   // A3 -> PC7
-    if (logical_addr & (1 << 4))  mangled |= (1 << 3);   // A4 -> PC3
-    if (logical_addr & (1 << 5))  mangled |= (1 << 2);   // A5 -> PC2
-    if (logical_addr & (1 << 6))  mangled |= (1 << 1);   // A6 -> PC1
-    if (logical_addr & (1 << 7))  mangled |= (1 << 0);   // A7 -> PC0
-    if (logical_addr & (1 << 8))  mangled |= (1 << 8);   // A8 -> PC8
-    if (logical_addr & (1 << 9))  mangled |= (1 << 13);  // A9 -> PC13
-    if (logical_addr & (1 << 10)) mangled |= (1 << 11);  // A10 -> PC11
-    if (logical_addr & (1 << 11)) mangled |= (1 << 12);  // A11 -> PC12
-    if (logical_addr & (1 << 12)) mangled |= (1 << 9);   // A12 -> PC9
+    // Map logical address bits to configured GPIO positions
+    for (int i = 0; i < MAX_ADDR_LINES; i++) {
+        if (logical_addr & (1 << i)) {
+            assert(address_mangler.addr_pins[i] <= 15);
+            mangled |= (1 << address_mangler.addr_pins[i]);
+        }
+    }
 
     return mangled;
 }
 
-// Convert mangled byte (as read from GPIO pins) back to logical data
 uint8_t demangle_byte(uint8_t mangled_byte) {
+    assert(byte_demangler.initialized);
+    
     uint8_t logical = 0;
     
-    // Reverse the bit order - PA0-PA7 maps to D7-D0
-    if (mangled_byte & (1 << 0)) logical |= (1 << 7);  // PA0 -> D7
-    if (mangled_byte & (1 << 1)) logical |= (1 << 6);  // PA1 -> D6
-    if (mangled_byte & (1 << 2)) logical |= (1 << 5);  // PA2 -> D5
-    if (mangled_byte & (1 << 3)) logical |= (1 << 4);  // PA3 -> D4
-    if (mangled_byte & (1 << 4)) logical |= (1 << 3);  // PA4 -> D3
-    if (mangled_byte & (1 << 5)) logical |= (1 << 2);  // PA5 -> D2
-    if (mangled_byte & (1 << 6)) logical |= (1 << 1);  // PA6 -> D1
-    if (mangled_byte & (1 << 7)) logical |= (1 << 0);  // PA7 -> D0
+    for (int i = 0; i < NUM_DATA_LINES; i++) {
+        assert(byte_demangler.data_pins[i] <= 7);
+        if (mangled_byte & (1 << byte_demangler.data_pins[i])) {
+            logical |= (1 << i);
+        }
+    }
 
     return logical;
 }

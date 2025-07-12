@@ -5,11 +5,11 @@ OUTPUT_DIR := ../$(GEN_OUTPUT_DIR)
 # Quick test harness for ROM data validation
 CC = gcc
 CFLAGS = -Werror -Wall -Wextra -g -I include -I../sdrr/include -I../output
-LDFLAGS = -lcurl -lzip
+LDFLAGS = -lcurl -lzip -ljson-c
 TARGET = image-test
 BUILD_DIR = build
 
-SRCS = src/main.c src/check-roms.c src/load-config.c src/query-roms.c
+SRCS = src/main.c src/check-roms.c src/roms-config.c src/query-roms.c src/json-config.c
 OBJS := $(addprefix $(BUILD_DIR)/,$(notdir $(SRCS:.c=.o)))
 ROMS_SRC := $(OUTPUT_DIR)/roms.c
 ROMS_OBJ := $(BUILD_DIR)/roms.o
@@ -17,7 +17,7 @@ ROMS_OBJ := $(BUILD_DIR)/roms.o
 # Convenience target
 all: $(BUILD_DIR)/$(TARGET)
 
-$(BUILD_DIR)/%.o: src/%.c include/roms-test.h $(OUTPUT_DIR)/roms.h $(OUTPUT_DIR)/sdrr_config.h | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: src/%.c include/roms-test.h include/json-config.h $(OUTPUT_DIR)/roms.h $(OUTPUT_DIR)/sdrr_config.h | $(BUILD_DIR)
 	@echo "- Compiling test/$<"
 	@$(CC) $(CFLAGS) -c $< -o $@
 

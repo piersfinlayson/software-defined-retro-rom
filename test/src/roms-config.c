@@ -11,7 +11,7 @@
 // Caller must free the returned array and strings within it
 int parse_rom_configs(const char *configs, rom_config_t **roms) {
     if (!configs) {
-        printf("Error: No ROM configurations string\n");
+        printf("Error: No ROM_CONFIGS\n");
         return -1;
     }
 
