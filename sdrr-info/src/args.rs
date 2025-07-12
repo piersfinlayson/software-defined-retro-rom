@@ -94,6 +94,11 @@ enum Commands {
     /// Outputting a range as binary data can be useful if you want
     /// to compare an entire stored ROM image stored in the firmware
     /// with the original file.
+    /// 
+    /// Note that this lookup is done using the address/data/CS pins
+    /// configured in the firmware image, and does no validation
+    /// against the hardware configuration used to create firmware,
+    /// nor does it check against the original image.
     #[command(verbatim_doc_comment)]
     Lookup {
         /// Firmware filename (.bin or .elf files supported)
