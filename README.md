@@ -85,6 +85,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 - [Logging](docs/LOGGING.md) - How to enable and use logging in SDRR.
 - [Technical Summary](docs/TECHNICAL-SUMMARY.md) - Overview of the SDRR architecture, operation and design decisions.
 - [Technical Details](docs/TECHNICAL-DETAILS.md) - Technical details of the SDRR firmware and hardware.
+- [Custom Hardware](docs/CUSTOM-HARDWARE.md) - Guide on designing custom hardware for SDRR.
 - [Build System](docs/BUILD-SYSTEM.md) - How the SDRR build system works.
 - [Voltage Levels](docs/VOLTAGE-LEVELS.md) - How the SDRR supports the required logic voltage levels.
 - [Pi Pico Programmer](docs/PI-PICO-PROGRAMMER.md) - How to use a $5 Raspberry Pi Pico as a programmer for SDRR.
