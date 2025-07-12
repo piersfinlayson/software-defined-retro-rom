@@ -1,22 +1,15 @@
 [package]
-name = "sdrr-gen"
+name = "sdrr-common"
 version = "0.1.1"
 edition = "2024"
 authors = ["Piers Finlayson <piers@piers.rocks>"]
-description = "Software Defined Retro ROM (SDRR) firmware generator"
+description = "Software Defined Retro ROM (SDRR) common Rust library"
 repository = "https://github.com/piersfinlayson/software-defined-retro-rom"
 readme = "README.md"
 license = "MIT"
 keywords = ["commodore", "embedded", "sdrr", "rom", "eeprom", "eprom", "flash"]
 
 [dependencies]
-clap = { version = ">=4.5.37", features = ["derive"] }
 anyhow = ">=1.0.98"
-thiserror = ">=2.0.12"
-reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-features = false }
-tempfile = "3.20"
-zip = "4.2"
-urlencoding = "2.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sdrr-common = { path = "../sdrr-common" }

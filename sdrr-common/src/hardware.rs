@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 /// Handles loading hardware configuration files and creating objects
-/// for use by sddr-gen.
+/// for use by sddr-gen/sdrr-info.
 
 // Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
 //
@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Deserializer};
 use anyhow::{anyhow, Result, bail, Context};
 
-use crate::rom_types::{RomType, StmFamily};
+use crate::sdrr_types::{RomType, StmFamily};
 
 // Maximum pin number on an STM32 port
 const MAX_STM_PIN_NUM: u8 = 15;

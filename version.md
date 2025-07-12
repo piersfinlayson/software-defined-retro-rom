@@ -6,4 +6,5 @@ To update the version:
 - Update the version in [Makefile](/Makefile).
 - Update the version in [sddr-gen/Cargo.toml](sdrr-gen/Cargo.toml).
 - Update the version in [sddr-info/Cargo.toml](sdrr-info/Cargo.toml).
+- Update the version in [sdrr-common/Cargo.toml](sdrr-common/Cargo.toml).
 - Update the version in [sdrr-info/src/main.rs](sdrr-info/src/main.rs).

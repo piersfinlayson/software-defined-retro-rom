@@ -333,7 +333,7 @@ ifneq ($(HW_REV),)
 ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - HW_REV=$(HW_REV))
 endif
-  HW_REV_FLAG = --hw-rev $(HW_REV)
+  HW_REV_FLAG = --hw $(HW_REV)
 else
   $(info - $(COLOUR_RED)HW_REV not set$(COLOUR_RESET) - please set it to a valid value, e.g. d or e)
   exit 1

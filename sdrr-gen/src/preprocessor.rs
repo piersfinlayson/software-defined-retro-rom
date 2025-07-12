@@ -3,8 +3,8 @@
 // MIT License
 
 use crate::config::{SizeHandling, RomInSet};
-use crate::rom_types::{RomType, CsLogic};
-use crate::hardware::HwConfig;
+use sdrr_common::sdrr_types::{RomType, CsLogic};
+use sdrr_common::hardware::HwConfig;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;

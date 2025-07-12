@@ -3,7 +3,7 @@
 // MIT License
 
 use crate::config::Config;
-use crate::rom_types::{CsLogic, RomType};
+use sdrr_common::sdrr_types::{CsLogic, RomType};
 use crate::preprocessor::RomSet;
 use anyhow::{Context, Result};
 use std::fs;

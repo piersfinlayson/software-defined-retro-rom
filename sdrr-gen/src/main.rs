@@ -5,13 +5,11 @@
 mod config;
 mod generator;
 mod preprocessor;
-mod rom_types;
-mod hardware;
 
 use crate::config::{Config, CsConfig, SizeHandling};
 use crate::generator::generate_files;
-use crate::rom_types::{CsLogic, RomType, StmVariant, ServeAlg};
-use crate::hardware::HwConfig;
+use sdrr_common::sdrr_types::{CsLogic, RomType, StmVariant, ServeAlg};
+use sdrr_common::hardware::{HwConfig, get_hw_config, list_available_configs};
 use anyhow::{Context, Result};
 use clap::Parser;
 use preprocessor::RomImage;
@@ -127,7 +125,7 @@ fn parse_hw_rev(hw_rev: &str) -> Result<HwConfig, String> {
         _ => hw_rev,
     };
 
-    let hw_config = hardware::get_hw_config(hw_rev)
+    let hw_config = get_hw_config(hw_rev)
         .map_err(|e| format!("Failed to get hardware config: {} - use --list-hw-revs for options", e))?;
 
     if hw_config.rom.pins.quantity != 24 {
@@ -446,7 +444,7 @@ fn main() -> Result<()> {
 
     if args.list_hw_revs {
         // List available hardware revisions
-        let hw_revs = hardware::list_available_configs()?;
+        let hw_revs = list_available_configs()?;
         if hw_revs.is_empty() {
             println!("No hardware revisions found.");
         } else {

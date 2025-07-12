@@ -2,9 +2,9 @@
 //
 // MIT License
 
-use crate::rom_types::{CsLogic, RomType, ServeAlg, StmVariant};
+use sdrr_common::sdrr_types::{CsLogic, RomType, ServeAlg, StmVariant};
 use crate::preprocessor::{RomImage, RomSet};
-use crate::hardware::HwConfig;
+use sdrr_common::hardware::HwConfig;
 use std::path::PathBuf;
 use std::collections::BTreeMap;
 
