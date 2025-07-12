@@ -1,6 +1,6 @@
-# 24 Pin Rev D
+# STM32F4 24 Pin Rev D
 
-23xx (24 pin) ROM replacement SDRR PCB.
+23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
 
 This revision has been verified to support
 

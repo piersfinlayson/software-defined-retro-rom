@@ -1,15 +1,15 @@
-# 28 Pin Revision A
+# STM32F4 28 Pin Revision A
 
 **Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
 
-23xxx (28 pin) ROM replacement SDRR PCB.
+23xxx (STM32F4 28 pin) ROM replacement SDRR PCB.
 
 This PCB is designed to replace 23128s, and possibly 23256/23512s, in the later C64s, 1541C, 1541-II, etc, that use this 16KB+, 28 pin ROMs.
 
 This was dervied from the 24-pin SDRR rev E PCB.
 
 <div style="text-align: center;">
-  <a href="/sdrr-pcb/unverified/28-pin-rev-a/sdrr-28-pin-rev-a.png">
+  <a href="/sdrr-pcb/unverified/stm32f4-28-pin-rev-a/sdrr-28-pin-rev-a.png">
     <img src="sdrr-28-pin-rev-a.png" alt="SDRR 28 pin rev A" width="400">
   </a>
 </div>

@@ -1,11 +1,11 @@
-# WiFi Programmer Revision A
+# ESP32 WiFi Programmer Revision A
 
 **Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
 
 This PCB is designed to be used as a daughtboard for the (24 or 28 pin) SDRR to program is via WiFi (and/or possibly via WiFi).  It is currently in the prototyping stage.
 
 <div style="text-align: center;">
-  <a href="/sdrr-pcb/unverified/wifi-prog-rev-a/wifi-rev-a-side.png">
+  <a href="/sdrr-pcb/unverified/esp32-wifi-prog-rev-a/wifi-rev-a-side.png">
     <img src="wifi-rev-a-side.png" alt="WiFi Programmer rev A" width="400">
   </a>
 </div>

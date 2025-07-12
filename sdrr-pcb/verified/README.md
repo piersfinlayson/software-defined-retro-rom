@@ -4,6 +4,6 @@ This folder contains design and manufacturing files for verified revisions of th
 
 Revisions:
 
-- [24-pin Rev D](./24-pin-rev-d/README.md) - 24-pin ROM replacement:
+- [STM32F4-24-pin Rev D](./stm32f4-24-pin-rev-d/README.md) - 24-pin ROM replacement:
   - Tested with STM32F401 and STM32F411 variants
   - Tested as 2364 and 2332 ROM replacements in PET, VIC-20 and C64 (50Hz/PAL)

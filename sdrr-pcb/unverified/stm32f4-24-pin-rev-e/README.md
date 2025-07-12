@@ -1,8 +1,8 @@
-# 24 Pin Rev E
+# STM32F4 24 Pin Rev E
 
 **Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
 
-23xx (24 pin) ROM replacement SDRR PCB.
+23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
 
 This revision has two key improvements over rev D:
 
@@ -10,7 +10,7 @@ This revision has two key improvements over rev D:
 - No 0402 passives are used - all passives are 0603, which is easier to hand solder.  The PCB footprint remains the same.
 
 <div style="text-align: center;">
-  <a href="/sdrr-pcb/unverified/rev-e/sdrr-rev-e.png">
+  <a href="/sdrr-pcb/unverified/stm32f4-24-pin-rev-e/sdrr-rev-e.png">
     <img src="sdrr-rev-e.png" alt="SDRR rev E" width="400">
   </a>
 </div>

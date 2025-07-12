@@ -10,7 +10,7 @@ This file contains a list of enhancements under consideration for future version
 
 Newer C64s, 1541Cs, 1541-IIs, 1571s, and other systems used larger 16KB 23128 ROMs, which has a 28-pin DIP package.  This enhancement adds support for 23128 ROMs and _possibly_ 23256/23512 ROMs.
 
-This requires a new PCB design, and the [28 pin revision A](/sdrr-pcb/unverified/28-pin-rev-a/README.md) is under development to support this.
+This requires a new PCB design, and the [28 pin revision A](/sdrr-pcb/unverified/stm32f4-28-pin-rev-a/README.md) is under development to support this.
 
 23128 replacement should be possible, using the timings are achievable (likely with the F405/F446).
 
@@ -20,7 +20,7 @@ However 23256/23512 may not be viable, because the combined number of chip selec
 
 This enhancement adds an optional daughtboard, connecting on top, to the programming pins, to expose them over WiFi.
 
-A prototype PCB design [WiFi Programmer revision A](sdrr-pcb/unverified/wifi-prog-rev-a/README.md) is under development.
+A prototype PCB design [WiFi Programmer revision A](/sdrr-pcb/unverified/esp32-wifi-prog-rev-a/README.md) is under development.
 
 This prototype uses the ESP32-C3-Mini-1, so that the daughtboard footprint does not exceed SDRR's.
 
