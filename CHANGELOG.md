@@ -6,18 +6,18 @@ All notables changes between versions are documented in this file.
 
 This version brings substantial improvements to the SDRR project, including:
 
-- Add your own hardware configurations, by adding a simple JSON file.
 - A single SDRR can be used to replace multiple ROM chips simultaneously.
 - New tool to extract details and ROM images from firmware.
+- Add your own hardware configurations, by adding a simple JSON file.
 - New STM32F4 variants supported.
 
 ### New Features
 
-- Moved hardware configuration to a dynamic model, where the supported hardware configurations are defined in configuration files, and the desired version is selected at build time.  Users can easily add configurations for their own PCB layouts, and either submit pull requests to include them in the main repository, or keep them locally.  For more details see [`sddr-hw-config`](/sdrr-hw-config/README.md).
 - Added support for ROM sets, allowing SDRR to serve multiple ROM images simultaneously, for certain combinations of ROM types.  This is done by connecting just the chip selects from other, empty sockets to be served, to pins X1/X2 (hardware revision 24-f onwards).  Currently tested only on VIC-20 (PAL), serving kernal and BASIC ROMs simultaneously.
 - Added [`sdrr-info`](/sdrr-info/README.md) tool to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  In particular this allows
   - listing which STM32F4 device the firmware was built for
   - extraction of ROM images from the firmware, for checksumming and/or comparing with the originals.
+- Moved hardware configuration to a dynamic model, where the supported hardware configurations are defined in configuration files, and the desired version is selected at build time.  Users can easily add configurations for their own PCB layouts, and either submit pull requests to include them in the main repository, or keep them locally.  For more details see [Custom Hardware](/docs/CUSTOM-HARDWARE.md).
 - Added [`test`](/test/README.md) suite, to verify the images source code files which are built into the firmware image, output the correct bytes, given the mangling that has taken place.
 - Added support F446 STM32F446R C/E variants - max clock speed 180 MHz (in excess of the F405's 168 MHz).  Currently untested.
 
