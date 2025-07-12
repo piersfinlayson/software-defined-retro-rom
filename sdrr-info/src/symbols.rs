@@ -195,6 +195,30 @@ impl SdrrRomType {
             _ => None,
         }
     }
+
+    pub fn max_addr(&self) -> u32 {
+        match self {
+            SdrrRomType::Rom2316 => 0x07FF, // 11-bit address
+            SdrrRomType::Rom2332 => 0x0FFF, // 12-bit address
+            SdrrRomType::Rom2364 => 0x1FFF, // 13-bit address
+        }
+    }
+
+    pub fn supports_cs2(&self) -> bool {
+        match self {
+            SdrrRomType::Rom2316 => true,
+            SdrrRomType::Rom2332 => true,
+            SdrrRomType::Rom2364 => false,
+        }
+    }
+
+    pub fn supports_cs3(&self) -> bool {
+        match self {
+            SdrrRomType::Rom2316 => true,
+            SdrrRomType::Rom2332 => false,
+            SdrrRomType::Rom2364 => false,
+        }
+    }
 }
 
 #[repr(u8)]
@@ -724,15 +748,20 @@ impl SdrrInfo {
     }
 
     pub fn demangle_byte(&self, byte: u8) -> u8 {
-        // Bit 0 -> 7
-        // Bit 1 -> 6
-        // Bit 2 -> 5
-        // Bit 3 -> 4
-        // Bit 4 -> 3
-        // Bit 5 -> 2
-        // Bit 6 -> 1
-        // Bit 7 -> 0
-        byte.reverse_bits()
+        // self.pins.data is an array of physical pin to logic bit location
+        // I.e. if bit 0 is 7, this indicates that logical bit 0 is physical
+        // pin 7.
+        // This function takes a byte read from the physical pins, and returns
+        // the logical byte.
+        assert!(self.pins.data.len() == 8, "Expected 8 data pins");
+        let mut result = 0u8;
+        for (logic_bit, &phys_pin) in self.pins.data.iter().enumerate() {
+            assert!(phys_pin < 8, "Physical pin {} out of range", phys_pin);
+            if (byte & (1 << phys_pin)) != 0 {
+            result |= 1 << logic_bit;
+            }
+        }
+        result
     }
 
     #[allow(dead_code)]
@@ -746,47 +775,51 @@ impl SdrrInfo {
         x1: Option<bool>,
         x2: Option<bool>,
     ) -> u32 {
-        let mut pin_to_addr_map = [
-            Some(7),
-            Some(6),
-            Some(5),
-            Some(4),
-            Some(1),
-            Some(0),
-            Some(2),
-            Some(3),
-            Some(8),
-            Some(12),
-            None,
-            Some(10),
-            Some(11),
-            Some(9),
-            None,
-            None,
-        ];
+        // self.pins.addr contains an array of physical pin to address bit
+        // mapping.
+        // I.e. if bit 0 is 5, this means logical address bit 0 is on physical pin 5.
+        let mut pin_to_addr_map = [None; 16];
+        assert!(self.pins.addr.len() <= 16, "Expected up to 16 address pins");
+        for (addr_bit, &phys_pin) in self.pins.addr.iter().enumerate() {
+            if phys_pin < 16 {
+                pin_to_addr_map[phys_pin as usize] = Some(addr_bit);
+            }
+        }
 
+        // Addr lines 14/15 are X1/X2
+        // Addr line 13,12,11 in that order are CS1, CS2, CS3
+        // This is fixed - what changes is where thee pins are located
         let num_roms = self.rom_sets[0].rom_count as usize;
         if num_roms > 1 {
             // X1 and X2 pins
-            pin_to_addr_map[14] = Some(14);
-            pin_to_addr_map[15] = Some(15);
+            assert!(self.pins.x1 < 16 && self.pins.x2 < 16, "X1 and X2 pins must be less than 16");
+            assert!(pin_to_addr_map[self.pins.x1 as usize].is_none() && pin_to_addr_map[self.pins.x2 as usize].is_none(),
+                    "X1 and X2 pins must not overlap with other address pins");
+            pin_to_addr_map[self.pins.x1 as usize] = Some(14);
+            pin_to_addr_map[self.pins.x2 as usize] = Some(15);
         }
 
         let rom_type = self.rom_sets[0].roms[0].rom_type;
         let addr_mask = match rom_type {
             SdrrRomType::Rom2364 => {
-                pin_to_addr_map[10] = Some(13);
+                assert!(self.pins.cs1_2364 < 16, "CS1 pin for 2364 must be less than 16");
+                pin_to_addr_map[self.pins.cs1_2364 as usize] = Some(13);
                 0x1FFF // 13-bit address
             }
             SdrrRomType::Rom2332 => {
-                pin_to_addr_map[10] = Some(13);
-                pin_to_addr_map[9] = Some(12);
+                assert!(self.pins.cs1_2332 < 16, "CS1 pin for 2332 must be less than 16");
+                assert!(self.pins.cs2_2332 < 16, "CS2 pin for 2332 must be less than 16");
+                pin_to_addr_map[self.pins.cs1_2332 as usize] = Some(13);
+                pin_to_addr_map[self.pins.cs2_2332 as usize] = Some(12);
                 0x0FFF // 12-bit address
             }
             SdrrRomType::Rom2316 => {
-                pin_to_addr_map[10] = Some(13);
-                pin_to_addr_map[9] = Some(11);
-                pin_to_addr_map[12] = Some(12);
+                assert!(self.pins.cs1_2316 < 16, "CS1 pin for 2316 must be less than 16");
+                assert!(self.pins.cs2_2316 < 16, "CS2 pin for 2316 must be less than 16");
+                assert!(self.pins.cs3_2316 < 16, "CS3 pin for 2316 must be less than 16");
+                pin_to_addr_map[self.pins.cs1_2316 as usize] = Some(13);
+                pin_to_addr_map[self.pins.cs2_2316 as usize] = Some(11);
+                pin_to_addr_map[self.pins.cs3_2316 as usize] = Some(12);
                 0x07FF // 11-bit address
             }
         };

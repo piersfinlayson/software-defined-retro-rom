@@ -1302,8 +1302,6 @@ dependencies = [
  "clap",
  "reqwest",
  "sdrr-common",
- "serde",
- "serde_json",
  "tempfile",
  "thiserror",
  "urlencoding",
@@ -1318,6 +1316,7 @@ dependencies = [
  "chrono",
  "clap",
  "goblin",
+ "sdrr-common",
 ]
 
 [[package]]

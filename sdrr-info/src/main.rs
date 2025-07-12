@@ -357,6 +357,31 @@ fn lookup_range(
         .collect();
     let rom_name = roms.join(", ");
 
+    // Validate address range
+    let rom_type = info.rom_sets[set as usize].roms[0].rom_type;
+    let max_addr = rom_type.max_addr();
+    if start_addr > end_addr || start_addr > max_addr || end_addr > max_addr {
+        return Err(format!(
+            "Invalid address range: 0x{:04X} to 0x{:04X} for ROM type {}",
+            start_addr, end_addr, rom_type
+        ));
+    }
+    if cs2.is_some() && !rom_type.supports_cs2() {
+        return Err(format!(
+            "ROM type {} does not support CS2 line",
+            rom_type
+        ));
+    }
+    if cs3.is_some() && !rom_type.supports_cs3() {
+        return Err(format!(
+            "ROM type {} does not support CS3 line",
+            rom_type
+        ));
+    }
+    if (x1.is_some() || x2.is_some()) && info.rom_sets[set as usize].roms.len() < 2 {
+        return Err("Multi-ROM X1/X2 lines can only be used with multi-ROM sets".to_string());
+    } 
+
     if output_binary {
         // Collect bytes for binary output
         let mut binary_data = Vec::new();
@@ -397,6 +422,11 @@ fn lookup_range(
 
             let byte_pos = (addr - start_addr) as usize;
 
+            // Print address at start of each line
+            if byte_pos % 16 == 0 {
+                print!("{:04X}: ", addr);
+            }
+            
             // Print the byte
             print!("{:02X}", output_byte);
 

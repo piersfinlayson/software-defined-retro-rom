@@ -13,3 +13,4 @@ goblin = "0.10"
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
 chrono = "0.4"
+sdrr-common = { path = "../sdrr-common" }

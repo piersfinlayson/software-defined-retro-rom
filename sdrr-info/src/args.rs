@@ -39,7 +39,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Outputs comprehensive information about the SDRR firmware, including:
+    /// Outputs comprehensive information about the SDRR firmware,
+    /// including:
     /// - Build and hardware properties
     /// - Firmware configuration options
     /// - Embedded ROM image information
@@ -52,13 +53,16 @@ enum Commands {
         detail: bool,
     },
     /// Lookup a byte associated with a raw STM32F4 address port line
-    /// configuration.  Use this to detect what byte the STM32F4 will output
-    /// on the data lines in response to a particular 16-bit input from the
-    /// appropriate port (port C on stock SDRR 24-pin hardware revisions).
+    /// configuration.  Use this to detect what byte the STM32F4 will
+    /// output on the data lines in response to a particular 16-bit
+    /// input from the appropriate port (port C on stock SDRR 24-pin
+    /// hardware revisions).
     ///
-    /// The output byte can be demangled (i.e. the correct value), which is the
-    /// default, or mangled (i.e. the raw value as it will be written to the
-    /// STM32F4 data port, port A on stock SDRR 24-pin hardware revisions).
+    /// The output byte can be demangled (i.e. the correct value),
+    /// which is the default, or mangled (i.e. the raw value as it
+    /// will be written to the STM32F4 data port, port A on stock
+    /// SDRR 24-pin hardware revisions).
+    #[command(verbatim_doc_comment)]
     LookupRaw {
         /// Firmware filename (.bin or .elf files supported)
         firmware: PathBuf,
@@ -76,19 +80,21 @@ enum Commands {
         #[arg(long, default_value = "false", verbatim_doc_comment)]
         output_mangled: bool,
     },
-    /// Lookup a byte associated with an actual address lookup on the address
-    /// bus, using a non-mangled address.  Use this to detect what byte the
-    /// STM32F4 will output on the data lines in response to a particular
-    /// address on the address bus.  This option requires CS line states,
-    /// including, for multi-rom sets, the X1 and X2 pins.
+    /// Lookup a byte associated with an actual address lookup on the
+    /// address bus, using a non-mangled address.  Use this to detect
+    /// what byte the STM32F4 will output on the data lines in
+    /// response to a particular address on the address bus.  This
+    /// option requires CS line states, including, for multi-rom sets,
+    /// the X1 and X2 pins.
     ///
-    /// This option allows a single byte or range of bytes to be looked up.
-    /// The output can be output as text (2 byte hex values) or optionally
-    /// output as binary data.
+    /// This option allows a single byte or range of bytes to be
+    /// looked up.  The output can be output as text (2 byte hex
+    /// values) or optionally output as binary data.
     ///
-    /// Outputting a range as binary data can be useful if you want to compare
-    /// an entire stored ROM image stored in the firmware with the original
-    /// file.
+    /// Outputting a range as binary data can be useful if you want
+    /// to compare an entire stored ROM image stored in the firmware
+    /// with the original file.
+    #[command(verbatim_doc_comment)]
     Lookup {
         /// Firmware filename (.bin or .elf files supported)
         firmware: PathBuf,
@@ -118,13 +124,14 @@ enum Commands {
         x1: Option<u8>,
         /// X2 line state (0 or 1) - valid for multi-ROM sets only
         /// #[arg(long, value_parser = parse_cs_line)]
+        #[arg(long, value_parser = parse_cs_line)]
         x2: Option<u8>,
         /// Output mangled data byte(s)
         /// (not specifying this outputs a demangled byte)
         #[arg(long, default_value = "false", verbatim_doc_comment)]
         output_mangled: bool,
-        /// Output binary data instead of text.  Only valid when --range is
-        /// used
+        /// Output binary data instead of text.  Only valid when
+        /// --range is used
         /// (default: false = text output)
         #[arg(long, default_value = "false", verbatim_doc_comment)]
         output_binary: bool,
