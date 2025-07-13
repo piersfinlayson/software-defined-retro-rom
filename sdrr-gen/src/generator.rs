@@ -511,6 +511,18 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
         )?;
     }
 
+    // Main loop one-shot mode
+    writeln!(file)?;
+    writeln!(file, "// Main loop one-shot mode")?;
+    if config.main_loop_one_shot {
+        writeln!(file, "#define MAIN_LOOP_ONE_SHOT 1")?;
+    } else {
+        writeln!(
+            file,
+            "// #define MAIN_LOOP_ONE_SHOT 0  // Main loop one-shot mode disabled"
+        )?;
+    }
+
     // Debug logging
     writeln!(file)?;
     writeln!(file, "// Debug logging")?;

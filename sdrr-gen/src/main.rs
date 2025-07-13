@@ -55,6 +55,10 @@ struct Args {
     #[clap(long, requires = "boot_logging")]
     main_loop_logging: bool,
 
+    /// Enable main loop one shot
+    #[clap(long, requires = "main_loop_logging")]
+    main_loop_one_shot: bool,
+
     /// Enable debug logging
     #[clap(long, requires = "boot_logging")]
     debug_logging: bool,
@@ -455,6 +459,7 @@ fn main() -> Result<()> {
         mco2: args.mco2,
         boot_logging: args.boot_logging,
         main_loop_logging: args.main_loop_logging,
+        main_loop_one_shot: args.main_loop_one_shot,
         debug_logging: args.debug_logging,
         overwrite: args.overwrite,
         hse: args.hse,

@@ -374,7 +374,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     ROM_IMPL_DEBUG("Data input mask: 0x%08X", data_input_mask);
     ROM_IMPL_DEBUG("GPIOC_PUPDR: 0x%08X", GPIOC_PUPDR);
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
     uint32_t byte;
     uint32_t addr_cs;
     while (1) {
@@ -382,7 +382,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         if (sdrr_info.status_led_enabled) {
             GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
         }
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
     switch (serve_mode)
     {
         // Default case - test CS twice as often as loading the byte from RAM
@@ -468,9 +468,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             LABEL(CS_INACTIVE_BYTE)
                 SET_DATA_IN
                 STORE_TO_DATA
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Start of main processing loop.  Load the data byte while
                 // constantly checking if CS has gone active
@@ -490,9 +490,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // CS went inactive, but we don't have a new byte to load.
             LABEL(CS_INACTIVE_NO_BYTE)
                 SET_DATA_IN
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Copy of main processing loop - to avoid a branch in this or the
                 // CS_INACTIVE_BYTE case
@@ -509,18 +509,18 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // loop as opposed to this copy.
                 BRANCH(LOOP)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
             LABEL(END_LOOP)
                 "mov %0, " R_ADDR_CS "\n"
                 "mov %1, " R_DATA "\n"
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 : "=r" (addr_cs),
                 "=r" (byte)
-#else // !MAIN_LOOP_LOGGING
+#else // !MAIN_LOOP_ONE_SHOT
                 :
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 : ASM_INPUTS
                 : ASM_CLOBBERS
             );
@@ -569,9 +569,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // CS went inactive.  We need to set the data lines as inputs.  Fall through into this code, so no branch penalty.
             LABEL(ALG2_CS_INACTIVE)
                 SET_DATA_IN
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(ALG2_END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 // Fall into main loop
 
             LABEL(ALG2_LOOP)
@@ -579,21 +579,21 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 TEST_CS
                 BEQ(ALG2_CS_ACTIVE)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
             LABEL(ALG2_END_LOOP)
                 "mov %0, " R_ADDR_CS "\n"
                 "mov %1, " R_DATA "\n"
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Start main loop again
                 BRANCH(ALG2_LOOP)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 : "=r" (addr_cs),
                 "=r" (byte)
-#else // !MAIN_LOOP_LOGGING
+#else // !MAIN_LOOP_ONE_SHOT
                 :
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 : ASM_INPUTS
                 : ASM_CLOBBERS
             );
@@ -621,43 +621,43 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
             LABEL(ALG3_CS_INACTIVE)
                 SET_DATA_IN
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(ALG3_END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
             LABEL(ALG3_LOOP)
                 LOAD_ADDR_CS
                 TEST_CS_ANY
                 BNE(ALG3_CS_ACTIVE)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
             LABEL(ALG3_END_LOOP)
                 "mov %0, " R_ADDR_CS "\n"
                 "mov %1, " R_DATA "\n"
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Start main loop again
                 BRANCH(ALG3_LOOP)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 : "=r" (addr_cs),
                 "=r" (byte)
-#else // !MAIN_LOOP_LOGGING
+#else // !MAIN_LOOP_ONE_SHOT
                 :
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 : ASM_INPUTS
                 : ASM_CLOBBERS
             );
             break;
     }
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
         if (sdrr_info.status_led_enabled) {
             GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
         }
         ROM_IMPL_LOG("Address/CS: 0x%08X Byte: 0x%08X", addr_cs, byte);
     }
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 }
 
 // Get the index of the selected ROM by reading the select jumpers

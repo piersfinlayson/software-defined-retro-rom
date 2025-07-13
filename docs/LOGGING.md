@@ -71,6 +71,12 @@ It is disabled by default, but can be enabled by setting the `DEBUG_LOGGING` con
 
 ## `MAIN_LOOP_LOGGING`
 
+This enables logging within the main_loop (see [`rom_impl.c`](/sdrr/src/rom_impl.c).  It does not control logging after every byte is served - see [`MAIN_LOOP_ONE_SHOT`](#main-loop-one-shot)
+
+You mus have `SWD` and `BOOT_LOGGING` enabled for this to work.
+
+## `MAIN_LOOP_ONE_SHOT`
+
 This makes a log after every requested byte has been served, once the chip select has gone inactive.
 
 Some notes:
@@ -79,4 +85,6 @@ Some notes:
 - It is also likely, unless you are only querying the odd byte here and there, that RTT will not be able to keep up with the logged data.
 - Although the address and data values served are logged, these are **mangled** versions of each - they are the value read directly from the STM32 GPIO port with the address and CS lines, and the value written directly to the STM32 GPIO port with the data lines.  As the pin mapping is complex, they are not the values you would naively expect to see.  See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information on the the pin mapping.
 
-This logging is disabled by default and can be enabled by setting the `MAIN_LOOP_LOGGING` configuration option to `1`.  This type of logging is useful for debugging the SDRR's main loop.
+This logging is disabled by default and can be enabled by setting the `MAIN_LOOP_ONE_SHOT` configuration option to `1`.  This type of logging is useful for debugging the SDRR's main loop.
+
+You must have `SWD`, `BOOT_LOGGING`, and `MAIN_LOOP_LOGGING` enabled for this to work.

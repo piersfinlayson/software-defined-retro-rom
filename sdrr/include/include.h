@@ -18,9 +18,11 @@
 // #define STM_FLASH_SIZE 65536
 // #define MCO2 1 // Enable MCO2 (microcontroller clock output) on PC9
 // #define BOOT_LOGGING 1  // Enable boot logging
-// #define MAIN_LOOP_LOGGING 1  // Enable main loop logging
 // #define DEBUG_LOGGING 1  // Enable more verbose logging
 // #define OVERCLOCK 1  // Enable overclocking (may damage the part)
+// #define MAIN_LOOP_LOGGING 1  // Enable main loop logging
+// #define MAIN_LOOP_ONE_SHOT 1 // Run the main loop once, then log, then run
+//                              // it again
 //
 // sdrr-gen also provides the rom images:
 //
