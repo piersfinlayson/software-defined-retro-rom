@@ -127,6 +127,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     // point in doing this until MAIN_LOOP_LOGGING is defined, as no-one
     // will hear us if we scream ...
     // Note that sdrr-gen should have got this stuff right.
+    ROM_IMPL_LOG("%s", log_divider);
     ROM_IMPL_LOG("Entered main_loop");
     if (sdrr_info.pins->data_port != PORT_A) {
         ROM_IMPL_LOG("!!! Data pins not using port A");
@@ -180,7 +181,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     }
 
     const sdrr_rom_info_t *rom = set->roms[0];
-    ROM_IMPL_DEBUG("Serve ROM: %s via mode: %d", rom->filename, serve_mode);
+    for (int ii = 0; ii < set->rom_count; ii++) {
+        ROM_IMPL_DEBUG("Serve ROM #%d: %s via mode: %d", ii, rom->filename, serve_mode);
+    }
 
     //
     // Set up CS pin masks, using CS values from sdrr_info.
@@ -363,6 +366,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     }
 
     // Now log current state, and items we're going to load to registers.
+    ROM_IMPL_DEBUG("%s", log_divider);
+    ROM_IMPL_DEBUG("Register locations and values:");
     ROM_IMPL_DEBUG("GPIOA_MODER: 0x%08X", GPIOA_MODER);
     ROM_IMPL_DEBUG("GPIOA_PUPDR: 0x%08X", GPIOA_PUPDR);
     ROM_IMPL_DEBUG("GPIOA_OSPEEDR: 0x%08X", GPIOA_OSPEEDR);
@@ -376,6 +381,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     ROM_IMPL_DEBUG("Data output mask: 0x%08X", data_output_mask_val);
     ROM_IMPL_DEBUG("Data input mask: 0x%08X", data_input_mask_val);
     ROM_IMPL_DEBUG("ROM table: 0x%08X", rom_table_val);
+    ROM_IMPL_DEBUG("%s", log_divider);
 
 #if defined(MAIN_LOOP_ONE_SHOT)
     uint32_t byte;
@@ -385,6 +391,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         if (sdrr_info.status_led_enabled) {
             GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
         }
+#else
+    ROM_IMPL_LOG("Begin serving data");
 #endif // MAIN_LOOP_ONE_SHOT
     // Now pre-load the registers
     // We do this here, so that if we are configured with MAIN_LOOP_ONE_SHOT,

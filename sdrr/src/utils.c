@@ -316,35 +316,70 @@ void log_init(void) {
     }
 
     LOG("%s", log_divider);
-    LOG("Firmware info ...");
+    LOG("Pin Configuration ...");
+    
+    // Port assignments
+    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
+    
+    LOG("ROM emulation: %d pin ROM", sdrr_info.pins->rom_pins);
+    
+    // Data pins
+    LOG("Data pins D[0-7]: P%s%d,%d,%d,%d,%d,%d,%d,%d", 
+        port_names[sdrr_info.pins->data_port],
+        sdrr_info.pins->data[0], sdrr_info.pins->data[1], sdrr_info.pins->data[2], sdrr_info.pins->data[3],
+        sdrr_info.pins->data[4], sdrr_info.pins->data[5], sdrr_info.pins->data[6], sdrr_info.pins->data[7]);
+    
+    // Address pins
+    LOG("Addr pins A[0-15]: P%s%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", 
+        port_names[sdrr_info.pins->addr_port],
+        sdrr_info.pins->addr[0], sdrr_info.pins->addr[1], sdrr_info.pins->addr[2], sdrr_info.pins->addr[3],
+        sdrr_info.pins->addr[4], sdrr_info.pins->addr[5], sdrr_info.pins->addr[6], sdrr_info.pins->addr[7],
+        sdrr_info.pins->addr[8], sdrr_info.pins->addr[9], sdrr_info.pins->addr[10], sdrr_info.pins->addr[11],
+        sdrr_info.pins->addr[12], sdrr_info.pins->addr[13], sdrr_info.pins->addr[14], sdrr_info.pins->addr[15]);
+    
+    // Chip select pins
+    LOG("CS pins - 2364: P%s%d 2332: P%s%d,%d 2316: P%s%d,%d,%d X1: P%s%d X2: P%s%d", 
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2364,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2332, sdrr_info.pins->cs2_2332,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2316, sdrr_info.pins->cs2_2316, sdrr_info.pins->cs3_2316,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x1, port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x2);
+    
+    // Select and status pins
+    LOG("Sel pins: P%s%d,%d,%d,%d", port_names[sdrr_info.pins->sel_port], 
+        sdrr_info.pins->sel[0], sdrr_info.pins->sel[1], 
+        sdrr_info.pins->sel[2], sdrr_info.pins->sel[3]);
+    LOG("Status pin: P%s%d", port_names[sdrr_info.pins->status_port], sdrr_info.pins->status);
+
+    LOG("%s", log_divider);
+    LOG("ROM info ...");
     LOG("# of ROM sets: %d", sdrr_rom_set_count);
     for (uint8_t ii = 0; ii < sdrr_rom_set_count; ii++) {
-        const char *rom_type_str;
-        const sdrr_rom_info_t *rom = rom_set[ii].roms[0];
-        switch (rom->rom_type) {
-            case ROM_TYPE_2364:
-                rom_type_str = r2364;
-                break;
-            case ROM_TYPE_2332:
-                rom_type_str = r2332;
-                break;
-            case ROM_TYPE_2316:
-                rom_type_str = r2316;
-                break;
-            default:
-                rom_type_str = unknown;
-                break;
+        LOG("Set #%d: %d ROM(s), size: %d bytes", ii, rom_set[ii].rom_count, rom_set[ii].size);
+        
+        for (uint8_t jj = 0; jj < rom_set[ii].rom_count; jj++) {
+            const char *rom_type_str;
+            const sdrr_rom_info_t *rom = rom_set[ii].roms[jj];
+            switch (rom->rom_type) {
+                case ROM_TYPE_2364:
+                    rom_type_str = r2364;
+                    break;
+                case ROM_TYPE_2332:
+                    rom_type_str = r2332;
+                    break;
+                case ROM_TYPE_2316:
+                    rom_type_str = r2316;
+                    break;
+                default:
+                    rom_type_str = unknown;
+                    break;
+            }
+
+            const char *cs1_state_str = get_cs_str(rom->cs1_state);
+            const char *cs2_state_str = get_cs_str(rom->cs2_state); 
+            const char *cs3_state_str = get_cs_str(rom->cs3_state);
+
+            LOG("  ROM #%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", jj, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
         }
-
-        const char *cs1_state_str = get_cs_str(rom->cs1_state);
-        const char *cs2_state_str = get_cs_str(rom->cs2_state); 
-        const char *cs3_state_str = get_cs_str(rom->cs3_state);
-
-#if !defined(DEBUG_LOGGING)
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
-#else // DEBUG_LOGGING
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s, size: %d bytes", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str, rom_set[ii].size);
-#endif // DEBUG_LOGGING
     }
 
 #if !defined(EXECUTE_FROM_RAM)

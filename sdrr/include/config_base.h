@@ -42,6 +42,7 @@ typedef enum {
 //
 // All pin numbers are physical pins - allocated from the configured STM32F4
 // port.  Valid numbers are 0-15.  255 indicates a particular pin is present.
+// The index into the array is ROM Ax or Dx number.
 typedef struct {
     // SDRR STM32 pin port locations
     // Offset: 0
