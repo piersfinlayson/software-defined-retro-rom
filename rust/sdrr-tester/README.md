@@ -43,9 +43,7 @@ The tester uses the following GPIO pin assignments:
 ## 🛠️ Building and Running
 
 ```bash
-# Clone the repository
-git clone https://github.com/piersfinlayson/sdrr-tester.git
-cd sdrr-tester
+cd rust/sdrr-tester
 
 # Build for your target ROM type (2316, 2332, or 2364)
 cargo build --release --no-default-fatures --features "rom_2364 cs1_active_low"

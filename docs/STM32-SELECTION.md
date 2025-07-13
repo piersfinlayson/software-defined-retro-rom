@@ -47,7 +47,7 @@ If you want to add build support for another variant:
 
 - Add it to [`Makefile`](/Makefile) - see the `STM` variable.
 - Add it to [`sdrr/Makefile`](/sdrr/Makefile) - see the `Linker script selection` section.
-- Add it to [`sddr-gen`](/sdrr-gen), in particular:
+- Add it to [`sddr-gen`](/rust/sdrr-gen), in particular:
   - [`sdrr-gen/src/main.rs`](sdrr-gen/src/main.rs):
     - `Args::stm` clap comment
     - `parse_stm_variant()` function

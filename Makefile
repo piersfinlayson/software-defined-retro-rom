@@ -494,9 +494,9 @@ endif
 
 # Set up CARGO_TARGET_DIR
 ifeq ($(CARGO_PROFILE),)
-  CARGO_TARGET_DIR := target/debug
+  CARGO_TARGET_DIR := rust/target/debug
 else
-  CARGO_TARGET_DIR := target/$(CARGO_PROFILE)
+  CARGO_TARGET_DIR := rust/target/$(CARGO_PROFILE)
 endif
 ifneq ($(SUPPRESS_OUTPUT),1)
 $(info - CARGO_TARGET_DIR=$(CARGO_TARGET_DIR))
@@ -576,7 +576,7 @@ sdrr-gen:
 	@echo "- retrieve ROM data"
 	@echo "- process ROM data into SDRR firmware files"
 	@echo "-----"
-	@cargo build --$(CARGO_PROFILE)
+	@cd rust && cargo build --$(CARGO_PROFILE)
 
 $(CARGO_TARGET_DIR)/sdrr-gen: sdrr-gen
 
@@ -596,7 +596,7 @@ sdrr-info:
 	@echo "- Validate SDRR firmware"
 	@echo "- Extract key SDRR firmware properties"
 	@echo "-----"
-	@cargo build --$(CARGO_PROFILE)
+	@cd rust && cargo build --$(CARGO_PROFILE)
 
 info: sdrr-info firmware
 	@echo "=========================================="
