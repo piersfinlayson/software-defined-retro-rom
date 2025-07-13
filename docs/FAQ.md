@@ -63,6 +63,21 @@ There is a more detailed explanation of the STM32 choice in [Hardware Selection]
 
 A: An internal oscillator was one of the microcontroller selection criteria, in order to simplify the design, and reduce the PCB footprint and BOM cost.  The STM32F4 runs stably off its internal oscillator, although its accuracy is not as good as from an external crystal.  A precisely accurate clock is not required for this application - it primarily requires raw speed.
 
+**Q: Why can't I find the STM32F4 for$2?**
+
+You need to look at Chinese sites including [aliexpress.com](https://www.aliexpress.com) and [LCSC](https://www.lcsc.com), JLC PCB's component supplier ARM.
+
+As of July 2025:
+
+- LCSC had STM32F401 for $1.93 in quantities of 1 - good enough for PET and VIC-20 ROMs
+- LCSC had STM32F411 for $2.69 in quantities of 1 - good enough for PET, VIC-20 and C64 ROMs
+- aliexpress had STM32F405 for $3 in quantities of 1 - faster than the F401/F411
+- aliexpress had GD32F405 $2.46 in quantities of 1 - GigaDevices produces clones of the STM32 parts
+
+The aliexpress seller referred to above was also offering free shipping when buying more than 4 parts.
+
+SDRR is extremely flexible in the STM32F4xxR variants it supports, so you can choose the cheapest one that meets your requirements.
+
 ## Installation and Setup
 
 **Q: What do I need to get started?**
