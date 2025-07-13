@@ -589,7 +589,25 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // is this way around, instead of skipping this and branching
                 // NE (i.e. CS gone active), because this works on the C64, and
                 // the other doesn't.  (Both work on the PAL VIC-20 at around
-                // he same clock speed - 37-38 MHz.)
+                // the same clock speed - 37-38 MHz.)
+                //
+                // My guess is that the C64 is loading the address lines later
+                // than other platforms, so if we're super-quick at spotting
+                // CS go active, and immediately use the address lines, they
+                // haven't stabilised to their proper value.
+                //
+                // The alternative (branch in the CS inactive case) would have
+                // taken slightly longer to get to loading and applying data
+                // again.  And, presumably too long.
+                //
+                // This (actually SERVE_ADDR_ON_ANY_CS, but which is
+                // essentially identify) works to replace all three ROMs on a 
+                // PAL C64 with the STM32 running at around 88Mhz minimum
+                // clock speed.  This leads us to needing at least an STM32F411
+                // to replace all three ROMs on the C64 - but gives us more
+                // headroom than the 98MHz requirement to just replace the C64
+                // character ROM.  I don't really understand that, but assume
+                // it's to do with the other, original ROM timings interfering.
                 LOAD_FROM_RAM
                 BEQ(ALG2_CS_ACTIVE_MID)
 
