@@ -9,6 +9,8 @@ builds/
 test/build
 sdrr-hw-config/user/*
 !sdrr-hw-config/user/README.md
+config/user/*
+!config/user/README.md
 
 output/
 

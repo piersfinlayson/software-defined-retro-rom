@@ -18,6 +18,7 @@ pub struct Config {
     pub mco2: bool,
     pub boot_logging: bool,
     pub main_loop_logging: bool,
+    pub main_loop_one_shot: bool,
     pub debug_logging: bool,
     pub overwrite: bool,
     pub hse: bool,

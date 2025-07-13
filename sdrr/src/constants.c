@@ -29,3 +29,7 @@ const char stm32_bootloader_mode[] = "STM32 bootloader mode";
 const char disabled[] = "disabled";
 const char enabled[] = "enabled";
 const char oscillator[] = "Oscillator";
+#if defined(BOOT_LOGGING)
+const char *port_names[] = {"NONE", "A", "B", "C", "D"};
+const char *cs_values[] = {"Active Low", "Active High", "-"};
+#endif // BOOT_LOGGING

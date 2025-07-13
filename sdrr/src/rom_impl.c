@@ -127,6 +127,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     // point in doing this until MAIN_LOOP_LOGGING is defined, as no-one
     // will hear us if we scream ...
     // Note that sdrr-gen should have got this stuff right.
+    ROM_IMPL_LOG("%s", log_divider);
+    ROM_IMPL_LOG("Entered main_loop");
     if (sdrr_info.pins->data_port != PORT_A) {
         ROM_IMPL_LOG("!!! Data pins not using port A");
     }
@@ -178,14 +180,16 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         serve_mode = SERVE_TWO_CS_ONE_ADDR;
     }
 
-    const sdrr_rom_info_t *rom = set->roms[0];
-    ROM_IMPL_DEBUG("Serve ROM: %s via mode: %d", rom->filename, serve_mode);
+    for (int ii = 0; ii < set->rom_count; ii++) {
+        ROM_IMPL_DEBUG("Serve ROM #%d: %s via mode: %d", ii, set->roms[ii]->filename, serve_mode);
+    }
 
     //
     // Set up CS pin masks, using CS values from sdrr_info.
     //
     uint32_t cs_invert_mask = 0;
     uint32_t cs_check_mask;
+    const sdrr_rom_info_t *rom = set->roms[0];
 
     if (serve_mode == SERVE_ADDR_ON_ANY_CS)
     {
@@ -306,9 +310,11 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
         // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
         if (set->rom_count == 2) {
-            // It's theoretically possible to set X2 to 14 and X1 to 15,
-            // so choosing the right value here.
-            GPIOC_PUPDR = (0b10 << (sdrr_info.pins->x2 * 2));
+            // As we only have 2 ROMs in either set, we must _pull up_ X2, not
+            // pull it down, as that would be two CS lines pulled down, which
+            // means 0xAA being served.
+            // As the pin for X2 can be configured, choose the right value here.
+            GPIOC_PUPDR = (0b01 << (sdrr_info.pins->x2 * 2));
         } else if (set->rom_count == 3) {
             // No pull-downs - PC14/PC15 used to select second and third ROM images
             GPIOC_PUPDR = 0;
@@ -327,54 +333,57 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     serve_mode = SERVE_TWO_CS_ONE_ADDR;
 #endif
 
-    //
-    // Preload all registers with their required values
-    //
-
-    // Data output enable mask for port A.
-    register uint32_t data_output_mask asm(R_DATA_OUT_MASK);
-    register uint32_t data_input_mask asm(R_DATA_IN_MASK);
-    if (sdrr_info.mco_enabled) {
-        // PA8 is AF, PA0-7 are inputs
-        data_output_mask = 0x00025555;
-        data_input_mask = 0x00020000;
-    } else {
-        // PA0-7 are inputs
-        data_output_mask = 0x00005555;
-        data_input_mask = 0x00000000;
-    }
-    if (sdrr_info.swd_enabled) {
-        // Ensure PA13/14 remain AF (SWD enabled)
-        data_output_mask |= 0x28000000;
-        data_input_mask |= 0x28000000;
-    }
-
-    // Preload registers with their values
-    register uint32_t cs_invert_mask_reg asm(R_CS_INVERT_MASK) = cs_invert_mask;
-    register uint32_t cs_check_mask_reg asm(R_CS_CHECK_MASK) = cs_check_mask;
-    register uint32_t gpioc_idr asm(R_GPIO_ADDR_CS_IDR) = VAL_GPIOC_IDR; 
-    register uint32_t gpioa_odr asm(R_GPIO_DATA_ODR) = VAL_GPIOA_ODR;
-    register uint32_t gpioa_moder asm(R_GPIO_DATA_MODER) = VAL_GPIOA_MODER;
-
-    register uint32_t rom_table asm(R_ROM_TABLE);
-    if (sdrr_info.preload_image_to_ram) {
-        rom_table = (uint32_t)&_ram_rom_image_start;
-    } else {
-        rom_table = (uint32_t)&(set->data[0]);
-    }
-
     if (sdrr_info.status_led_enabled) {
         setup_status_led();
     }
 
-    // Log some useful information before entering the main loop
+    //
+    // Calculcate pre-load values for all registers
+    //
+    uint32_t data_output_mask_val;
+    uint32_t data_input_mask_val;
+    if (sdrr_info.mco_enabled) {
+        // PA8 is AF, PA0-7 are inputs
+        data_output_mask_val = 0x00025555;
+        data_input_mask_val = 0x00020000;
+    } else {
+        // PA0-7 are inputs
+        data_output_mask_val = 0x00005555;
+        data_input_mask_val = 0x00000000;
+    }
+
+    if (sdrr_info.swd_enabled) {
+        // Ensure PA13/14 remain AF (SWD enabled)
+        data_output_mask_val |= 0x28000000;
+        data_input_mask_val |= 0x28000000;
+    }
+
+    uint32_t rom_table_val;
+    if (sdrr_info.preload_image_to_ram) {
+        rom_table_val = (uint32_t)&_ram_rom_image_start;
+    } else {
+        rom_table_val = (uint32_t)&(set->data[0]);
+    }
+
+    // Now log current state, and items we're going to load to registers.
+    ROM_IMPL_DEBUG("%s", log_divider);
+    ROM_IMPL_DEBUG("Register locations and values:");
+    ROM_IMPL_DEBUG("GPIOA_MODER: 0x%08X", GPIOA_MODER);
+    ROM_IMPL_DEBUG("GPIOA_PUPDR: 0x%08X", GPIOA_PUPDR);
+    ROM_IMPL_DEBUG("GPIOA_OSPEEDR: 0x%08X", GPIOA_OSPEEDR);
+    ROM_IMPL_DEBUG("GPIOC_MODER: 0x%08X", GPIOC_MODER);
+    ROM_IMPL_DEBUG("GPIOC_PUPDR: 0x%08X", GPIOC_PUPDR);
+    ROM_IMPL_DEBUG("VAL_GPIOA_ODR: 0x%08X", VAL_GPIOA_ODR);
+    ROM_IMPL_DEBUG("VAL_GPIOA_MODER: 0x%08X", VAL_GPIOA_MODER);
+    ROM_IMPL_DEBUG("VAL_GPIOC_IDR: 0x%08X", VAL_GPIOC_IDR);
     ROM_IMPL_DEBUG("CS check mask: 0x%08X", cs_check_mask);
     ROM_IMPL_DEBUG("CS invert mask: 0x%08X", cs_invert_mask);
-    ROM_IMPL_DEBUG("Data output mask: 0x%08X", data_output_mask);
-    ROM_IMPL_DEBUG("Data input mask: 0x%08X", data_input_mask);
-    ROM_IMPL_DEBUG("GPIOC_PUPDR: 0x%08X", GPIOC_PUPDR);
+    ROM_IMPL_DEBUG("Data output mask: 0x%08X", data_output_mask_val);
+    ROM_IMPL_DEBUG("Data input mask: 0x%08X", data_input_mask_val);
+    ROM_IMPL_DEBUG("ROM table: 0x%08X", rom_table_val);
+    ROM_IMPL_DEBUG("%s", log_divider);
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
     uint32_t byte;
     uint32_t addr_cs;
     while (1) {
@@ -382,7 +391,25 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         if (sdrr_info.status_led_enabled) {
             GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
         }
-#endif // MAIN_LOOP_LOGGING
+#else
+    ROM_IMPL_LOG("Begin serving data");
+#endif // MAIN_LOOP_ONE_SHOT
+    // Now pre-load the registers
+    // We do this here, so that if we are configured with MAIN_LOOP_ONE_SHOT,
+    // calling the additional log above every time around the while loop
+    // doesn't clobber our registers.
+    register uint32_t data_output_mask asm(R_DATA_OUT_MASK) = data_output_mask_val;
+    register uint32_t data_input_mask asm(R_DATA_IN_MASK) = data_input_mask_val;
+    register uint32_t cs_invert_mask_reg asm(R_CS_INVERT_MASK) = cs_invert_mask;
+    register uint32_t cs_check_mask_reg asm(R_CS_CHECK_MASK) = cs_check_mask;
+    register uint32_t gpioc_idr asm(R_GPIO_ADDR_CS_IDR) = VAL_GPIOC_IDR; 
+    register uint32_t gpioa_odr asm(R_GPIO_DATA_ODR) = VAL_GPIOA_ODR;
+    register uint32_t gpioa_moder asm(R_GPIO_DATA_MODER) = VAL_GPIOA_MODER;
+    register uint32_t rom_table asm(R_ROM_TABLE) = rom_table_val;
+
+    // There must be NO function calls between the pre-load immediately above,
+    // and entering the assembly code below, or one or more registers may get
+    // clobbered.
     switch (serve_mode)
     {
         // Default case - test CS twice as often as loading the byte from RAM
@@ -468,9 +495,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             LABEL(CS_INACTIVE_BYTE)
                 SET_DATA_IN
                 STORE_TO_DATA
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Start of main processing loop.  Load the data byte while
                 // constantly checking if CS has gone active
@@ -490,9 +517,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // CS went inactive, but we don't have a new byte to load.
             LABEL(CS_INACTIVE_NO_BYTE)
                 SET_DATA_IN
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Copy of main processing loop - to avoid a branch in this or the
                 // CS_INACTIVE_BYTE case
@@ -509,18 +536,18 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // loop as opposed to this copy.
                 BRANCH(LOOP)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
             LABEL(END_LOOP)
                 "mov %0, " R_ADDR_CS "\n"
                 "mov %1, " R_DATA "\n"
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 : "=r" (addr_cs),
                 "=r" (byte)
-#else // !MAIN_LOOP_LOGGING
+#else // !MAIN_LOOP_ONE_SHOT
                 :
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 : ASM_INPUTS
                 : ASM_CLOBBERS
             );
@@ -539,7 +566,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             LABEL(ALG2_CS_ACTIVE)
                 // By definition we just loaded and tested the address/CS
                 // lines, immediately load the byte from RAM.  There's no load-
-                // use penalty here because we've alrady spent cycles since
+                // use penalty here because we've already spent cycles since
                 // loading the address lines.
                 LOAD_FROM_RAM
 
@@ -550,28 +577,28 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // penalty here.
                 SET_DATA_OUT
 
+            LABEL(ALG2_CS_ACTIVE_MID)
                 // Now store byte to data lines
                 STORE_TO_DATA
 
                 // Now test if CS has gone inactive again
                 LOAD_ADDR_CS
                 TEST_CS
-                BNE(ALG2_CS_INACTIVE)
 
-            LABEL(ALG2_CS_ACTIVE_MID_LOOP)
-                LOAD_ADDR_CS
-                TEST_CS
-                // If still active, load byte from address again in case the
-                // address lines changed.  Going backwards here is what the
-                // CPU will have predicted so saves a cycle.
-                BEQ(ALG2_CS_ACTIVE_MID_LOOP)
+                // Load from RAM before branching, just in case - the logic
+                // is this way around, instead of skipping this and branching
+                // NE (i.e. CS gone active), because this works on the C64, and
+                // the other doesn't.  (Both work on the PAL VIC-20 at around
+                // he same clock speed - 37-38 MHz.)
+                LOAD_FROM_RAM
+                BEQ(ALG2_CS_ACTIVE_MID)
 
                 // CS went inactive.  We need to set the data lines as inputs.  Fall through into this code, so no branch penalty.
             LABEL(ALG2_CS_INACTIVE)
                 SET_DATA_IN
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(ALG2_END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 // Fall into main loop
 
             LABEL(ALG2_LOOP)
@@ -579,21 +606,21 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 TEST_CS
                 BEQ(ALG2_CS_ACTIVE)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
             LABEL(ALG2_END_LOOP)
                 "mov %0, " R_ADDR_CS "\n"
                 "mov %1, " R_DATA "\n"
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Start main loop again
                 BRANCH(ALG2_LOOP)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 : "=r" (addr_cs),
                 "=r" (byte)
-#else // !MAIN_LOOP_LOGGING
+#else // !MAIN_LOOP_ONE_SHOT
                 :
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 : ASM_INPUTS
                 : ASM_CLOBBERS
             );
@@ -609,55 +636,53 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             LABEL(ALG3_CS_ACTIVE)
                 LOAD_FROM_RAM
                 SET_DATA_OUT
+
+            LABEL(ALG3_CS_ACTIVE_MID)
                 STORE_TO_DATA
                 LOAD_ADDR_CS
                 TEST_CS_ANY
-                BEQ(ALG3_CS_INACTIVE)
-
-            LABEL(ALG3_CS_ACTIVE_MID_LOOP)
-                LOAD_ADDR_CS
-                TEST_CS_ANY
-                BNE(ALG3_CS_ACTIVE_MID_LOOP)
+                LOAD_FROM_RAM
+                BNE(ALG3_CS_ACTIVE_MID)
 
             LABEL(ALG3_CS_INACTIVE)
                 SET_DATA_IN
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 BRANCH(ALG3_END_LOOP)
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
             LABEL(ALG3_LOOP)
                 LOAD_ADDR_CS
                 TEST_CS_ANY
                 BNE(ALG3_CS_ACTIVE)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
             LABEL(ALG3_END_LOOP)
                 "mov %0, " R_ADDR_CS "\n"
                 "mov %1, " R_DATA "\n"
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 
                 // Start main loop again
                 BRANCH(ALG3_LOOP)
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
                 : "=r" (addr_cs),
                 "=r" (byte)
-#else // !MAIN_LOOP_LOGGING
+#else // !MAIN_LOOP_ONE_SHOT
                 :
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
                 : ASM_INPUTS
                 : ASM_CLOBBERS
             );
             break;
     }
 
-#if defined(MAIN_LOOP_LOGGING)
+#if defined(MAIN_LOOP_ONE_SHOT)
         if (sdrr_info.status_led_enabled) {
             GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
         }
         ROM_IMPL_LOG("Address/CS: 0x%08X Byte: 0x%08X", addr_cs, byte);
     }
-#endif // MAIN_LOOP_LOGGING
+#endif // MAIN_LOOP_ONE_SHOT
 }
 
 // Get the index of the selected ROM by reading the select jumpers
@@ -725,7 +750,8 @@ void preload_rom_image(const sdrr_rom_set_t *set) {
     memcpy(img_dst, img_src, img_size);
 
     LOG("ROM %s preloaded to RAM 0x%08X size %d bytes", set->roms[0]->filename, (uint32_t)_ram_rom_image_start, img_size);
-    LOG("Set ROM count: %d, Serving algorithm: %d, multi-ROM CS1 state: %d", set->rom_count, set->serve, set->multi_rom_cs1_state);
+    LOG("Set ROM count: %d, Serving algorithm: %d, multi-ROM CS1 state: %s",
+        set->rom_count, set->serve, cs_values[set->multi_rom_cs1_state]);
 }
 
 #endif // !TIMER_TEST/TOGGLE_PA4

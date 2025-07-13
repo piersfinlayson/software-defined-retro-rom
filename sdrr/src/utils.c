@@ -27,11 +27,11 @@ uint32_t check_sel_pins(uint32_t *sel_mask) {
         if (pin < 255) {
             // Pin is present, so set the mask
             if (pin <= 15) {
-                sel_1bit_mask = 1 << pin;
+                sel_1bit_mask |= 1 << pin;
                 sel_2bit_mask |= (11 << (pin * 2));
                 pull_downs |= (10 << (pin * 2));
             } else {
-                LOG("!!! Sel pin 15 < %d < 255 - not using", ii);
+                LOG("!!! Sel pin 15 < %d < 255 - not using", pin);
             }
         }
     }
@@ -48,7 +48,7 @@ uint32_t check_sel_pins(uint32_t *sel_mask) {
     uint32_t pins = GPIOB_IDR;
 
     // Disable peripheral clock for port again.
-    RCC_AHB1ENR &= ~(1 << 1);
+    RCC_AHB1ENR &= ~RCC_AHB1ENR_GPIOBEN;
 
     // Return sel_mask as well as the value of the pins
     *sel_mask = sel_1bit_mask;
@@ -244,19 +244,6 @@ void set_flash_ws(void) {
 //
 
 #if defined(BOOT_LOGGING)
-const char *get_cs_str(sdrr_cs_state_t cs) {
-    switch (cs) {
-        case CS_ACTIVE_LOW:
-            return cs_low;
-        case CS_ACTIVE_HIGH:
-            return cs_high;
-        case CS_NOT_USED:
-            return cs_na;
-        default:
-            return unknown;
-    }
-}
-
 // Linker variables, used by log_init()
 extern uint32_t _flash_start;
 extern uint32_t _flash_end;
@@ -315,36 +302,72 @@ void log_init(void) {
         LOG("Bootloader: %s", disabled);
     }
 
+    // Port assignments
+    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
+
+
     LOG("%s", log_divider);
-    LOG("Firmware info ...");
+    LOG("Pin Configuration ...");
+    
+    
+    LOG("ROM emulation: %d pin ROM", sdrr_info.pins->rom_pins);
+    
+    // Data pins
+    LOG("Data pins D[0-7]: P%s%d,%d,%d,%d,%d,%d,%d,%d", 
+        port_names[sdrr_info.pins->data_port],
+        sdrr_info.pins->data[0], sdrr_info.pins->data[1], sdrr_info.pins->data[2], sdrr_info.pins->data[3],
+        sdrr_info.pins->data[4], sdrr_info.pins->data[5], sdrr_info.pins->data[6], sdrr_info.pins->data[7]);
+    
+    // Address pins
+    LOG("Addr pins A[0-15]: P%s%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", 
+        port_names[sdrr_info.pins->addr_port],
+        sdrr_info.pins->addr[0], sdrr_info.pins->addr[1], sdrr_info.pins->addr[2], sdrr_info.pins->addr[3],
+        sdrr_info.pins->addr[4], sdrr_info.pins->addr[5], sdrr_info.pins->addr[6], sdrr_info.pins->addr[7],
+        sdrr_info.pins->addr[8], sdrr_info.pins->addr[9], sdrr_info.pins->addr[10], sdrr_info.pins->addr[11],
+        sdrr_info.pins->addr[12], sdrr_info.pins->addr[13], sdrr_info.pins->addr[14], sdrr_info.pins->addr[15]);
+    
+    // Chip select pins
+    LOG("CS pins - 2364: P%s%d 2332: P%s%d,%d 2316: P%s%d,%d,%d X1: P%s%d X2: P%s%d", 
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2364,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2332, sdrr_info.pins->cs2_2332,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2316, sdrr_info.pins->cs2_2316, sdrr_info.pins->cs3_2316,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x1, port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x2);
+    
+    // Select and status pins
+    LOG("Sel pins: P%s%d,%d,%d,%d", port_names[sdrr_info.pins->sel_port], 
+        sdrr_info.pins->sel[0], sdrr_info.pins->sel[1], 
+        sdrr_info.pins->sel[2], sdrr_info.pins->sel[3]);
+    LOG("Status pin: P%s%d", port_names[sdrr_info.pins->status_port], sdrr_info.pins->status);
+
+    LOG("%s", log_divider);
+    LOG("ROM info ...");
     LOG("# of ROM sets: %d", sdrr_rom_set_count);
     for (uint8_t ii = 0; ii < sdrr_rom_set_count; ii++) {
-        const char *rom_type_str;
-        const sdrr_rom_info_t *rom = rom_set[ii].roms[0];
-        switch (rom->rom_type) {
-            case ROM_TYPE_2364:
-                rom_type_str = r2364;
-                break;
-            case ROM_TYPE_2332:
-                rom_type_str = r2332;
-                break;
-            case ROM_TYPE_2316:
-                rom_type_str = r2316;
-                break;
-            default:
-                rom_type_str = unknown;
-                break;
+        LOG("Set #%d: %d ROM(s), size: %d bytes", ii, rom_set[ii].rom_count, rom_set[ii].size);
+        
+        for (uint8_t jj = 0; jj < rom_set[ii].rom_count; jj++) {
+            const char *rom_type_str;
+            const sdrr_rom_info_t *rom = rom_set[ii].roms[jj];
+            switch (rom->rom_type) {
+                case ROM_TYPE_2364:
+                    rom_type_str = r2364;
+                    break;
+                case ROM_TYPE_2332:
+                    rom_type_str = r2332;
+                    break;
+                case ROM_TYPE_2316:
+                    rom_type_str = r2316;
+                    break;
+                default:
+                    rom_type_str = unknown;
+                    break;
+            }
+
+            LOG("  ROM #%d: %s, %s, CS1: %s, CS2: %s, CS3: %s",
+                jj, rom->filename,
+                rom_type_str,
+                cs_values[rom->cs1_state], cs_values[rom->cs2_state], cs_values[rom->cs3_state]);
         }
-
-        const char *cs1_state_str = get_cs_str(rom->cs1_state);
-        const char *cs2_state_str = get_cs_str(rom->cs2_state); 
-        const char *cs3_state_str = get_cs_str(rom->cs3_state);
-
-#if !defined(DEBUG_LOGGING)
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
-#else // DEBUG_LOGGING
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s, size: %d bytes", ii, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str, rom_set[ii].size);
-#endif // DEBUG_LOGGING
     }
 
 #if !defined(EXECUTE_FROM_RAM)

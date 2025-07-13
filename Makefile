@@ -134,6 +134,18 @@ BOOT_LOGGING ?= 1
 
 # Main loop logging configuration
 #
+# This option enables/disabld logging within main_loop (see sdrr.rom_impl.c).
+#
+# It does not loop after every byte is served - that is enabled/disabled via
+# MAIN_LOOP_ONE_SHOT.
+#
+# SWD, BOOT_LOGGING and MAIN_LOOP_LOGGING are required for this option to work.
+
+MAIN_LOOP_LOGGING ?= 0
+#MAIN_LOOP_LOGGING ?= 1
+
+# Main loop one shot logging
+#
 # This option outputs logs after every byte is retrieved from the ROM.  While
 # the main loop that processes the chip select and retrieves ROM data remanins
 # functional, there is a gap between the CS line being released, and the ROM
@@ -145,8 +157,8 @@ BOOT_LOGGING ?= 1
 #
 # SWD and BOOT_LOGGING are required for this option to work.
 
-MAIN_LOOP_LOGGING ?= 0
-#MAIN_LOOP_LOGGING ?= 1
+MAIN_LOOP_ONE_SHOT ?= 0
+# MAIN_LOOP_ONE_SHOT ?= 1
 
 # Debug logging
 #
@@ -615,13 +627,13 @@ firmware: gen
 	@GEN_OUTPUT_DIR=$(GEN_OUTPUT_DIR) make --no-print-directory -C sdrr
 
 # Call make run-actual - this causes a new instance of make to be invoked and generated.mk exists, so it can load PROBE_RS_CHIP_ID
-run: firmware
+run: firmware info
 	@echo "=========================================="
 	@echo "Flash SDRR firmware to device and attach to logging:"
 	@echo "-----"
 	@SUPPRESS_OUTPUT=1 make --no-print-directory run-actual
 
-flash: firmware
+flash: firmware info
 	@echo "=========================================="
 	@echo "Flash SDRR firmware to device:"
 	@echo "-----"
