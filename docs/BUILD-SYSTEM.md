@@ -5,18 +5,20 @@ The SDRR build system is a multi-stage pipeline that transforms ROM images and c
 ## Build Pipeline Overview
 
 ```ascii
-User Input → Top-level Make → sdrr-gen → sdrr Make → probe-rs → STM32
-    ↓              ↓            ↓          ↓            ↓         ↓
-Config Files  ROM Download    Code Gen    Compile     Flash     Running
-ROM Images    & Validation    & Mangle    & Link                Firmware
+User Input → Top-level Make → sdrr-gen → sdrr Make → sdrr-info → test (optional) → probe-rs → STM32
+    ↓              ↓            ↓          ↓             ↓              ↓              ↓        ↓
+Config Files  ROM Download    Code Gen    Compile      Query      Compile tests      Flash    Running
+ROM Images    & Validation    & Mangle    & Link      Firmware        & Run         Firmware
 ```
 
-The build process involves four main components:
+The build process involves six main components:
 
 1. **Top-level Makefile** - Configuration processing and orchestration
-2. **sdrr-gen** - Rust tool for ROM processing and generation of firmware code containing the ROMs  
+2. **sdrr-gen** - Rust tool for ROM processing and generation of firmware code containing the ROMs
 3. **sdrr Makefile** - STM32 ARM firmware compilation
-4. **probe-rs** - STM32 flashing and debugging
+4. **sdrr-info** - Validate the build firmware and extract its key properties
+5. **test** - Optional tests to verify the generated "mangled" ROMs - `make test`
+6. **probe-rs** - STM32 flashing and debugging
 
 ## Component Breakdown
 
@@ -63,6 +65,7 @@ ROM_CONFIGS=file=kernel.rom,type=2364,cs1=0 file=basic.rom,type=2364,cs1=0
 - "Mangle" ROM data to match PCB pin mapping
 - Generate C source files with embedded ROM data
 - Create Makefile fragments with build settings
+- Create linker scripts for STM32 variant
 - Handle license acceptance for ROM images
 
 **ROM Processing Pipeline**:
@@ -82,6 +85,7 @@ Original ROM → Size Validation → Pin Mapping → Flash Layout → C Arrays
 - `roms.c` - ROM data as C arrays
 - `roms.h` - ROM declarations and types  
 - `generated.mk` - Makefile fragment with STM32 variant information
+- `linker.ld` - Linker script for the STM32 variant
 
 ### 3. sdrr Makefile ([`/sdrr/Makefile`](/sdrr/Makefile))
 
@@ -92,7 +96,6 @@ Original ROM → Size Validation → Pin Mapping → Flash Layout → C Arrays
 - Compile C source files for target STM32 variant
 - Link with SEGGER RTT library for logging output via RTT over SWD
 - Include auto-generated ROM data from sdrr-gen
-- Select appropriate linker script for flash/RAM layout
 - Generate ELF, binary, and disassembly files
 
 **Toolchain Setup**:
@@ -107,13 +110,40 @@ OBJCOPY := $(TOOLCHAIN)/bin/arm-none-eabi-objcopy
 
 - `/sdrr/src/*.c` - Main firmware source
 - `/sdrr/include/*.h` - Header files
-- `/sdrr/link/*.ld` - Linker scripts for different STM32 variants
+- `/sdrr/link/stm32-common.ld` - Common linker script for all STM32 variants
 - `/output/roms.c` - Generated ROM data
 - `/output/roms.h` - Generated ROM data
 - `/output/sdrr_config.h` - Generated SDRR configuration
+- `/output/linker.ld` - Generated linker script for specific STM32 variant
 - `/sdrr/segger-rtt/RTT/*.c` - Debug logging library (downloaded automatically by build process)
 
-### 4. probe-rs Integration
+### 6. sdrr-info
+
+**Purpose**: Validate the build firmware and extract its key properties
+
+See [`sdrr-info`](/sdrr-info/README.md) for details on how to use this tool.
+
+### 5. Test (Optional)
+
+**Purpose**: Validate the generated mangled ROM data, which is built into the firmware image
+
+**Configuration**:
+
+- ROM_CONFIGS as defined in the top-level Makefile
+
+**Operation**:
+
+The test program builds in the `sdrr-gen` auto-generated `roms.c` output, loads in the original ROM files, and does a byte-by-byte comparison by
+
+- Choosing the next address
+- Mangling the address, as it done in the real hardware
+- Looking up the byte in the `roms.c` generated data
+- Demangling the byte
+- Comparing the byte with the original ROM file
+
+This is a complex process when testing rom sets, as the appropriate chip select line(s) have to be activated.
+
+### 6. probe-rs Integration
 
 **Purpose**: Hardware flashing and debugging
 

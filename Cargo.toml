@@ -1,0 +1,8 @@
+# Workspace configuration for the Rust elements of the SDRR project
+[workspace]
+members = [
+    "sdrr-gen",
+    "sdrr-info", 
+    "sdrr-common"
+]
+resolver = "2"

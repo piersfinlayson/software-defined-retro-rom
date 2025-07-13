@@ -1,6 +1,6 @@
 [package]
 name = "sdrr-gen"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["Piers Finlayson <piers@piers.rocks>"]
 description = "Software Defined Retro ROM (SDRR) firmware generator"
@@ -17,3 +17,4 @@ reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-fea
 tempfile = "3.20"
 zip = "4.2"
 urlencoding = "2.1"
+sdrr-common = { path = "../sdrr-common" }

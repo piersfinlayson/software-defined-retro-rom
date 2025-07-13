@@ -10,13 +10,191 @@
 
 #include <stdint.h>
 
+typedef enum {
+    F401 = 0x0000,
+    F405 = 0x0001,
+    F411 = 0x0002,
+    F446 = 0x0003,
+    STM_LINE_FORCE_UINT16 = 0xFFFF,
+} stm_line_t;
+
+typedef enum {
+    STORAGE_8 = 0x00,
+    STORAGE_B = 0x01,
+    STORAGE_C = 0x02,
+    STORAGE_D = 0x03,
+    STORAGE_E = 0x04,
+    STORAGE_F = 0x05,
+    STORAGE_G = 0x06,
+    STM_STORAGE_FORFCE_UINT16 = 0xFFFF,
+} stm_storage_t;
+
+// Only ports A-D are exposed on the 64-pin STM32F4s.
+typedef enum {
+    PORT_NONE = 0x00,
+    PORT_A    = 0x01,
+    PORT_B    = 0x02,
+    PORT_C    = 0x03,
+    PORT_D    = 0x04,
+} sdrr_stm_port_t;
+
+// Pin allocations
+//
+// All pin numbers are physical pins - allocated from the configured STM32F4
+// port.  Valid numbers are 0-15.  255 indicates a particular pin is present.
+// The index into the array is ROM Ax or Dx number.
+typedef struct {
+    // SDRR STM32 pin port locations
+    // Offset: 0
+    // 8 x 1 byte = 8 bytes
+    sdrr_stm_port_t data_port;  // Data lines
+    sdrr_stm_port_t addr_port;  // Address lines
+    sdrr_stm_port_t cs_port;    // Chip select/enable lines
+    sdrr_stm_port_t sel_port;   // Image select jumpers
+    sdrr_stm_port_t status_port; // Status LED
+    uint8_t rom_pins;           // Number of pins this ROM is emulating 
+    uint8_t reserved1[2];
+
+    // 8 data lines
+    // Offset: 8
+    // 8 bytes
+    uint8_t data[8];
+
+    // Up to 16 address lines.  0xFF indicates unused line.
+    // Offset: 16
+    // 20 x 1 byte = 20 bytes
+    uint8_t addr[16];
+    uint8_t reserved2[4];
+
+    // Chip select lines for supported variants
+    // Offset: 36
+    // 16 x 1 byte = 16 bytes
+    uint8_t cs1_2364;
+    uint8_t cs1_2332;
+    uint8_t cs1_2316;
+    uint8_t cs2_2332;
+    uint8_t cs2_2316;
+    uint8_t cs3_2316;
+    uint8_t x1;
+    uint8_t x2;
+    uint8_t ce_23128;
+    uint8_t oe_23128;
+    uint8_t reserved3[6];
+
+    // Image select lines
+    // Offset: 52
+    // 8 x 4 bytes = 8 bytes
+    uint8_t sel[4];
+    uint8_t reserved4[4];
+
+    // Status LED line
+    // Offset: 60
+    // 4x1 byte = 4 byte
+    uint8_t status;
+    uint8_t reserved5[3];
+
+    // Length: 64
+} sdrr_pins_t;
+
+// Forward declarations
+struct sdrr_rom_set_t;
+
+// Main SDRR information data structure
+typedef struct {
+    // Magic bytes to identify the firmware and structure
+    // Offset: 0
+    // 4 bytes
+    const char magic[4];  // Magic bytes = "SDRR"
+
+    // Firmware version information
+    // Offset: 4
+    // 4 x 2 bytes = 8 bytes
+    const uint16_t major_version;
+    const uint16_t minor_version;
+    const uint16_t patch_version;
+    const uint16_t build_number;
+
+    // Pointer to build date/time string
+    // Offset: 12
+    // 4 bytes
+    const char* build_date;
+
+    // Git commit hash, NULL terminated
+    // Offset: 16
+    // 8 bytes
+    char commit[8];
+
+    // Hardware revision - pointer to string
+    // Offset: 24
+    // 4 bytes
+    const char* hw_rev;
+
+    // STM32 product line
+    // Offset: 28
+    // 2 x 2 bytes = 4 bytes
+    const stm_line_t stm_line;
+    const stm_storage_t stm_storage;
+
+    // Target frequency in MHz
+    // Offset: 32
+    // 2 + 1 bytes = 3 bytes
+    const uint16_t freq;
+    const uint8_t overclock;
+
+    // Enable SWD support
+    // Offset: 35
+    // 1 byte
+    const uint8_t swd_enabled;
+
+    // Various debug options
+    // Offset: 36
+    // 5 x 1 bytes = 5 bytes
+    const uint8_t preload_image_to_ram;
+    const uint8_t bootloader_capable;
+    const uint8_t status_led_enabled;
+    const uint8_t boot_logging_enabled;
+    const uint8_t mco_enabled;
+
+    // Number of ROM sets - length of the `rom_sets` array 
+    // Offset: 41
+    // 3 bytes
+    const uint8_t rom_set_count;
+    const uint8_t pad2[2];
+    
+    // Pointer to array of ROM sets
+    // Offset: 44
+    // 4 bytes
+    const struct sdrr_rom_set_t *rom_sets;
+
+    // Pin allocation structure
+    // Offset: 48
+    // 4 bytes
+    const sdrr_pins_t *pins;
+
+    // Boot configuration.  This is for future use.  For example, an external
+    // programmer may change this value, and the SDRR firmware check it on
+    // boot, and decide to pre-select an image based on it, rather than the
+    // sel jumpers.
+    // 
+    // As such this is reserved and must be set to 0xff.
+    //
+    // Offset: 52
+    // 4 bytes
+    const uint8_t boot_config[4];
+
+    // Length: 56
+} sdrr_info_t;
+
 // ROM image sizes by type (F1 family)
-#define ROM_IMAGE_SIZE_2316 2048
-#define ROM_IMAGE_SIZE_2332 4096
-#define ROM_IMAGE_SIZE_2364 8192
+#define ROM_IMAGE_SIZE_2316  2048
+#define ROM_IMAGE_SIZE_2332  4096
+#define ROM_IMAGE_SIZE_2364  8192
 
 // Maximum ROM image size (F4 family uses a single size for all ROM types)
-#define ROM_IMAGE_SIZE 16384
+#define ROM_IMAGE_SIZE  16384
+
+// ROM image size for sets of more than 1 ROM image
+#define ROM_SET_IMAGE_SIZE  65536
 
 // ROM type enumeration
 typedef enum {
@@ -29,26 +207,85 @@ typedef enum {
 typedef enum {
     CS_ACTIVE_LOW,
     CS_ACTIVE_HIGH,
-    CS_NOT_USED
+    CS_NOT_USED,
 } sdrr_cs_state_t;
 
 // ROM serving algorithm
 typedef enum {
-    SERVE_ORIG,  // Original ROM serving algorithm
+    // Original ROM serving algorithm - tests the chip select state(s) twice
+    // as often as it loads the ROM data given the address lines state.  This
+    // is the default algorithm, and is used for all single ROM sets.
+    SERVE_TWO_CS_ONE_ADDR,
+
+    // Serves the byte from RAM only once chip select line(s) active.
+    // Very similar to SERVE_ADDR_ON_ANY_CS - but this only matches on all
+    // of the required CS lines, that matches on any, so is suitable for
+    // multiple ROM sets.
+    SERVE_ADDR_ON_CS,
+
+    // Serves the byte from RAM once any of the chip select lines are active.
+    // This is used for sets with multiple ROM images, where we don't know the
+    // full address (i.e. the image to lookup from) until any of the chip
+    // select lines are active.  This is the default algorithm for sets with
+    // multiple ROM images on hardware revision F.
+    SERVE_ADDR_ON_ANY_CS,
 } sdrr_serve_t;
+
+typedef enum {
+    PIN_NONE,
+    PIN_18,     // This is 23xx pin 18, so CS2 on 2316
+    PIN_20,     // This is 23xx pin 20, so CS1 on 2364, 2332 and 2316
+    PIN_21,     // This is 23xx pin 21, so CS3 on 2316, CS2 on 2332
+    PIN_X1,     // This is pin X1 on SDRR, aka STM32F4 PC14 in hw rev f
+    PIN_X2,     // This is pin X2 on SDRR, aka STM32F4 PC15 in hw rev f
+} sdrr_cs_pin_t;
 
 // ROM information structure
 typedef struct {
-    const uint8_t* data;        // Pointer to ROM data
-    uint16_t size;              // Actual ROM size (varies by type on F1, always 16384 on F4)
-    sdrr_rom_type_t rom_type;   // ROM type
-    sdrr_cs_state_t cs1_state;  // CS1 state
-    sdrr_cs_state_t cs2_state;  // CS2 state
-    sdrr_cs_state_t cs3_state;  // CS3 state
+    const sdrr_rom_type_t rom_type;   // ROM type
+    const sdrr_cs_state_t cs1_state;  // CS1 state
+    const sdrr_cs_state_t cs2_state;  // CS2 state
+    const sdrr_cs_state_t cs3_state;  // CS3 state
 #if defined(BOOT_LOGGING)
     const char* filename;       // Source filename (BOOT_LOGGING only)
 #endif // BOOT_LOGGING
-    sdrr_serve_t serve;         // ROM serving algorithm
 } sdrr_rom_info_t;
+
+// ROM set information structure
+//
+// SDRR can serve sets of ROM images, which are addressed using the entirety
+// of the STM32F4 port C.  This is done in order to emulate multuple ROMs
+// simultaneously, with  the additional ROM select lines attached to SDRR via
+// X1 and X2.
+//
+// If the multiple ROM image support is not used, there is be a 1:1 mapping
+// between set and image - i.e. `rom_count` is be 1.
+typedef struct sdrr_rom_set_t {
+    // Pointer to the data for the ROM image(s) in this set.  Copied to RAM at
+    // startup.
+    const uint8_t* data;
+
+    // Size of the data for the ROM image(s) in this set.  Used to copy the
+    // ROM data to RAM at startup.  This is either:
+    // - ROM_IMAGE_SIZE for a single ROM image
+    // - ROM_SET_IMAGE_SIZE for a set of multiple ROM images
+    const uint32_t size;
+
+    // Pointer to array of pointers to ROMs in this set.  Note it needs to be
+    // a pointer to const pointer to const data, otherwise the linker will
+    // decide that the sdrr_rom_info_t structs need to be relocated to RAM
+    // on startup, which is unnecessary. 
+    const sdrr_rom_info_t* const * roms;
+
+    // The number of unique ROM images in this set.  Used to index the above
+    // array.
+    const uint8_t rom_count;
+
+    // Which ROM serving algorithm to use for this set.
+    const sdrr_serve_t serve;         // ROM serving algorithm
+
+    // CS1 state (active high/low) when using multiple ROM images in this set
+    const sdrr_cs_state_t multi_rom_cs1_state;  // CS1 state
+} sdrr_rom_set_t;
 
 #endif // CONFIG_BASE_H

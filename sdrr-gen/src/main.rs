@@ -1,16 +1,19 @@
-// src/main.rs
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
 mod config;
 mod generator;
 mod preprocessor;
-mod rom_types;
 
 use crate::config::{Config, CsConfig, SizeHandling};
 use crate::generator::generate_files;
-use crate::rom_types::{CsLogic, RomType, StmVariant};
+use sdrr_common::sdrr_types::{CsLogic, RomType, StmVariant, ServeAlg};
+use sdrr_common::hardware::{HwConfig, list_available_configs};
+use sdrr_common::args::{parse_stm_variant, parse_hw_rev, parse_serve_alg};
 use anyhow::{Context, Result};
 use clap::Parser;
 use preprocessor::RomImage;
-use rom_types::HwRev;
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use tempfile::{NamedTempFile, TempPath};
@@ -25,12 +28,12 @@ use zip::ZipArchive;
 )]
 struct Args {
     /// ROM configuration (file=path,type=2364,cs1=0)
-    #[clap(long, required = true)]
+    #[clap(long, required_unless_present = "list_hw_revs")]
     rom: Vec<String>,
 
     /// STM32 variant (f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc)
-    #[clap(long, value_parser = parse_stm_variant)]
-    stm: StmVariant,
+    #[clap(long, required_unless_present = "list_hw_revs", value_parser = parse_stm_variant)]
+    stm: Option<StmVariant>,
 
     /// Enable SWD
     #[clap(long)]
@@ -52,6 +55,10 @@ struct Args {
     #[clap(long, requires = "boot_logging")]
     main_loop_logging: bool,
 
+    /// Enable main loop one shot
+    #[clap(long, requires = "main_loop_logging")]
+    main_loop_one_shot: bool,
+
     /// Enable debug logging
     #[clap(long, requires = "boot_logging")]
     debug_logging: bool,
@@ -72,9 +79,9 @@ struct Args {
     #[clap(long, conflicts_with = "hsi")]
     hse: bool,
 
-    /// Hardware revision (a, b, c, d, e)
-    #[clap(long, value_parser = parse_hw_rev)]
-    hw_rev: Option<HwRev>,
+    /// Hardware revision (use --list-hw-revs for options)
+    #[clap(long, alias= "hw-rev", value_parser = parse_hw_rev, required_unless_present = "list_hw_revs")]
+    hw: Option<HwConfig>,
 
     /// Target frequency in MHz (default: max for the variant)
     #[clap(long)]
@@ -99,20 +106,14 @@ struct Args {
     /// Automatically answer [y]es to questions
     #[clap(long, short = 'y')]
     yes: bool,
-}
 
-fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
-    StmVariant::from_str(s)
-        .ok_or_else(|| format!("Invalid STM32 variant: {}. Valid values are: f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc", s))
-}
+    /// Byte serving algorithm to choose (default, a = 2 CS 1 Addr, b = Addr on CS)
+    #[clap(long, value_parser = parse_serve_alg)]
+    serve_alg: Option<ServeAlg>,
 
-fn parse_hw_rev(s: &str) -> Result<HwRev, String> {
-    HwRev::from_str(s).ok_or_else(|| {
-        format!(
-            "Invalid hardware revision: {}. Valid values are: a, b, c, d, e",
-            s
-        )
-    })
+    /// List available hardware revisions
+    #[clap(long, default_value = "false")]
+    list_hw_revs: bool,
 }
 
 fn download_url_to_temp(url: &str) -> Result<(PathBuf, TempPath), String> {
@@ -221,11 +222,20 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
     let mut cs2 = None;
     let mut cs3 = None;
     let mut size_handling = SizeHandling::None;
+    let mut set = None;
 
     for pair in s.split(',') {
         let parts: Vec<&str> = pair.split('=').collect();
 
         match parts[0] {
+            "set" => {
+                if parts.len() != 2 {
+                    return Err("Invalid 'set' parameter format - must include set number".to_string());
+                }
+                let set_num: usize = parts[1].parse()
+                    .map_err(|_| format!("Invalid set number: {}", parts[1]))?;
+                set = Some(set_num);
+            }
             "file" => {
                 let original_source = parts[1].to_string();
                 if parts[1].starts_with("http://") || parts[1].starts_with("https://") {
@@ -266,54 +276,36 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
             }
             "cs1" => {
                 if parts.len() != 2 {
-                    return Err(
-                        "Invalid 'cs1' parameter format - must include cs1 value".to_string()
-                    );
+                    return Err("Invalid 'cs1' parameter format - must include cs1 value".to_string());
                 }
                 if cs1.is_some() {
                     return Err("cs1 specified multiple times".to_string());
                 }
-                cs1 = CsLogic::from_u8(
-                    parts[1]
-                        .parse()
-                        .map_err(|_| format!("Invalid cs1 value: {}", parts[1]))?,
-                )
-                .map(Some)
-                .ok_or_else(|| format!("Invalid cs1 value: {}", parts[1]))?
+                cs1 = CsLogic::from_str(parts[1])
+                    .map(Some)
+                    .ok_or_else(|| format!("Invalid cs1 value: {} (use 0, 1, or ignore)", parts[1]))?
             }
             "cs2" => {
                 if parts.len() != 2 {
-                    return Err(
-                        "Invalid 'cs2' parameter format - must include cs2 value".to_string()
-                    );
+                    return Err("Invalid 'cs2' parameter format - must include cs2 value".to_string());
                 }
                 if cs2.is_some() {
                     return Err("cs2 specified multiple times".to_string());
                 }
-                cs2 = CsLogic::from_u8(
-                    parts[1]
-                        .parse()
-                        .map_err(|_| format!("Invalid cs2 value: {}", parts[1]))?,
-                )
-                .map(Some)
-                .ok_or_else(|| format!("Invalid cs2 value: {}", parts[1]))?
+                cs2 = CsLogic::from_str(parts[1])
+                    .map(Some)
+                    .ok_or_else(|| format!("Invalid cs2 value: {} (use 0, 1, or ignore)", parts[1]))?
             }
             "cs3" => {
                 if parts.len() != 2 {
-                    return Err(
-                        "Invalid 'cs3' parameter format - must include cs3 value".to_string()
-                    );
+                    return Err("Invalid 'cs3' parameter format - must include cs3 value".to_string());
                 }
                 if cs3.is_some() {
                     return Err("cs3 specified multiple times".to_string());
                 }
-                cs3 = CsLogic::from_u8(
-                    parts[1]
-                        .parse()
-                        .map_err(|_| format!("Invalid cs3 value: {}", parts[1]))?,
-                )
-                .map(Some)
-                .ok_or_else(|| format!("Invalid cs3 value: {}", parts[1]))?
+                cs3 = CsLogic::from_str(parts[1])
+                    .map(Some)
+                    .ok_or_else(|| format!("Invalid cs3 value: {} (use 0, 1, or ignore)", parts[1]))?
             }
             "dup" => {
                 if parts.len() != 1 {
@@ -365,6 +357,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
             rom_type,
             cs_config: CsConfig::new(cs1, cs2, cs3),
             size_handling,
+            set,
         },
         temp_handles,
     ))
@@ -418,6 +411,20 @@ fn confirm_licences(config: &Config) -> Result<()> {
 fn main() -> Result<()> {
     let args = Args::parse();
 
+    if args.list_hw_revs {
+        // List available hardware revisions
+        let hw_revs = list_available_configs()?;
+        if hw_revs.is_empty() {
+            println!("No hardware revisions found.");
+        } else {
+            println!("Available hardware revisions:");
+            for (name, description) in hw_revs {
+                println!("  {}: {}", name, description);
+            }
+        }
+        return Ok(());
+    }
+
     // Parse ROM configurations
     let mut all_temp_handles = Vec::new();
     let mut roms = Vec::new();
@@ -435,43 +442,45 @@ fn main() -> Result<()> {
     }
 
     // Set the frequency based on the STM32 variant or user input
-    let freq = args.freq.unwrap_or_else(|| {
-        args.stm
-            .processor()
-            .map(|p| p.max_sysclk_mhz())
-            .unwrap_or(64) // Default to 64MHz for F1 variants
-    });
+    let stm_variant = args
+        .stm
+        .expect("Default STM32 variant must be valid");
+    let freq = args
+        .freq
+        .unwrap_or_else(|| stm_variant.processor().max_sysclk_mhz());
 
     // Create configuration
     let mut config = Config {
         roms,
-        stm_variant: args.stm,
+        stm_variant,
         output_dir: args.output,
         swd: args.swd,
         mco: args.mco,
         mco2: args.mco2,
         boot_logging: args.boot_logging,
         main_loop_logging: args.main_loop_logging,
+        main_loop_one_shot: args.main_loop_one_shot,
         debug_logging: args.debug_logging,
         overwrite: args.overwrite,
         hse: args.hse,
-        hw_rev: args.hw_rev,
+        hw: args.hw.unwrap(),
         freq,
         status_led: args.status_led,
         overclock: args.overclock,
         bootloader: args.bootloader,
         preload_to_ram: !args.disable_preload_to_ram,
         auto_yes: args.yes,
+        serve_alg: args.serve_alg.unwrap_or(ServeAlg::Default),
     };
 
-    // Validate configuration
+    // Validate it
     config
         .validate()
         .map_err(|e| anyhow::anyhow!("Configuration error: {}", e))?;
 
     // Validate output directory
     if !config.overwrite && config.output_dir.exists() {
-        for file_name in &["roms.h", "roms.c", "sdrr_config.h"] {
+        for file_name in &["roms.h", "roms.c", "sdrr_config.h", "linker.ld"] {
             let file_path = config.output_dir.join(file_name);
             if file_path.exists() {
                 return Err(anyhow::anyhow!(
@@ -485,7 +494,7 @@ fn main() -> Result<()> {
     // Check and confirm licences before proceeding
     confirm_licences(&config)?;
 
-    // Load and validate ROM files
+    // Load ROM files
     let mut rom_images = Vec::new();
     for (_, rom_config) in config.roms.iter().enumerate() {
         let rom_image = RomImage::load_from_file(
@@ -502,13 +511,18 @@ fn main() -> Result<()> {
         rom_images.push(rom_image);
     }
 
-    println!("Successfully loaded {} ROM file(s)", rom_images.len());
+    // Create ROM sets (no additional validation needed)
+    let rom_sets = config
+        .create_rom_sets(&rom_images)
+        .map_err(|e| anyhow::anyhow!("ROM set creation error: {}", e))?;
+
+    println!("Successfully loaded {} ROM file(s) in {} set(s)", rom_images.len(), rom_sets.len());
 
     // Generate output files
-    generate_files(&config, &rom_images).with_context(|| "Failed to generate output files")?;
+    generate_files(&config, &rom_sets).with_context(|| "Failed to generate output files")?;
 
     println!(
-        "Successfully transformed ROM images and generated output files in {}",
+        "Successfully transformed ROM images and generated output files in `{}/`",
         config.output_dir.display()
     );
 

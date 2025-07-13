@@ -7,90 +7,59 @@
 #include "include.h"
 #include "roms.h"
 
-// Most/all of this is likely unnecessary
-void reset_rcc_registers(void) {
-#if defined(STM32F1)
-    // Can't be bothered to implement for STM32F4 as unnecessary
+uint32_t check_sel_pins(uint32_t *sel_mask) {
+    if (sdrr_info.pins->sel_port != PORT_B) {
+        // sel_mask of 0 means invalid response
+        LOG("!!! Sel port not B - not using");
+        *sel_mask = 0;
+        return 0;
+    }
 
-    // Set RCC_CR to reset value
-    // Retain reserved and read-only bits
-    // Set HSION and default HSI trim value
-    uint32_t rcc_cr = RCC_CR;
-    rcc_cr &= RCC_CR_RSVD_RO_MASK; 
-    rcc_cr |= RCC_CR_HSION | (0x10 << 3);
-    RCC_CR = rcc_cr;
+    // Set the GPIO peripheral clock
+    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN;  // Port B
 
-    // Set RCC_CFGR to reset value
-    // Retain reserved and read-only bits
-    // Set SW to HSI (value 0)
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= RCC_CFGR_RSVD_RO_MASK;
-    RCC_CFGR = rcc_cfgr;
+    // Set sel port mask
+    uint32_t sel_1bit_mask = 0;
+    uint32_t sel_2bit_mask = 0;
+    uint32_t pull_downs = 0;
+    for (int ii = 0; ii < 4; ii++) {
+        uint8_t pin = sdrr_info.pins->sel[ii];
+        if (pin < 255) {
+            // Pin is present, so set the mask
+            if (pin <= 15) {
+                sel_1bit_mask |= 1 << pin;
+                sel_2bit_mask |= (11 << (pin * 2));
+                pull_downs |= (10 << (pin * 2));
+            } else {
+                LOG("!!! Sel pin 15 < %d < 255 - not using", pin);
+            }
+        }
+    }
 
-    // Set RCC_CIR to reset value
-    uint32_t rcc_cir = RCC_CIR;
-    rcc_cir &= RCC_CIR_RSVD_RO_MASK;
-    RCC_CIR = rcc_cir;
+    // Set pins as inputs
+    GPIOB_MODER &= ~sel_2bit_mask;  // Set sel pins as inputs
+    GPIOB_PUPDR &= ~sel_2bit_mask;  // Clear pull-up/down on sel inputs
+    GPIOB_PUPDR |= pull_downs;    // Set pull-down on sel inputs
 
-    // Set RCC_APB2RSTR to reset value
-    uint32_t rcc_apb2rstr = RCC_APB2RSTR;
-    rcc_apb2rstr &= RCC_APB2RSTR_RSVD_RO_MASK;
-    RCC_APB2RSTR = rcc_apb2rstr;
+    // Add short delay to allow GPIOB to allow the pull-downs to settle.
+    for(volatile int i = 0; i < 10; i++);
 
-    // Set RCC_APB1RSTR to reset value
-    uint32_t rcc_apb1rstr = RCC_APB1RSTR;
-    rcc_apb1rstr &= RCC_APB1RSTR_RSVD_RO_MASK;
-    RCC_APB1RSTR = rcc_apb1rstr;
+    // Read pins
+    uint32_t pins = GPIOB_IDR;
 
-    // Set RCC_AHBENR to reset value
-    uint32_t rcc_ahbenr = RCC_AHBENR;
-    rcc_ahbenr &= RCC_AHBENR_RSVD_RO_MASK;
-    rcc_ahbenr |= (1 << 4);  // FLITF clock enabled during sleep mode
-    RCC_AHBENR = rcc_ahbenr;
+    // Disable peripheral clock for port again.
+    RCC_AHB1ENR &= ~RCC_AHB1ENR_GPIOBEN;
 
-    // Set RCC_APB2ENR to reset value
-    uint32_t rcc_apb2enr = RCC_APB2ENR;
-    rcc_apb2enr &= RCC_APB2ENR_RSVD_RO_MASK;
-    RCC_APB2ENR = rcc_apb2enr;
-
-    // Set RCC_APB1ENR to reset value
-    uint32_t rcc_apb1enr = RCC_APB1ENR;
-    rcc_apb1enr &= RCC_APB1ENR_RSVD_RO_MASK;
-    RCC_APB1ENR = rcc_apb1enr;
-
-    // Set RCC_BDCR to reset value
-    uint32_t rcc_bdcr = RCC_BDCR;
-    rcc_bdcr &= RCC_BDCR_RSVD_RO_MASK;
-    RCC_BDCR = rcc_bdcr;
-#endif // STM32F1
+    // Return sel_mask as well as the value of the pins
+    *sel_mask = sel_1bit_mask;
+    return (pins & sel_1bit_mask);
 }
-
-// May be unnecessary
-#if defined(STM32F1)
-void reset_afio_registers(void) {
-    uint32_t afio_mapr = AFIO_MAPR;
-    afio_mapr &= AFIO_MAPR_RSVD_RO_MASK;
-    AFIO_MAPR = afio_mapr;
-}
-#endif // STM32F1
 
 // Sets up the MCO (clock output) on PA8, to the value provided
-#if defined(MCO)
 void setup_mco(uint8_t mco) {
     // Enable GPIOA clock
-#if defined(STM32F1)
-    RCC_APB2ENR |= (1 << 2);
-#elif defined(STM32F4)
     RCC_AHB1ENR |= (1 << 0);
-#endif // STM32F1/4
 
-#if defined(STM32F1)
-    // Configure PA8 as output (MODE=11, CNF=00)
-    uint32_t gpioa_crh = GPIOA_CRH;
-    gpioa_crh &= ~(0b1111 << 0);  // Clear CND and MODE bits for PA8
-    gpioa_crh |= (0b1011 << 0);   // Set as AF 50MHz push-pull
-    GPIOA_CRH = gpioa_crh;
-#elif defined(STM32F4)
     uint32_t gpioa_moder = GPIOA_MODER;
     gpioa_moder &= ~(0b11 << (8 * 2));  // Clear bits for PA8
     gpioa_moder |= (0b10 << (8 * 2));   // Set as AF
@@ -106,14 +75,9 @@ void setup_mco(uint8_t mco) {
     GPIOC_OSPEEDR |= (0b11 << (9 * 2));  // Set speed to very high speed
     GPIOC_OTYPER &= ~(0b1 << 9);  // Set as push-pull
 #endif // MCO2
-#endif // STM32F1/4
 
     // Set MCO bits in RCC_CFGR
     uint32_t rcc_cfgr = RCC_CFGR;
-#if defined(STM32F1)
-    rcc_cfgr &= ~RCC_CFGR_MCO_MASK;  // Clear MCO bits
-    rcc_cfgr |= ((mco & 0b111) << 24);  // Set MCO bits
-#elif defined(STM32F4)
     rcc_cfgr &= ~RCC_CFGR_MCO1_MASK;  // Clear MCO1 bits
     rcc_cfgr |= ((mco & 0b11) << 21);  // Set MCO1 bits for PLL
     if ((mco & 0b11) == RCC_CFGR_MCO1_PLL) {
@@ -128,19 +92,9 @@ void setup_mco(uint8_t mco) {
     rcc_cfgr &= ~(0b111 << 27); // Clear MCO7 pre-scaler bits
     rcc_cfgr |= (0b110 << 27);  // Set MCO7 pre-scaler to /4
 #endif // MCO2
-#endif // STM32F4
     RCC_CFGR = rcc_cfgr;
 
     // Check MCO configuration in RCC_CFGR
-#if defined(STM32F1)
-    while(1) {
-        uint32_t cfgr = RCC_CFGR;
-        uint32_t mco_bits = (cfgr >> 24) & 0b111;
-        if (mco_bits == (mco & 0b111)) {
-            break;  // MCO1 set to PLL
-        }
-    }
-#elif defined(STM32F4)    
     while(1) {
         uint32_t cfgr = RCC_CFGR;
         uint32_t mco1_bits = (cfgr >> 21) & 0b11;
@@ -148,21 +102,8 @@ void setup_mco(uint8_t mco) {
             break;  // MCO1 set to PLL
         }
     }
-#endif // STM32F1/4
 }
-#endif // MCO
 
-#if defined(STM32F1)
-// Sets up the PLL multiplier to the value provided
-void setup_pll_mul(uint8_t mul) {
-    // Set PLL multiplier in RCC_CFGR
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= ~RCC_CFGR_PLLMULL_MASK;  // Clear PLLMUL bits
-    rcc_cfgr |= ((mul & 0b1111) << 18);  // Set PLLMUL bits
-    RCC_CFGR = rcc_cfgr;
-}
-#endif // STM32F1
-#if defined(STM32F4)
 // Sets up the PLL dividers/multiplier to the values provided
 void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q) {
     // Set PLL multiplier in RCC_PLLCFGR
@@ -184,36 +125,15 @@ void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q) {
     LOG("Configured PLL MNPQ: %d/%d/%d/%d", actual_m, actual_n, actual_p, actual_q);
 #endif // BOOT_LOGGING
 }
-#endif // STM32F4
 
 // Sets up the PLL source to the value provided
 void setup_pll_src(uint8_t src) {
-#if defined(STM32F1)
-    // Set PLL source in RCC_CFGR
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= ~RCC_CFGR_PLLSRC;  // Clear PLLSRC bit
-    rcc_cfgr |= (src & 1) << 16;  // Set PLLSRC bit
-    RCC_CFGR = rcc_cfgr;
-#elif defined(STM32F4)
     // Set PLL source in RCC_PLLCFGR
     uint32_t rcc_pllcfgr = RCC_PLLCFGR;
     rcc_pllcfgr &= ~RCC_PLLCFGR_PLLSRC_MASK;  // Clear PLLSRC bit
     rcc_pllcfgr |= (src & 1) << 22;  // Set PLLSRC bit
     RCC_PLLCFGR = rcc_pllcfgr;
-#endif // STM32F4
 }
-
-#if defined(STM32F1)
-// Sets up the PLL XTPRE to the value provided - this is the HSE divider
-// for the PLL input clock
-void setup_pll_xtpre(uint8_t xtpre) {
-    // Set PLL XTPRE in RCC_CFGR
-    uint32_t rcc_cfgr = RCC_CFGR;
-    rcc_cfgr &= ~RCC_CFGR_PLLXTPRE_MASK;  // Clear PLLXTPRE bit
-    rcc_cfgr |= (xtpre & 0b1) << 17;  // Set PLLXTPRE bit
-    RCC_CFGR = rcc_cfgr;
-}
-#endif // STM32F1
 
 // Enables the PLL and waits for it to be ready
 void enable_pll(void) {
@@ -287,39 +207,29 @@ void set_bus_clks(void) {
 // switching to the PLL as we're running from flash.  Also enable the prefetch
 // buffer.
 void set_flash_ws(void) {
-    uint8_t wait_states;
-#ifdef STM32F1
-#if TARGET_FREQ_MHZ <= 24
-    wait_states = 0;
-#elif TARGET_FREQ_MHZ <= 48
-    wait_states = 1;
-#elif TARGET_FREQ_MHZ <= 72
-    wait_states = 2;
-#else
-#error "Unsupported frequency for STM32F1"
-#endif // TARGET_FREQ_MHZ
-    FLASH_ACR = FLASH_ACR_PRFTBE;
-#elif defined(STM32F4)
+    uint8_t wait_states = 0;
+
     // Set data and instruction caches
     FLASH_ACR = FLASH_ACR_PRFTEN | FLASH_ACR_ICEN | FLASH_ACR_DCEN;
-#if TARGET_FREQ_MHZ <= 30
-    wait_states = 0;
-#elif TARGET_FREQ_MHZ <= 60
-    wait_states = 1;
-#elif TARGET_FREQ_MHZ <= 90
-    wait_states = 2;
-#elif TARGET_FREQ_MHZ <= 120
-    wait_states = 3;
-#elif TARGET_FREQ_MHZ <= 150
-    wait_states = 4;
-#elif TARGET_FREQ_MHZ <= 180
-    wait_states = 5;
-#elif TARGET_FREQ_MHZ <= 210
-    wait_states = 6;
-#else
-#error "Unsupported frequency for STM32F4"
-#endif // TARGET_FREQ_MHZ
-#endif // STM32F1/4
+    if (sdrr_info.freq > 30) {
+        if (sdrr_info.freq <= 60) {
+            wait_states = 1;
+        } else if (sdrr_info.freq <= 90) {
+            wait_states = 2;
+        } else if (sdrr_info.freq <= 120) {
+            wait_states = 3;
+        } else if (sdrr_info.freq <= 150) {
+            wait_states = 4;
+        } else if (sdrr_info.freq <= 180) {
+            wait_states = 5;
+        } else if (sdrr_info.freq <= 210) {
+            wait_states = 6;
+        } else if (sdrr_info.freq <= 240) {
+            wait_states = 7;
+        } else if (sdrr_info.freq <= 270) {
+            wait_states = 8;
+        }
+    }
     FLASH_ACR &= ~FLASH_ACR_LATENCY_MASK;  // Clear latency bits
     FLASH_ACR |= wait_states & FLASH_ACR_LATENCY_MASK;  // Set wait states
 
@@ -334,19 +244,6 @@ void set_flash_ws(void) {
 //
 
 #if defined(BOOT_LOGGING)
-const char *get_cs_str(sdrr_cs_state_t cs) {
-    switch (cs) {
-        case CS_ACTIVE_LOW:
-            return cs_low;
-        case CS_ACTIVE_HIGH:
-            return cs_high;
-        case CS_NOT_USED:
-            return cs_na;
-        default:
-            return unknown;
-    }
-}
-
 // Linker variables, used by log_init()
 extern uint32_t _flash_start;
 extern uint32_t _flash_end;
@@ -355,38 +252,25 @@ extern uint32_t _ram_size;
 // Logging function to output various debug information via RTT
 void log_init(void) {
     LOG("%s", log_divider);
-    LOG("%s v%s - %s", product, version, project_url);
+    LOG("%s v%d.%d.%d (build %d) - %s", product, sdrr_info.major_version, sdrr_info.minor_version, sdrr_info.patch_version, sdrr_info.build_number, project_url);
     LOG("%s %s", copyright, author);
-    LOG("Build date: %s", build_date);
+    LOG("Build date: %s", sdrr_info.build_date);
+    LOG("Git commit: %s", sdrr_info.commit);
 
     LOG("%s", log_divider);
     LOG("Hardware info ...");
     LOG("STM32%s", stm_variant);
-    char hw_rev;
-#if defined(HW_REV_A)
-    hw_rev = 'A';
-#elif defined(HW_REV_B)
-    hw_rev = 'B';
-#elif defined(HW_REV_C)
-    hw_rev = 'C';
-#elif defined(HW_REV_D)
-    hw_rev = 'D';
-#elif defined(HW_REV_E)
-    hw_rev = 'E';
-#else
-#error "Unknown hardware revision"
-#endif // HW_REV_A/B/C/D/E
-    LOG("PCB rev %c", hw_rev);
+    LOG("PCB rev %s", sdrr_info.hw_rev);
     uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
     uint32_t flash_kb = flash_bytes / 1024;
     if (flash_bytes % 1024 != 0) {
         flash_kb += 1;
     }
 #if !defined(DEBUG_LOGGING)
-    LOG("%s size: %dKB", flash, STM_FLASH_SIZE / 1024);
+    LOG("%s size: %dKB", flash, STM_FLASH_SIZE_KB);
     LOG("%s used: %dKB", flash, flash_kb);
 #else // DEBUG_LOGGING
-    LOG("%s size: %dKB (%d bytes)", flash, STM_FLASH_SIZE / 1024, STM_FLASH_SIZE);
+    LOG("%s size: %dKB (%d bytes)", flash, STM_FLASH_SIZE_KB, STM_FLASH_SIZE);
     LOG("%s used: %dKB %d bytes", flash, flash_kb, flash_bytes);
 #endif
 
@@ -398,71 +282,92 @@ void log_init(void) {
     LOG("RAM: %dKB (%d bytes)", ram_size_kb, ram_size_bytes);
 #endif
 
-#if defined(USE_PLL)
     LOG("Target freq: %dMHz", TARGET_FREQ_MHZ);
-#endif // USE_PLL
-#if defined(HSI)
     LOG("%s: HSI", oscillator);
 #if defined(HSI_TRIM)
     LOG("HSI Trim: 0x%X", HSI_TRIM);
 #endif // HSI_TRIM
-#if defined(USE_PLL)
-#if defined(STM32F1)
-    LOG("PLLx: %d", HSI_PLL);
-#elif defined(STM32F4)
     LOG("PLL MNPQ: %d/%d/%d/%d", PLL_M, PLL_N, PLL_P, PLL_Q);
-#endif // STM32F1/4
-#endif // USE_PLL
-#endif // HSI
-#if defined(HSE)
-    LOG("%s: HSE", oscillator);
-#if defined(USE_PLL)
-    LOG("PLLx: %d", HSE_PLL);
-#endif // USE_PLL
-#endif // HSE
-#if defined(MCO)
-    LOG("MCO: %s - PA8", enabled);
+    if (sdrr_info.mco_enabled) {
+        LOG("MCO: enabled - PA8");
+    } else {
+        LOG("MCO: disabled");
+    }
 #if defined(MCO2)
     LOG("MCO2: %s - PC9", enabled);
 #endif // MCO2
-#else // !MCO
-    LOG("MCO: %s", disabled);
-#endif // MCO
-#if !defined(NO_BOOTLOADER)
-    LOG("%s %s", stm32_bootloader_mode, enabled);
-#else // NO_BOOTLOADER
-    LOG("%s %s", stm32_bootloader_mode, disabled);
-#endif // NO_BOOTLOADER
+    if (sdrr_info.bootloader_capable) {
+        LOG("Bootloader: %s", enabled);
+    } else {
+        LOG("Bootloader: %s", disabled);
+    }
+
+    // Port assignments
+    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
+
 
     LOG("%s", log_divider);
-    LOG("Firmware info ...");
-    LOG("# of ROM images: %d", SDRR_NUM_IMAGES);
-    for (uint8_t ii = 0; ii < SDRR_NUM_IMAGES; ii++) {
-        const char *rom_type_str;
-        switch (sdrr_rom_info[ii].rom_type) {
-            case ROM_TYPE_2364:
-                rom_type_str = r2364;
-                break;
-            case ROM_TYPE_2332:
-                rom_type_str = r2332;
-                break;
-            case ROM_TYPE_2316:
-                rom_type_str = r2316;
-                break;
-            default:
-                rom_type_str = unknown;
-                break;
+    LOG("Pin Configuration ...");
+    
+    
+    LOG("ROM emulation: %d pin ROM", sdrr_info.pins->rom_pins);
+    
+    // Data pins
+    LOG("Data pins D[0-7]: P%s%d,%d,%d,%d,%d,%d,%d,%d", 
+        port_names[sdrr_info.pins->data_port],
+        sdrr_info.pins->data[0], sdrr_info.pins->data[1], sdrr_info.pins->data[2], sdrr_info.pins->data[3],
+        sdrr_info.pins->data[4], sdrr_info.pins->data[5], sdrr_info.pins->data[6], sdrr_info.pins->data[7]);
+    
+    // Address pins
+    LOG("Addr pins A[0-15]: P%s%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", 
+        port_names[sdrr_info.pins->addr_port],
+        sdrr_info.pins->addr[0], sdrr_info.pins->addr[1], sdrr_info.pins->addr[2], sdrr_info.pins->addr[3],
+        sdrr_info.pins->addr[4], sdrr_info.pins->addr[5], sdrr_info.pins->addr[6], sdrr_info.pins->addr[7],
+        sdrr_info.pins->addr[8], sdrr_info.pins->addr[9], sdrr_info.pins->addr[10], sdrr_info.pins->addr[11],
+        sdrr_info.pins->addr[12], sdrr_info.pins->addr[13], sdrr_info.pins->addr[14], sdrr_info.pins->addr[15]);
+    
+    // Chip select pins
+    LOG("CS pins - 2364: P%s%d 2332: P%s%d,%d 2316: P%s%d,%d,%d X1: P%s%d X2: P%s%d", 
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2364,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2332, sdrr_info.pins->cs2_2332,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2316, sdrr_info.pins->cs2_2316, sdrr_info.pins->cs3_2316,
+        port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x1, port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x2);
+    
+    // Select and status pins
+    LOG("Sel pins: P%s%d,%d,%d,%d", port_names[sdrr_info.pins->sel_port], 
+        sdrr_info.pins->sel[0], sdrr_info.pins->sel[1], 
+        sdrr_info.pins->sel[2], sdrr_info.pins->sel[3]);
+    LOG("Status pin: P%s%d", port_names[sdrr_info.pins->status_port], sdrr_info.pins->status);
+
+    LOG("%s", log_divider);
+    LOG("ROM info ...");
+    LOG("# of ROM sets: %d", sdrr_rom_set_count);
+    for (uint8_t ii = 0; ii < sdrr_rom_set_count; ii++) {
+        LOG("Set #%d: %d ROM(s), size: %d bytes", ii, rom_set[ii].rom_count, rom_set[ii].size);
+        
+        for (uint8_t jj = 0; jj < rom_set[ii].rom_count; jj++) {
+            const char *rom_type_str;
+            const sdrr_rom_info_t *rom = rom_set[ii].roms[jj];
+            switch (rom->rom_type) {
+                case ROM_TYPE_2364:
+                    rom_type_str = r2364;
+                    break;
+                case ROM_TYPE_2332:
+                    rom_type_str = r2332;
+                    break;
+                case ROM_TYPE_2316:
+                    rom_type_str = r2316;
+                    break;
+                default:
+                    rom_type_str = unknown;
+                    break;
+            }
+
+            LOG("  ROM #%d: %s, %s, CS1: %s, CS2: %s, CS3: %s",
+                jj, rom->filename,
+                rom_type_str,
+                cs_values[rom->cs1_state], cs_values[rom->cs2_state], cs_values[rom->cs3_state]);
         }
-
-        const char *cs1_state_str = get_cs_str(sdrr_rom_info[ii].cs1_state);
-        const char *cs2_state_str = get_cs_str(sdrr_rom_info[ii].cs2_state); 
-        const char *cs3_state_str = get_cs_str(sdrr_rom_info[ii].cs3_state);
-
-#if !defined(DEBUG_LOGGING)
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", ii, sdrr_rom_info[ii].filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
-#else // DEBUG_LOGGING
-        LOG("#%d: %s, %s, CS1: %s, CS2: %s, CS3: %s, size: %d bytes", ii, sdrr_rom_info[ii].filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str, sdrr_rom_info[ii].size);
-#endif // DEBUG_LOGGING
     }
 
 #if !defined(EXECUTE_FROM_RAM)
@@ -511,19 +416,26 @@ void execute_ram_func(uint32_t ram_addr) {
 
 // Common setup for stauts LED output using PB15 (inverted logic: 0=on, 1=off)
 void setup_status_led(void) {
-#if defined(STM32F4)
-#if defined(STATUS_LED)
-    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN; // Enable GPIOB clock
-    
-    GPIOB_MODER &= ~(0x3 << (15 * 2));  // Clear bits for PB15
-    GPIOB_MODER |= (0x1 << (15 * 2));   // Set as output
-    GPIOB_OSPEEDR |= (0x3 << (15 * 2)); // Set speed to high speed
-    GPIOB_OTYPER &= ~(0x1 << 15);       // Set as push-pull
-    GPIOB_PUPDR &= ~(0x3 << (15 * 2));  // No pull-up/down
-    
-    GPIOB_BSRR = (1 << 15); // Start with LED off (PB15 high)
-#endif // STATUS_LED
-#endif // STM32F4
+    if (sdrr_info.pins->status_port != PORT_B) {
+        LOG("!!! Status port not B - not using");
+        return;
+    }
+    if (sdrr_info.pins->status > 15) {
+        LOG("!!! Status pin %d > 15 - not using", sdrr_info.pins->status);
+        return;
+    }
+    if (sdrr_info.status_led_enabled) {
+        RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN; // Enable GPIOB clock
+        
+        uint8_t pin = sdrr_info.pins->status;
+        GPIOB_MODER &= ~(0x3 << (pin * 2));  // Clear bits for PB15
+        GPIOB_MODER |= (0x1 << (pin * 2));   // Set as output
+        GPIOB_OSPEEDR |= (0x3 << (pin * 2)); // Set speed to high speed
+        GPIOB_OTYPER &= ~(0x1 << pin);       // Set as push-pull
+        GPIOB_PUPDR &= ~(0x3 << (pin * 2));  // No pull-up/down
+        
+        GPIOB_BSRR = (1 << pin); // Start with LED off (PB15 high)
+    }
 }
 
 // Simple delay function
@@ -533,16 +445,13 @@ void delay(volatile uint32_t count) {
 
 // Blink pattern: on_time, off_time, repeat_count
 void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
-#if defined(STATUS_LED)
-    for(uint8_t i = 0; i < repeats; i++) {
-        GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-        delay(on_time);
-        GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
-        delay(off_time);
+    if (sdrr_info.status_led_enabled && sdrr_info.pins->status_port == PORT_B && sdrr_info.pins->status <= 15) {
+        uint8_t pin = sdrr_info.pins->status;
+        for(uint8_t i = 0; i < repeats; i++) {
+            GPIOB_BSRR = (1 << (pin + 16)); // LED on (PB15 low)
+            delay(on_time);
+            GPIOB_BSRR = (1 << pin);        // LED off (PB15 high)
+            delay(off_time);
+        }
     }
-#else // !STATUS_LED
-    (void)on_time;
-    (void)off_time;
-    (void)repeats;
-#endif // STATUS_LED
 }

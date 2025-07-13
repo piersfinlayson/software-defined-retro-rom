@@ -1,14 +1,17 @@
-// src/generator.rs
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
 use crate::config::Config;
-use crate::preprocessor::RomImage;
-use crate::rom_types::{CsLogic, StmFamily};
+use sdrr_common::sdrr_types::{CsLogic, RomType};
+use crate::preprocessor::RomSet;
 use anyhow::{Context, Result};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
 // Generate all output files
-pub fn generate_files(config: &Config, rom_images: &[RomImage]) -> Result<()> {
+pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
     // Create output directory if it doesn't exist
     if !config.output_dir.exists() {
         fs::create_dir_all(&config.output_dir).with_context(|| {
@@ -20,23 +23,31 @@ pub fn generate_files(config: &Config, rom_images: &[RomImage]) -> Result<()> {
     }
 
     // Generate roms.h
-    generate_roms_header_file(config, rom_images)?;
+    generate_roms_header_file(config, rom_sets)?;
 
     // Generate roms.c
-    generate_roms_implementation_file(config, rom_images)?;
+    generate_roms_implementation_file(config, rom_sets)?;
 
     // Generate sdrr_config.h
     generate_sdrr_config_header(config)?;
 
+    // Generate sdrr_config.c
+    generate_sdrr_config_implementation(config, rom_sets)?;
+
     // Generate Makefile fragment
     generate_makefile_fragment(config)?;
+
+    // Generate linker script
+    generate_linker_script(config)?;
 
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FileType {
     C,
     Makefile,
+    Linker,
 }
 
 fn create_file(output_dir: &PathBuf, filename: &str, filetype: FileType) -> Result<fs::File> {
@@ -53,7 +64,11 @@ fn write_header(name: &str, file: &mut fs::File, filetype: FileType) -> Result<(
     let comment = match filetype {
         FileType::C => "//",
         FileType::Makefile => "#",
+        FileType::Linker => "",
     };
+    if filetype == FileType::Linker {
+        writeln!(file, "/*")?;
+    }
     writeln!(file, "{comment} {}", name)?;
     writeln!(file)?;
     writeln!(
@@ -80,13 +95,16 @@ fn write_header(name: &str, file: &mut fs::File, filetype: FileType) -> Result<(
         file,
         "{comment} of the Makefile in the repostiory root and running `make` from there."
     )?;
+    if filetype == FileType::Linker {
+        writeln!(file, "*/")?;
+    }
     writeln!(file)?;
 
     Ok(())
 }
 
 // Generate roms.h header file
-fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result<()> {
+fn generate_roms_header_file(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
     const FILENAME: &str = "roms.h";
     let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
 
@@ -95,48 +113,15 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
     writeln!(file)?;
     writeln!(file, "#include <stdint.h>")?;
     writeln!(file)?;
-    writeln!(file, "// Number of ROM images")?;
-    writeln!(file, "#define SDRR_NUM_IMAGES {}", rom_images.len())?;
+    writeln!(file, "// Number of ROM images and sets")?;
+    writeln!(file, "#define SDRR_NUM_IMAGES  {}", config.roms.len())?;
+    writeln!(file, "#define SDRR_NUM_SETS    {}", rom_sets.len())?;
     writeln!(file)?;
 
-    // Generate individual ROM size defines
-    writeln!(
-        file,
-        "// Individual ROM sizes (generated based on actual ROM types)"
-    )?;
-    let family = config.stm_variant.family();
-    for (i, rom_config) in config.roms.iter().enumerate() {
-        let size = match family {
-            StmFamily::F1 => format!("{}", rom_config.rom_type.size_bytes()),
-            StmFamily::F4 => "ROM_IMAGE_SIZE".to_string(),
-        };
-        writeln!(
-            file,
-            "#define ROM_{}_SIZE {}   // {} type",
-            i,
-            size,
-            rom_config.rom_type.name()
-        )?;
-    }
-    writeln!(file)?;
-
-    // ROM information array
-    writeln!(file, "// ROM information array")?;
-    writeln!(
-        file,
-        "extern const sdrr_rom_info_t sdrr_rom_info[SDRR_NUM_IMAGES];"
-    )?;
-    writeln!(file)?;
-
-    // Individual ROM data arrays
-    writeln!(file, "// Individual ROM data arrays")?;
-    for i in 0..config.roms.len() {
-        writeln!(
-            file,
-            "extern const uint8_t sdrr_rom_{}_data[ROM_{}_SIZE];",
-            i, i
-        )?;
-    }
+    // ROM set array
+    writeln!(file, "// ROM set array")?;
+    writeln!(file, "extern const uint8_t sdrr_rom_set_count;")?;
+    writeln!(file, "extern const sdrr_rom_set_t rom_set[SDRR_NUM_SETS];")?;
     writeln!(file)?;
 
     writeln!(file, "#endif // SDRR_ROMS_H")?;
@@ -145,7 +130,7 @@ fn generate_roms_header_file(config: &Config, rom_images: &[RomImage]) -> Result
 }
 
 // Generate roms.c implementation file
-fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -> Result<()> {
+fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
     const FILENAME: &str = "roms.c";
     let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
 
@@ -153,8 +138,6 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "#include \"config_base.h\"")?;
     writeln!(file, "#include \"roms.h\"")?;
     writeln!(file)?;
-
-    let family = config.stm_variant.family();
 
     // Generate filename strings (debug only)
     writeln!(file, "// ROM filenames (BOOT_LOGGING only)")?;
@@ -177,27 +160,35 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
     writeln!(file, "#endif // BOOT_LOGGING")?;
     writeln!(file)?;
 
-    // Generate ROM information array
-    writeln!(file, "// ROM information array")?;
-    writeln!(
-        file,
-        "const sdrr_rom_info_t sdrr_rom_info[SDRR_NUM_IMAGES] = {{"
-    )?;
-
     // Helper function to convert CsLogic to enum string
     let cs_logic_to_enum = |cs_logic: CsLogic| -> &'static str {
         match cs_logic {
             CsLogic::ActiveLow => "CS_ACTIVE_LOW",
             CsLogic::ActiveHigh => "CS_ACTIVE_HIGH",
+            CsLogic::Ignore => "CS_NOT_USED",
         }
     };
 
-    for (i, rom_config) in config.roms.iter().enumerate() {
-        let rom_type_enum = match rom_config.rom_type {
-            crate::rom_types::RomType::Rom2316 => "ROM_TYPE_2316",
-            crate::rom_types::RomType::Rom2332 => "ROM_TYPE_2332",
-            crate::rom_types::RomType::Rom2364 => "ROM_TYPE_2364",
-        };
+    writeln!(
+        file,
+        "// All objects are static, except for the rom_set array.  This is the only"
+    )?;
+    writeln!(
+        file,
+        "// object which should be directly accessed by the rest of the code."
+    )?;
+    writeln!(file)?;
+
+    // Generate ROM information array
+    writeln!(file, "//")?;
+    writeln!(file, "// ROM info")?;
+    writeln!(file, "//")?;
+    writeln!(file)?;
+
+    for (ii, rom_config) in config.roms.iter().enumerate() {
+        writeln!(file, "// ROM {}", ii)?;
+
+        writeln!(file, "static const sdrr_rom_info_t rom_{}_info = {{", ii)?;
 
         let cs1_state = cs_logic_to_enum(rom_config.cs_config.cs1);
         let cs2_state = rom_config
@@ -211,55 +202,160 @@ fn generate_roms_implementation_file(config: &Config, rom_images: &[RomImage]) -
             .map(cs_logic_to_enum)
             .unwrap_or("CS_NOT_USED");
 
-        writeln!(file, "    {{")?;
-        writeln!(file, "        .data = sdrr_rom_{}_data,", i)?;
-        writeln!(file, "        .size = ROM_{}_SIZE,", i)?;
-        writeln!(file, "        .rom_type = {},", rom_type_enum)?;
-        writeln!(file, "        .cs1_state = {},", cs1_state)?;
-        writeln!(file, "        .cs2_state = {},", cs2_state)?;
-        writeln!(file, "        .cs3_state = {},", cs3_state)?;
+        writeln!(file, "    .rom_type = {},", rom_config.rom_type.c_enum())?;
+        writeln!(file, "    .cs1_state = {},", cs1_state)?;
+        writeln!(file, "    .cs2_state = {},", cs2_state)?;
+        writeln!(file, "    .cs3_state = {},", cs3_state)?;
         writeln!(file, "#if defined(BOOT_LOGGING)")?;
-        writeln!(file, "        .filename = sdrr_rom_{}_filename,", i)?;
+        writeln!(file, "    .filename = sdrr_rom_{}_filename,", ii)?;
         writeln!(file, "#endif // BOOT_LOGGING")?;
-        writeln!(file, "        .serve = SERVE_ORIG,")?;
-        if i == config.roms.len() - 1 {
-            writeln!(file, "    }}")?;
+        writeln!(file, "}};")?;
+        writeln!(file)?;
+    }
+
+    // Add array of pointers for each ROM set, where there is a 1:1 mapping
+    // between the ROMs and rom sets
+    writeln!(file, "//")?;
+    writeln!(file, "// ROM set definitions")?;
+    writeln!(file, "//")?;
+    writeln!(file)?;
+
+    for rom_set in rom_sets {
+        let ii = rom_set.id;
+        writeln!(file, "// ROM set {}", ii)?;
+        let num_roms = rom_set.roms.len();
+        writeln!(file, "#define ROM_SET_{}_ROM_COUNT  {}", ii, num_roms)?;
+        if num_roms == 1 {
+            writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE", ii)?;
         } else {
-            writeln!(file, "    }},")?;
+            writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_SET_IMAGE_SIZE", ii)?;
         }
+        writeln!(
+            file,
+            "static const uint8_t rom_set_{}_data[];  // Forward declaration",
+            ii
+        )?;
+        writeln!(
+            file,
+            "static const sdrr_rom_info_t * const rom_set_{}_roms[] = {{",
+            ii
+        )?;
+        for rom_in_set in &rom_set.roms {
+            writeln!(file, "    &rom_{}_info,", rom_in_set.original_index)?;
+        }
+        writeln!(file, "}};")?;
+        writeln!(file)?;
+    }
+
+    // Create the ROM sets
+    writeln!(file, "//")?;
+    writeln!(file, "// ROM set array")?;
+    writeln!(file, "//")?;
+    writeln!(file, "const uint8_t sdrr_rom_set_count = SDRR_NUM_SETS;")?;
+    writeln!(file, "const sdrr_rom_set_t rom_set[SDRR_NUM_SETS] = {{")?;
+
+    for rom_set in rom_sets {
+        let ii = rom_set.id;
+        let num_roms = rom_set.roms.len();
+        let serve_alg = if num_roms == 1 {
+            config.serve_alg.c_value()
+        } else {
+            config.serve_alg.c_value_multi_rom_set()
+        };
+        writeln!(file, "    {{")?;
+        writeln!(file, "        .data = rom_set_{}_data,", ii)?;
+        writeln!(file, "        .size = ROM_SET_{}_DATA_SIZE,", ii)?;
+        writeln!(file, "        .roms = rom_set_{}_roms,", ii)?;
+        writeln!(file, "        .rom_count = ROM_SET_{}_ROM_COUNT,", ii)?;
+        writeln!(file, "        .serve = {},", serve_alg)?;
+        let set_cs_state = if num_roms == 1 {
+            "CS_NOT_USED"
+        } else {
+            // Check that every ROM in this set has the same CS1 configuration
+            if rom_set.roms.iter().any(|rom| rom.config.cs_config.cs1 != rom_set.roms[0].config.cs_config.cs1) {
+                return Err(anyhow::anyhow!(
+                    "All ROMs in a multi-ROM set must have the same CS1 configuration"
+                ));
+            }
+
+            // Check that every ROM in this set has CS2 and CS3 ignored.
+            if rom_set.roms.iter().any(|rom| {
+                rom.config.cs_config.cs2.is_some_and(|cs| cs != CsLogic::Ignore) ||
+                rom.config.cs_config.cs3.is_some_and(|cs| cs != CsLogic::Ignore)
+            }) {
+                return Err(anyhow::anyhow!(
+                    "All ROMs in a multi-ROM set must have CS2 and CS3 ignored or not present"
+                ));
+            }
+
+            // Use the CS1 state from any ROM image, as they must be the same
+            cs_logic_to_enum(rom_set.roms[0].config.cs_config.cs1)
+
+        };
+        writeln!(file, "        .multi_rom_cs1_state = {},", set_cs_state)?;
+        writeln!(file, "    }},")?;
     }
 
     writeln!(file, "}};")?;
     writeln!(file)?;
 
-    // Generate individual ROM data arrays
-    for (i, (rom_config, rom)) in config.roms.iter().zip(rom_images.iter()).enumerate() {
-        writeln!(file, "// ROM image {} ({})", i, rom_config.rom_type.name())?;
-        writeln!(
-            file,
-            "const uint8_t sdrr_rom_{}_data[ROM_{}_SIZE] = {{",
-            i, i
-        )?;
-
-        let rom_len = match family {
-            StmFamily::F1 => rom_config.rom_type.size_bytes(),
-            StmFamily::F4 => 16384,
+    // Generate ROM set data arrays
+    let hw = &config.hw;
+    for rom_set in rom_sets {
+        // Determine image size based on number of ROMs in the set
+        let image_size = if rom_set.roms.len() == 1 {
+            16384
+        } else {
+            65536
         };
+        let ii = rom_set.id;
 
-        for j in 0..rom_len {
-            // 16 bytes per line
-            if j % 16 == 0 {
-                if j > 0 {
+        writeln!(file, "// ROM set {} data", rom_set.id)?;
+        writeln!(file, "static const uint8_t rom_set_{}_data[ROM_SET_{}_DATA_SIZE] = {{", ii, ii)?;
+
+        fn format_binary_spaced(num: impl std::fmt::Binary, width: usize) -> String {
+            let binary = format!("{:0width$b}", num, width = width);
+            binary
+                .chars()
+                .collect::<Vec<_>>()
+                .chunks(4)
+                .map(|chunk| chunk.iter().collect::<String>())
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+
+        for address in 0..image_size {
+            if address % 256 == 0 {
+                // Comment address every 256 bytes
+                if address > 0 {
+                    writeln!(file)?;
                     writeln!(file)?;
                 }
+
+                // Output address in hex and binary
+                writeln!(file, "    // Address 0x{:04x}, {}", address, format_binary_spaced(address, 16))?;
+                if rom_set.roms.len() > 1 {
+                    writeln!(
+                        file,
+                        "    // CS1 = {}, X1 = {}, X2 = {}",
+                        if (address & (1 << 10)) != 0 { 1 } else { 0 },
+                        if (address & (1 << 14)) != 0 { 1 } else { 0 },
+                        if (address & (1 << 15)) != 0 { 1 } else { 0 }
+                    )?;
+                }
+            } else if address % 16 == 0 {
+                // Otherwise, start a newline every 16 bytes
+                writeln!(file)?;
+            }
+
+            if address % 16 == 0 {
                 write!(file, "    ")?;
             }
 
-            let byte = rom.get_byte(j, &family, &rom_config.rom_type);
+            let byte = rom_set.get_byte(address, &hw);
             write!(file, "0x{:02x}, ", byte)?;
         }
 
-        writeln!(file)?;
         writeln!(file, "}};")?;
         writeln!(file)?;
     }
@@ -274,8 +370,12 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
 
     writeln!(file, "#ifndef SDRR_CONFIG_H")?;
     writeln!(file, "#define SDRR_CONFIG_H")?;
-
     writeln!(file)?;
+
+    writeln!(file, "// Created within main.c but required by sdrr_config.c")?;
+    writeln!(file, "extern const char sdrr_build_date[];")?;
+    writeln!(file)?;
+
     writeln!(file, "//")?;
     writeln!(file, "// Hardware configuration")?;
     writeln!(file, "//")?;
@@ -286,10 +386,17 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
     writeln!(file, "{}", config.stm_variant.define_var_fam())?;
     writeln!(file, "{}", config.stm_variant.define_var_sub_fam())?;
     writeln!(file, "{}", config.stm_variant.define_var_str())?;
-    writeln!(file, "{}", config.stm_variant.define_flash_size())?;
+    writeln!(file, "{}", config.stm_variant.define_flash_size_bytes())?;
+    writeln!(file, "{}", config.stm_variant.define_flash_size_kb())?;
+    writeln!(file, "{}", config.stm_variant.define_ram_size_bytes())?;
+    writeln!(file, "{}", config.stm_variant.define_ram_size_kb())?;
     writeln!(file)?;
     writeln!(file, "// SDRR hardware variant")?;
-    writeln!(file, "{}", config.hw_rev.unwrap().define())?;
+    if config.hw.rom.pins.quantity == 24 {
+        writeln!(file, "#define SDRR_24_PIN  1")?;
+    } else {
+        unreachable!("Only 24-pin SDRR hardware is supported");
+    }
     writeln!(file)?;
     if !config.bootloader {
         writeln!(
@@ -404,6 +511,18 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
         )?;
     }
 
+    // Main loop one-shot mode
+    writeln!(file)?;
+    writeln!(file, "// Main loop one-shot mode")?;
+    if config.main_loop_one_shot {
+        writeln!(file, "#define MAIN_LOOP_ONE_SHOT 1")?;
+    } else {
+        writeln!(
+            file,
+            "// #define MAIN_LOOP_ONE_SHOT 0  // Main loop one-shot mode disabled"
+        )?;
+    }
+
     // Debug logging
     writeln!(file)?;
     writeln!(file, "// Debug logging")?;
@@ -431,6 +550,122 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
     Ok(())
 }
 
+// Generate sdrr_config.c implementation file
+fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
+    const FILENAME: &str = "sdrr_config.c";
+    let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
+
+    writeln!(file, "#include \"sdrr_config.h\"")?;
+    writeln!(file, "#include \"config_base.h\"")?;
+    writeln!(file, "#include \"roms.h\"")?;
+    writeln!(file)?;
+
+    let hw = &config.hw;
+
+    // Pin definitions
+    writeln!(file, "// Pin definitions")?;
+    writeln!(file, "static const sdrr_pins_t sdrr_pins = {{")?;
+    writeln!(file, "    .data_port = {},", hw.port_data())?;
+    writeln!(file, "    .addr_port = {},", hw.port_addr())?;
+    writeln!(file, "    .cs_port = {},", hw.port_cs())?;
+    writeln!(file, "    .sel_port = {},", hw.port_sel())?;
+    writeln!(file, "    .status_port = {},", hw.port_status())?;
+    writeln!(file, "    .rom_pins = {},", hw.rom.pins.quantity)?;
+    writeln!(file, "    .reserved1 = {{0, 0}},")?;
+
+    let data_pins = hw.stm.pins.data.clone();
+    let data_pins_str = data_pins
+        .iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    writeln!(file, "    .data = {{ {} }},", data_pins_str)?;
+
+    let mut addr_pins = hw.stm.pins.addr.clone();
+    addr_pins.resize(16, 255);
+    let addr_pins_str = addr_pins
+        .iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    writeln!(file, "    .addr = {{ {} }},", addr_pins_str)?;
+
+    writeln!(file, "    .reserved2 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .cs1_2364 = {},", hw.pin_cs1(&RomType::Rom2364))?;
+    writeln!(file, "    .cs1_2332 = {},", hw.pin_cs1(&RomType::Rom2332))?;
+    writeln!(file, "    .cs1_2316 = {},", hw.pin_cs1(&RomType::Rom2316))?;
+    writeln!(file, "    .cs2_2332 = {},", hw.pin_cs2(&RomType::Rom2332))?;
+    writeln!(file, "    .cs2_2316 = {},", hw.pin_cs2(&RomType::Rom2316))?;
+    writeln!(file, "    .cs3_2316 = {},", hw.pin_cs3(&RomType::Rom2316))?;
+    writeln!(file, "    .x1 = {},", hw.pin_x1())?;
+    writeln!(file, "    .x2 = {},", hw.pin_x2())?;
+    writeln!(file, "    .ce_23128 = {},", hw.pin_ce(&RomType::Rom23128))?;
+    writeln!(file, "    .oe_23128 = {},", hw.pin_oe(&RomType::Rom23128))?;
+    writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
+    writeln!(file, "    .sel = {{ {}, {}, {}, {} }},", hw.pin_sel(0), hw.pin_sel(1), hw.pin_sel(2), hw.pin_sel(3))?;
+    writeln!(file, "    .reserved4 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .status = {},", hw.pin_status())?;
+    writeln!(file, "    .reserved5 = {{0, 0, 0}},")?;
+
+    writeln!(file, "}};")?;
+    writeln!(file)?;
+
+    // Hardware revision string
+    writeln!(file, "// Hardware revision string - {}", hw.description)?;
+    writeln!(file, "static const char sdrr_hw_rev[] = \"{}\";", hw.name)?;
+
+    // Main info structure
+    writeln!(file, "// Main SDRR information structure, located at known point in flash")?;
+    writeln!(file, "__attribute__((section(\".sdrr_info\"))) const sdrr_info_t sdrr_info = {{")?;
+    
+    // Magic bytes
+    writeln!(file, "    .magic = {{'S', 'D', 'R', 'R'}},")?;
+    
+    // Version info - these would come from environment or build system
+    writeln!(file, "    .major_version = SDRR_VERSION_MAJOR,")?;
+    writeln!(file, "    .minor_version = SDRR_VERSION_MINOR,")?;
+    writeln!(file, "    .patch_version = SDRR_VERSION_PATCH,")?;
+    writeln!(file, "    .build_number = SDRR_BUILD_NUMBER,")?;
+    
+    // Build date pointer
+    writeln!(file, "    .build_date = sdrr_build_date,")?;
+    
+    // Git commit - this would come from build system
+    writeln!(file, "    .commit = SDRR_GIT_COMMIT,")?;
+    
+    // Hardware revision
+    writeln!(file, "    .hw_rev = sdrr_hw_rev,")?;
+    
+    // STM32 info
+    writeln!(file, "    .stm_line = {},", config.stm_variant.line_enum())?;
+    writeln!(file, "    .stm_storage = {},", config.stm_variant.storage_enum())?;
+    
+    // Frequency and overclock
+    writeln!(file, "    .freq = {},", config.freq)?;
+    writeln!(file, "    .overclock = {},", if config.overclock { 1 } else { 0 })?;
+    
+    // Feature flags
+    writeln!(file, "    .swd_enabled = {},", if config.swd { 1 } else { 0 })?;
+    writeln!(file, "    .preload_image_to_ram = {},", if config.preload_to_ram { 1 } else { 0 })?;
+    writeln!(file, "    .bootloader_capable = {},", if config.bootloader { 1 } else { 0 })?;
+    writeln!(file, "    .status_led_enabled = {},", if config.status_led { 1 } else { 0 })?;
+    writeln!(file, "    .boot_logging_enabled = {},", if config.boot_logging { 1 } else { 0 })?;
+    writeln!(file, "    .mco_enabled = {},", if config.mco { 1 } else { 0 })?;
+
+    // ROM set info
+    writeln!(file, "    .rom_set_count = {},", rom_sets.len())?;
+    writeln!(file, "    .pad2 = {{0, 0}},")?;
+    writeln!(file, "    .rom_sets = rom_set,")?;
+    writeln!(file, "    .pins = &sdrr_pins,")?;
+
+    // Boot configuration - reserved for future use, set to 0xff
+    writeln!(file, "    .boot_config = {{0xff, 0xff, 0xff, 0xff}},")?;
+    
+    writeln!(file, "}};")?;
+
+    Ok(())
+}
+
 fn generate_makefile_fragment(config: &Config) -> Result<()> {
     const FILENAME: &str = "generated.mk";
     let mut file = create_file(&config.output_dir, FILENAME, FileType::Makefile)?;
@@ -445,6 +680,36 @@ fn generate_makefile_fragment(config: &Config) -> Result<()> {
     writeln!(file, "PROBE_RS_CHIP_ID={}", config.stm_variant.chip_id())?;
 
     writeln!(file)?;
+
+    Ok(())
+}
+
+fn generate_linker_script(config: &Config) -> Result<()> {
+    const FILENAME: &str = "linker.ld";
+    let mut file = create_file(&config.output_dir, FILENAME, FileType::Linker)?;
+
+    writeln!(file, "MEMORY")?;
+    writeln!(file, "{{")?;
+    writeln!(
+        file,
+        "    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = {}K",
+        config.stm_variant.flash_storage_kb()
+    )?;
+    writeln!(
+        file,
+        "    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = {}K",
+        config.stm_variant.ram_kb()
+    )?;
+    if let Some(ccm_ram_kb) = config.stm_variant.ccm_ram_kb() {
+        writeln!(
+            file,
+            "    CCMRAM (rw): ORIGIN = 0x10000000, LENGTH = {}K",
+            ccm_ram_kb
+        )?;
+    }
+    writeln!(file, "}}")?;
+    writeln!(file)?;
+    writeln!(file, "INCLUDE stm32f-common.ld")?;
 
     Ok(())
 }

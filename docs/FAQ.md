@@ -119,6 +119,14 @@ A: Install the BOOT0 jumper and power cycle to force bootloader mode, then refla
 
 See the [Programming Guide](/docs/PROGRAMMING.md) for more details.
 
+**Q: How can I see what platform in my firmware image is for?**
+
+A: You can use [`sdrr-info`](/sdrr-info/README.md) to inspect firmware `.elf` and `.bin` files.
+
+**Q: How can I see what ROMs are in my firmware image?**
+
+A: You can use [`sdrr-info`](/sdrr-info/README.md) to inspect firmware `.elf` and `.bin` files.
+
 ## Configuration and Usage
 
 **Q: How do I select which ROM image to use?**

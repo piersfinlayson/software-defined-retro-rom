@@ -57,11 +57,19 @@ void (* const g_pfnVectors[])(void) = {
     Default_Handler, Default_Handler, Default_Handler, Default_Handler,
     Default_Handler, Default_Handler, Default_Handler, Default_Handler,
     Default_Handler, Default_Handler, Default_Handler, Default_Handler,
-#ifdef STM32F4
     Default_Handler, Default_Handler, Default_Handler, Default_Handler,
     Default_Handler, Default_Handler, Default_Handler, Default_Handler,
-    Default_Handler, Default_Handler
-#endif // STM32F4
+    Default_Handler, Default_Handler, Default_Handler, Default_Handler,
+    Default_Handler, Default_Handler, Default_Handler, Default_Handler,
+    Default_Handler, Default_Handler, Default_Handler, Default_Handler,
+    Default_Handler, Default_Handler, Default_Handler, Default_Handler,
+    Default_Handler, Default_Handler, Default_Handler, Default_Handler,
+    Default_Handler, Default_Handler, Default_Handler, Default_Handler,
+    Default_Handler, Default_Handler, Default_Handler, Default_Handler,
+    // Different STM32F4s have different numbers of interrupts.  The maximum
+    // appears to be 96 (F446), which is what's included here.  This means
+    // that 0x080001C4 onwards is free, but we'll not use anything until
+    // 0x08000200 to be safe.
 };
 
 //
@@ -116,16 +124,20 @@ void Reset_Handler(void) {
 
 // Default handler for unhandled interrupts - fast continuous blink
 void Default_Handler(void) {
-#if defined(STATUS_LED)
-    setup_status_led();
-    
-    while(1) {
-        GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-        delay(50000);
-        GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)  
-        delay(50000);
+    if (sdrr_info.status_led_enabled) {
+        setup_status_led();
+        
+        if (sdrr_info.pins->status_port == PORT_B && sdrr_info.pins->status <= 15) {
+            while(1) {
+                GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
+                delay(50000);
+                GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)  
+                delay(50000);
+            }
+        } else {
+            while (1);
+        }
     }
-#endif // STATUS_LED
 }
 
 // NMI_Handler - single blink pattern

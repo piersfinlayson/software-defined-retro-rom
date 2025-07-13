@@ -5,7 +5,7 @@ ENTRY(Reset_Handler)
 _Min_Stack_Size = 0x400;    /* 1KB */
 
 /* Space for storing functions in RAM */
-_Ram_Func_Size = 0x400; /* 1KB */
+_Ram_Func_Size = 0x800; /* 1KB */
 
 SECTIONS
 {
@@ -18,6 +18,18 @@ SECTIONS
         KEEP(*(.isr_vector))
         . = ALIGN(4);
         _isr_vector_end = .;
+    } >FLASH
+
+    /* Start at 0x200 to give some space after the vector table, in case */
+    /* it's bigger than planned on a specific variant. */
+    .sdrr_info :
+    {
+        . = ORIGIN(FLASH) + 0x200;
+        . = ALIGN(4);
+        _sdrr_info_start = .;
+        KEEP(*(.sdrr_info))
+        . = ALIGN(4);
+        _sdrr_info_end = .;
     } >FLASH
 
     .text :
@@ -55,7 +67,7 @@ SECTIONS
     {
         . = ALIGN(4);
         _ram_rom_image_start = .;
-        . = . + 0x4000;  /* 16KB for 2 x max ROM image size */
+        . = . + 0x10000;  /* 64KB for max 4 16KB images for a set */
         . = ALIGN(4);
         _ram_rom_image_end = .;
     } >RAM

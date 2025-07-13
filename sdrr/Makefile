@@ -1,16 +1,11 @@
-# STM32F103 Makefile
+# SDRR firmware Makefile
 
-# To specify the target variant, use:
-# ```bash
-# make VARIANT=stm32f103x8
-# ```
-#
-# Available variants:
-# - stm32f103xb (default)
-# - stm32f103x8
+# To build, use the top-level /Makefile, which generates the required files and
+# configuration to build SDRR, then calls this Makefile.
 
 # sdrr-gen Output directory
-OUTPUT_DIR := ../output
+GEN_OUTPUT_DIR ?= output
+OUTPUT_DIR := ../$(GEN_OUTPUT_DIR)
 
 # Include the auto-generated Makefile fragment
 # Only include generated.mk if we're not doing a clean target
@@ -18,12 +13,12 @@ ifeq ($(filter clean clean-% distclean,$(MAKECMDGOALS)),)
   ifneq ($(wildcard $(OUTPUT_DIR)/generated.mk),)
     include $(OUTPUT_DIR)/generated.mk
   else
-$(error sddr-gen generated.mk Makefile fragment not found. Please run the sddr-gen tool first.)
+$(error sdrr-gen generated.mk Makefile fragment not found. Please run the sdrr-gen tool first.)
   endif
 endif
 
 # Default variant - this is set in generated.mk
-# VARIANT := stm32f103xb
+# VARIANT := stm32f411xb
 
 # Build directory
 BUILD_DIR := build
@@ -44,6 +39,8 @@ SEGGER_OBJS := $(BUILD_DIR)/SEGGER_RTT.o $(BUILD_DIR)/SEGGER_RTT_printf.o
 
 ROMS_SRC := $(OUTPUT_DIR)/roms.c
 ROMS_OBJ := $(BUILD_DIR)/roms.o
+SDRR_CONFIG_SRC := $(OUTPUT_DIR)/sdrr_config.c
+SDRR_CONFIG_OBJ := $(BUILD_DIR)/sdrr_config.o
 
 # Output files
 BIN_PREFIX := sdrr-$(VARIANT)
@@ -56,34 +53,10 @@ DISASM := $(BUILD_DIR)/$(BIN_PREFIX).dis
 ifeq ($(filter clean clean-% distclean,$(MAKECMDGOALS)),)
 
 # Linker script selection
-ifeq ($(VARIANT),stm32f103r8)
-    LDSCRIPT := stm32f103x8.ld
-else ifeq ($(VARIANT),stm32f103rb)
-    LDSCRIPT := stm32f103xb.ld
-else ifeq ($(VARIANT),stm32f411rc)
-	LDSCRIPT := stm32f411xc.ld
-else ifeq ($(VARIANT),stm32f411re)
-	LDSCRIPT := stm32f411xe.ld
-else ifeq ($(VARIANT),stm32f401re)
-	LDSCRIPT := stm32f401xe.ld
-else ifeq ($(VARIANT),stm32f401rb)
-	LDSCRIPT := stm32f401xb.ld
-else ifeq ($(VARIANT),stm32f401rc)
-	LDSCRIPT := stm32f401xc.ld
-else ifeq ($(VARIANT),stm32f405rg)
-	LDSCRIPT := stm32f405xg.ld
-else ifeq ($(VARIANT),stm32f446rc)
-	LDSCRIPT := stm32f446xc.ld
-else ifeq ($(VARIANT),stm32f446re)
-	LDSCRIPT := stm32f446xe.ld
-else
-$(error Unsupported variant: $(VARIANT))
-endif
+LDSCRIPT=$(OUTPUT_DIR)/linker.ld
 
 # Flags
-ifeq ($(findstring stm32f103,$(VARIANT)),stm32f103)
-	COMMON_FLAGS := -mcpu=cortex-m3 -mthumb -mfloat-abi=soft 
-else ifeq ($(findstring stm32f4,$(VARIANT)),stm32f4)
+ifeq ($(findstring stm32f4,$(VARIANT)),stm32f4)
 	COMMON_FLAGS := -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ffast-math
 #	COMMON_FLAGS := -mcpu=cortex-m4 -mthumb -mfloat-abi=soft
 else
@@ -92,7 +65,8 @@ endif
 
 endif
 
-CFLAGS := $(COMMON_FLAGS) -Werror -I include -I $(OUTPUT_DIR) -I segger-rtt/RTT -I segger-rtt/Config -g -nostdlib -O3 -ffunction-sections -fdata-sections -Wall -Wextra -MMD -MD -MP
+SEGGER_RTT_FLAGS := -DBUFFER_SIZE_UP=4096
+CFLAGS := $(COMMON_FLAGS) $(SEGGER_RTT_FLAGS) -Werror -I include -I $(OUTPUT_DIR) -I segger-rtt/RTT -I segger-rtt/Config -g -nostdlib -O3 -ffunction-sections -fdata-sections -Wall -Wextra -MMD -MD -MP
 LDFLAGS := $(COMMON_FLAGS) -Werror -L link -nostdlib -specs=nosys.specs -specs=nano.specs -Wl,--no-gc-sections -Wl,--fatal-warnings -Wl,-Map=$(MAP)
 
 # Phony targets
@@ -113,43 +87,48 @@ segger-rtt:
 
 # sdrr object files
 $(BUILD_DIR)/%.o: src/%.c ../Makefile | $(BUILD_DIR) segger-rtt
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 # roms.o is built from roms.c from a different directory
-$(ROMS_OBJ): $(OUTPUT_DIR)/roms.c ../Makefile 
-	$(CC) $(CFLAGS) -c $< -o $@
+$(ROMS_OBJ): $(ROMS_SRC) ../Makefile 
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+# sdrr_config.o is built from sdrr_config.c from a different directory
+$(SDRR_CONFIG_OBJ): $(SDRR_CONFIG_SRC) ../Makefile 
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -DSDRR_VERSION_MAJOR=$(VERSION_MAJOR) -DSDRR_VERSION_MINOR=$(VERSION_MINOR) -DSDRR_VERSION_PATCH=$(VERSION_PATCH) -DSDRR_BUILD_NUMBER=$(BUILD_NUMBER) -DSDRR_GIT_COMMIT=\"$(GIT_COMMIT)\" -c $< -o $@
 
 # Explicit rules for SEGGER files
 $(BUILD_DIR)/SEGGER_RTT.o: segger-rtt/RTT/SEGGER_RTT.c ../Makefile  | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/SEGGER_RTT_printf.o: segger-rtt/RTT/SEGGER_RTT_printf.c ../Makefile | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "- Compiling sdrr/$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 segger-rtt/RTT/SEGGER_RTT.c segger-rtt/RTT/SEGGER_RTT_printf.c: segger-rtt
 
 # Link
-$(ELF): $(OBJS) $(ROMS_OBJ) $(SEGGER_OBJS) link/$(LDSCRIPT) | $(BUILD_DIR)
-	$(CC) $(LDFLAGS) -T link/$(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) -o $@
+$(ELF): $(OBJS) $(ROMS_OBJ) $(SDRR_CONFIG_OBJ) $(SEGGER_OBJS) $(LDSCRIPT) | $(BUILD_DIR)
+	@echo "- Linking object files to create ELF -> sdrr/$@"
+	@$(CC) $(LDFLAGS) -T $(LDSCRIPT) $(OBJS) $(SEGGER_OBJS) $(ROMS_OBJ) $(SDRR_CONFIG_OBJ) -o $@
 
 # Generate binary
 $(BIN): $(ELF)
-	$(OBJCOPY) -O binary $< $@
-	$(OBJDUMP) -D -S -t -h $< > $(DISASM)
-	@echo "Build complete: $@"
+	@echo "- Generating binary from sdrr/$< -> sdrr/$@"
+	@$(OBJCOPY) -O binary $< $@
+	@$(OBJDUMP) -D -S -t -h $< > $(DISASM)
+	@echo "----"
+	@echo "Build complete:"
 
 # Size information
 size: $(ELF)
-	$(SIZE) $(ELF)
+	@$(SIZE) $(ELF)
+	@ls -ltr $(ELF) 
 	@ls -ltr $(BIN) 
-
-# Flash target
-flash: $(ELF)
-	probe-rs download --chip STM32F103C8Tx $<
-
-# Run target
-run: $(ELF)
-	probe-rs run --chip STM32F103C8Tx $<
 
 # Clean segger
 clean-segger-src:

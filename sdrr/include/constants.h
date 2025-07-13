@@ -8,8 +8,6 @@
 #define CONSTANTS_H
 
 // Metadata strings to include in the binary
-extern const char build_date[];
-extern const char version[];
 extern const char stm_variant[];
 extern const char license[];
 extern const char project_url[];
@@ -33,5 +31,7 @@ extern const char stm32_bootloader_mode[];
 extern const char disabled[];
 extern const char enabled[];
 extern const char oscillator[];
+extern const char *port_names[];
+extern const char *cs_values[];
 
 #endif // CONSTANTS_H

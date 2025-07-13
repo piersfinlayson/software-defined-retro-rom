@@ -1,0 +1,36 @@
+{
+  "description": "SDRR 24-pin rev e",
+  "rom": {
+    "pins": {
+      "quantity": 24
+    }
+  },
+  "stm": {
+    "family": "f4",
+    "ports": {
+        "data_port": "A",
+        "addr_port": "C",
+        "cs_port": "C",
+        "sel_port": "B",
+        "status_port": "B"
+    },
+    "pins": {
+        "data": [7, 6, 5, 4, 3, 2, 1, 0],
+        "addr": [5, 4, 6, 7, 3, 2, 1, 0, 8, 13, 11, 12, 9],
+        "cs1": {
+        "2364": 10,
+        "2332": 10,
+        "2316": 10
+        },
+        "cs2": {
+        "2332": 9,
+        "2316": 12
+        },
+        "cs3": {
+        "2316": 9
+        },
+        "sel": [0, 1, 2, 7],
+        "status": 15
+    }
+  }
+}

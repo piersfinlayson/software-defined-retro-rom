@@ -2,6 +2,10 @@
 
 This document summarises how SDRR provides the ROM emulation function, and hits the required timings.
 
+If you'd rather consume similar content in video form:
+
+[![How It's Done - Software ROMs](https://img.youtube.com/vi/pOZ2-W3dpZ8/maxresdefault.jpg)](https://youtu.be/pOZ2-W3dpZ8)
+
 ## Overview
 
 SDRR replaces mask-programmed ROMs (2364/8KB, 2332/4KB, 2316/2KB) in retro systems using an STM32F4 microcontroller.  Unlike traditional ROM replacements that require hardware modifications or expensive programming equipment, SDRR provides a software-configurable solution that can store multiple ROM images of different types and switch between them via jumpers.  It can also be reprogrammed in situ, without needing to remove it from the system.
@@ -144,6 +148,29 @@ Up to 16 different ROM configurations can be stored in a single firmware build d
 
 Images are selected via the jumpers binary encoding 0-15 which are read at startup.  When emulating ROMs with fast access times, on the slower STM32F4 variants, there is no time in the main loop to do any additional processing, so the jumpers must be read at startup.  It _may_ be possible when emulatig slow ROMs, with the fastest STM32F4 variants, to do additional processing the main loop, like testing the jumpers, but this has not been validated.
 
+## Multi-ROM Support
+
+SDRR implements multi-ROM support, allowing replacement of up to 3 ROMs simultaneously, with a single SDRR.  This is done by installing the SDRR in one of the ROM sockets, and depopulating the other ROM sockets.  A flying lead is then used to connect the chip select line (pin 20) of the empty ROM sockets to pins X1 and X2 on SDRR board.
+
+A ROM set configuration must be used, to program SDRR with the combined ROM images - see [`config/set*.mk`](/config/README.md#multi-image-rom-sets).
+
+This feature works by
+
+- combining all of the ROM images to be served into a single 64KB image, and then using X1/X2 (HW revision F onwards) as additional address lines into the image
+- a different data serving algorithm, which only serves data when any one of the chip select lines (CS1, X1, X2) is active.
+- using the entire 16-bit input value - including X1 and X2 state - from the STM32F4's address/CS port as index into the 64KB image.
+
+The serving algorithm is slightly less performant than the single default ROM serving algorithm, as it cannot load address bytes and write then to the data port (in input state) before CS lines go active - as without the CS line active, it doesn't know which ROM image to serve from.  It is difficuly to give a precise figure for the perfomance hit as it seems to differ by systems/ROMs replaced, but 10% is a decent rule of thumb.  See [Multi-ROM performance](#multi-rom-performance) for more details.
+
+There are currently various limitations in this support.  For example:
+
+- All replaced ROMs must share both address and data buses.  The VIC-20 character ROM does not share the address bus with the Kernal and BASIC ROMs, so cannot be replaced by a multi-ROM set, but the C64 character ROM does share a bus, so all of Kernal, BASIC and character ROMs can be replaced by a single multi-ROM set.
+- Mixed ROM type support is only possible when the extra chip select lines of the smaller ROMs are tied to always active.  Again, the C64 character ROM is a good example - it is a 2332 ROM, unlike the Kernal and BASIC ROMs which are 2364 ROMs.  However, the 2332's second cs line is always tied active.
+- Only 2364, and 2364/2332 ROM types have been tested.
+- While single ROM and multi-ROM sets can be used in the same SDRR firmware image, you have to disconnect X1/X2 when using a single ROM set.  (And X2 must be disconnected when using a 2-ROM set.)
+
+It may be possible to lift some of these limitations, but that may require an (even) slower serving algorithm, and hence limit the systems it works on/STM32F4s you can run it on.  Having said that, smaller ROMs are typically used in slower systems.
+
 ## Performance Analysis
 
 ### Timing Requirements vs. STM32 Performance
@@ -159,6 +186,14 @@ These figures were measured using single systems during testing.  Your values ma
 | C64 (PAL) Character | 98MHz | F411/F405/F446 |
 
 The F405 at 168MHz and F446 at 180MHz provide substantial headroom for all these systems.
+
+### Multi-ROM performance
+
+When replacing multiple ROMs simultaneously, SDRR has to use a different, slighty less performant algorithm to serve the data.  This means that for multi-ROM support you require a faster variant than the above figures suggest:
+
+| System | Min Frequency | STM32 Variant Required | Notes |
+|--------|---------------|------------------------|-------|
+| C64 (PAL) | 88MHz | F411/F405/F446 | Kernal & BASIC & Char ROM |
 
 ### Startup Performance
 

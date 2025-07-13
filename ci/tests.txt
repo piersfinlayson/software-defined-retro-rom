@@ -21,6 +21,29 @@ basic-f411re:STM=f411re,CONFIG=config/test-sdrr-0.mk
 basic-f405rg:STM=f405rg,CONFIG=config/test-sdrr-0.mk
 basic-f446re:STM=f446re,CONFIG=config/test-sdrr-0.mk
 
+# Test each config (except those requiring licenses and not sets)
+test-1541-f411re:STM=f401re,CONFIG=config/1541.mk
+test-2040-f411re:STM=f411re,CONFIG=config/2040.mk
+test-4040-f411re:STM=f411re,CONFIG=config/4040.mk
+test-c64-no-destestmax-f411re:STM=f411re,CONFIG=config/c64-no-destestmax.mk
+test-ieee-diag-f411re:STM=f411re,CONFIG=config/ieee-diag.mk
+test-pet-4-40-50-f411re:STM=f411re,CONFIG=config/pet-4-40-50.mk
+test-vic20-pal-f411re:STM=f411re,CONFIG=config/vic20-pal.mk
+
+# Test old config set letters
+test-hw-rev-D:HW_REV=d,STM=f411re,CONFIG=config/test-sdrr-0.mk
+test-hw-rev-E:HW_REV=e,STM=f411re,CONFIG=config/test-sdrr-0.mk
+test-hw-rev-F:HW_REV=f,STM=f411re,CONFIG=config/test-sdrr-0.mk
+
+# Test each set config - HW_REV=24-f only
+test-set-c64-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-c64.mk
+test-set-vic20-pal-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-vic20-pal.mk
+
+# Test different hardware revisions
+hw-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+hw-rev-e:HW_REV=24-e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+hw-rev-f:HW_REV=24-f,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+
 # Enable MCO, one of each STM32F4 variant
 mco-f401rb:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 mco-f411re:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
@@ -34,8 +57,8 @@ no-boot-logging-f401rb:BOOT_LOGGING=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 no-boot-logging-no-swd-f401rb:BOOT_LOGGING=0,SWD=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # PCB revisions
-pcb-rev-d:HW_REV=d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-pcb-rev-e:HW_REV=d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-e:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Enable DEBUG_LOGGING
 debug-logging-f401rb:DEBUG_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
@@ -43,11 +66,15 @@ debug-logging-f401rb:DEBUG_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 # Enable MAIN_LOOP_LOGGING
 main-loop-logging-f401rb:MAIN_LOOP_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
+# Enable MAIN_LOOP_ONE_SHOT
+main-loop-one-shot-f401rb:MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+main-loop-one-shot-debug-f401rb:DEBUG_LOGGING=1,MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+
 # DISABLE_PRELOAD_TO_RAM
 disable-preload-to-ram-f401rb:DISABLE_PRELOAD_TO_RAM=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Disable status LED, PCB revision E
-disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=24-e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Custom frequencies
 freq-50hz-f401rb:FREQ=50,STM=f401rb,CONFIG=config/test-sdrr-0.mk
@@ -60,3 +87,7 @@ overclock-f401rb:OVERCLOCK=1,FREQ=100,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 overclock-f411re:OVERCLOCK=1,FREQ=110,STM=f411re,CONFIG=config/test-sdrr-0.mk
 overclock-f405rg:OVERCLOCK=1,FREQ=180,STM=f405rg,CONFIG=config/test-sdrr-0.mk
 overclock-f446re:OVERCLOCK=1,FREQ=200,STM=f446re,CONFIG=config/test-sdrr-0.mk
+
+# Build with different serve algorithms
+serve-algorithm-a-f401rb:SERVE_ALG=a,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+serve-algorithm-b-f401rb:SERVE_ALG=b,STM=f401rb,CONFIG=config/test-sdrr-0.mk

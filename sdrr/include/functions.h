@@ -11,19 +11,10 @@
 extern int main(void);
 
 // stm_utils.c
-extern void reset_rcc_registers(void);
-#if defined(STM32F1)
-extern void reset_afio_registers(void);
-#endif // STM32F1
-extern void setup_swd(void);
+extern uint32_t check_sel_pins(uint32_t *sel_mask);
 extern void setup_mco(uint8_t mco);
-#if defined(STM32F1)
-extern void setup_pll_mul(uint8_t mul);
-#elif defined(STM32F4)
 void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q);
-#endif // STM32F1/4
 extern void setup_pll_src(uint8_t src);
-extern void setup_pll_xtpre(uint8_t xtpre);
 extern void setup_pll(void);
 extern void enable_pll(void);
 extern void enable_hse(void);
@@ -49,9 +40,9 @@ extern void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats);
 
 // rom_impl.c
 #if !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
-extern void main_loop(const sdrr_rom_info_t *rom);
-extern uint8_t get_rom_index(void);
-extern void preload_rom_image(const sdrr_rom_info_t *rom);
+extern void main_loop(const sdrr_rom_set_t *set);
+extern uint8_t get_rom_set_index(void);
+extern void preload_rom_image(const sdrr_rom_set_t *set);
 #endif // !TIMER_TEST && !TOGGLE_PA4
 
 // test function prototypes

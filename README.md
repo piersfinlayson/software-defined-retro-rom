@@ -27,11 +27,11 @@ The video below provides an introduction to the Software Defined Retro ROM:
 
 ## Hardware
 
-This is the 24-pin version, hardware revison F.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
+This is the STM32F4 24-pin version, hardware revison F.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
 
 <div style="display: flex; justify-content: center; gap: 20px;">
   <a href="docs/images/sdrr-24-pin-side.png">
-    <img src="docs/images/sdrr-24-pin-side.png" alt="SDRR 24 pin side on" width="400">
+    <img src="docs/images/sdrr-24-pin-side.png" alt="SDRR STM32F4 24 pin side on" width="400">
   </a>
 </div>
 
@@ -85,6 +85,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 - [Logging](docs/LOGGING.md) - How to enable and use logging in SDRR.
 - [Technical Summary](docs/TECHNICAL-SUMMARY.md) - Overview of the SDRR architecture, operation and design decisions.
 - [Technical Details](docs/TECHNICAL-DETAILS.md) - Technical details of the SDRR firmware and hardware.
+- [Custom Hardware](docs/CUSTOM-HARDWARE.md) - Guide on designing custom hardware for SDRR.
 - [Build System](docs/BUILD-SYSTEM.md) - How the SDRR build system works.
 - [Voltage Levels](docs/VOLTAGE-LEVELS.md) - How the SDRR supports the required logic voltage levels.
 - [Pi Pico Programmer](docs/PI-PICO-PROGRAMMER.md) - How to use a $5 Raspberry Pi Pico as a programmer for SDRR.
