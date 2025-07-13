@@ -43,25 +43,82 @@ cargo run --release -- info -d ../sdrr/build/sdrr-yourtarget.elf
 ```
 
 ```text
+==========================================
+Running sdrr-info, to:
+- Validate SDRR firmware
+- Extract key SDRR firmware properties
+- Show detailed SDRR firmware properties
+-----
+Software Defined Retro ROM - Firmware Information
+-------------------------------------------------
+
 Core Firmware Properties
 ------------------------
+File name:     sdrr-stm32f411re.bin
+File modified: Jul 13 2025 13:43:48
 File type:     Binary (.bin)
-File size:     82,524 bytes (81KB)
-Version:       0.1.1 (build 1)
-Build Date:    Jul  9 2025 18:50:57
-Git commit:    171a135
-Hardware:      24 pin rev F
+File size:     82,944 bytes (81KB)
+Version:       0.2.0 (build 1)
+Build Date:    Jul 13 2025 13:43:46
+Git commit:    5d372a7
+Hardware:      24-d
 STM32:         F411RE (512KB flash, 128KB RAM)
 Frequency:     100 MHz (Overclocking: false)
 
 Configurable Options
 --------------------
+ROM emulation:    24 pin ROM
 Serve image from: RAM
 SWD enabled:      true
 Boot logging:     true
 Status LED:       false
 STM bootloader:   false
 MCO enabled:      false
+Boot config:      0xFFFFFFFF - Reserved, should be 0xFFFFFFFF
+
+Pin Configuration
+-----------------
+
+Data pin mapping:
+  D0:  PA7
+  D1:  PA6
+  D2:  PA5
+  D3:  PA4
+  D4:  PA3
+  D5:  PA2
+  D6:  PA1
+  D7:  PA0
+
+Address pin mapping:
+  A0:  PC5
+  A1:  PC4
+  A2:  PC6
+  A3:  PC7
+  A4:  PC3
+  A5:  PC2
+  A6:  PC1
+  A7:  PC0
+  A8:  PC8
+  A9:  PC13
+  A10: PC11
+  A11: PC12
+  A12: PC9
+
+Chip select pins:
+  2364 CS1: PC10
+  2332 CS1: PC10
+  2332 CS2: PC9
+  2316 CS1: PC10
+  2316 CS2: PC12
+  2316 CS3: PC9
+
+Image select pins:
+  SEL0: PB0
+  SEL1: PB1
+  SEL2: PB2
+
+Status LED pin:
+  Pin: None
 
 ROMs Summary:
 -------------
@@ -77,9 +134,8 @@ ROM Set: 0
   Multi-ROM CS1: Not Used
   ROM: 0
     Type:      2364
-    Name:      kernal.901486-07.bin
+    Name:      kernal.901227-03.bin
     CS States: Active Low/Not Used/Not Used
-    CS Lines:  ROM Pin 20/ROM Pin 18/ROM Pin 21
 -----------
 ROM Set: 1
   Size: 16384 bytes
@@ -88,9 +144,8 @@ ROM Set: 1
   Multi-ROM CS1: Not Used
   ROM: 0
     Type:      2364
-    Name:      basic.901486-01.bin
+    Name:      basic.901226-01.bin
     CS States: Active Low/Not Used/Not Used
-    CS Lines:  ROM Pin 20/ROM Pin 18/ROM Pin 21
 -----------
 ROM Set: 2
   Size: 16384 bytes
@@ -99,9 +154,8 @@ ROM Set: 2
   Multi-ROM CS1: Not Used
   ROM: 0
     Type:      2332
-    Name:      characters.901460-03.bin
-    CS States: Active Low/Active Low/Not Used
-    CS Lines:  ROM Pin 20/ROM Pin 21/None
+    Name:      characters.901225-01.bin
+    CS States: Active Low/Active High/Not Used
 -----------
 ROM Set: 3
   Size: 16384 bytes
@@ -110,7 +164,7 @@ ROM Set: 3
   Multi-ROM CS1: Not Used
   ROM: 0
     Type:      2364
-    Name:      dead-test.pal.e0
+    Name:      dead%20test.BIN
     CS States: Active Low/Not Used/Not Used
-    CS Lines:  ROM Pin 20/ROM Pin 18/ROM Pin 21
+==========================================
 ```

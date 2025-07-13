@@ -1,6 +1,6 @@
 # Multiple ROM Sets
 
-As of version v0.1.1, SDRR hardware revision F onwards supports multiple ROM image sets.  A set is a group of up to 3 ROM images, all of which SDRR will serve, so long as all of the following conditions are met:
+As of version v0.2.0, SDRR hardware revision F onwards supports multiple ROM image sets.  A set is a group of up to 3 ROM images, all of which SDRR will serve, so long as all of the following conditions are met:
 
 - All the ROMs being replaced share the same address and data buses.
 - SDRR is installed in the socket of the first ROM in the set to be replaced.
@@ -51,6 +51,8 @@ A different ROM serving algorithm is used in the rom set case, to serve addresse
 - detects when _all_ chip selects (for that ROM type) go active, and only sets the data lines to output when this happens.
 
 It is this different algorithm that is roughly 10% less efficient than the single ROM image serving algorithm.  The pre-loading of 64KB at startup instead of 16KB probably also adds around 200-300us at boot.  Given systems typically have a decent reset circuit, this is not expected to be an issue.
+
+See [Multi-ROM Support](/docs/TECHNICAL-SUMMARY.md#multi-rom-support) for more details on the performance on this feature.
 
 ## Acknowledgements
 

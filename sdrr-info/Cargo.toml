@@ -1,6 +1,6 @@
 [package]
 name = "sdrr-info"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 authors = ["Piers Finlayson <piers@piers.rocks>"]
 description = "Generates information from Software Defined Retro ROM (SDRR) firmware elf files"

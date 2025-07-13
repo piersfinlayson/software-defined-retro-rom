@@ -45,6 +45,8 @@ Sample boot logs from a startup of firmware built with [`c64.mk`](/config/c64.mk
 14:44:53.730: Start main loop - logging ends
 ```
 
+Logging from v0.2.0 onwards is even more extensive.
+
 Pulling out some highlights:
 
 - The `Hardare info` section logs provide information about the SDRR hardware that this firmware image **was built for**.  This may not necessarily the hardware you are running the firmware on.

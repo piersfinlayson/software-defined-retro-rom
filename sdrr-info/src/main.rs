@@ -3,7 +3,7 @@
 /// This tool extracts the core properties, configuration options and ROM
 /// image information from an SDRR firmware binary or ELF file.
 ///
-/// It supports firmware version from v0.1.1 onwards.  v0.1.0 firmware did not
+/// It supports firmware version from v0.2.0 onwards.  v0.1.0 firmware did not
 /// contain the relevant magic bytes or properties in a format that could be
 /// easily extracted.
 ///
@@ -25,8 +25,8 @@
 
 // Versions supported by sdrr-info
 pub const SDRR_VERSION_MAJOR: u16 = 0;
-pub const SDRR_VERSION_MINOR: u16 = 1;
-pub const SDRR_VERSION_PATCH: u16 = 1;
+pub const SDRR_VERSION_MINOR: u16 = 2;
+pub const SDRR_VERSION_PATCH: u16 = 0;
 
 // Modules
 mod symbols;
@@ -74,7 +74,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => {
             print_header();
             eprintln!("Error loading firmware");
-            eprintln!("Did you supply an SDRR v0.1.1 or later .elf or .bin file?");
+            eprintln!("Did you supply an SDRR v{}.{}.{} or later .elf or .bin file?", SDRR_VERSION_MAJOR, SDRR_VERSION_MINOR, SDRR_VERSION_PATCH);
             eprintln!("Detailed error: {}", e);
             std::process::exit(1);
         }
