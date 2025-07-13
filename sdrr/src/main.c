@@ -130,6 +130,9 @@ void gpio_init(void) {
 void enter_bootloader(void) {
     LOG("Entering bootloader");
 
+    // Pause to allow the log to be received
+    for (int ii = 0; ii < 100000000; ii++);
+
     // Set the stack pointer
     asm volatile("msr msp, %0" : : "r" (*((uint32_t*)0x1FFFF000)));
     

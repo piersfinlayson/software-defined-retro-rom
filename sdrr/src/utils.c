@@ -27,11 +27,11 @@ uint32_t check_sel_pins(uint32_t *sel_mask) {
         if (pin < 255) {
             // Pin is present, so set the mask
             if (pin <= 15) {
-                sel_1bit_mask = 1 << pin;
+                sel_1bit_mask |= 1 << pin;
                 sel_2bit_mask |= (11 << (pin * 2));
                 pull_downs |= (10 << (pin * 2));
             } else {
-                LOG("!!! Sel pin 15 < %d < 255 - not using", ii);
+                LOG("!!! Sel pin 15 < %d < 255 - not using", pin);
             }
         }
     }
@@ -48,7 +48,7 @@ uint32_t check_sel_pins(uint32_t *sel_mask) {
     uint32_t pins = GPIOB_IDR;
 
     // Disable peripheral clock for port again.
-    RCC_AHB1ENR &= ~(1 << 1);
+    RCC_AHB1ENR &= ~RCC_AHB1ENR_GPIOBEN;
 
     // Return sel_mask as well as the value of the pins
     *sel_mask = sel_1bit_mask;
