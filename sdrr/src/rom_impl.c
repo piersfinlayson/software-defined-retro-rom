@@ -180,9 +180,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         serve_mode = SERVE_TWO_CS_ONE_ADDR;
     }
 
-    const sdrr_rom_info_t *rom = set->roms[0];
     for (int ii = 0; ii < set->rom_count; ii++) {
-        ROM_IMPL_DEBUG("Serve ROM #%d: %s via mode: %d", ii, rom->filename, serve_mode);
+        ROM_IMPL_DEBUG("Serve ROM #%d: %s via mode: %d", ii, set->roms[ii]->filename, serve_mode);
     }
 
     //
@@ -190,6 +189,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     //
     uint32_t cs_invert_mask = 0;
     uint32_t cs_check_mask;
+    const sdrr_rom_info_t *rom = set->roms[0];
 
     if (serve_mode == SERVE_ADDR_ON_ANY_CS)
     {
@@ -566,7 +566,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             LABEL(ALG2_CS_ACTIVE)
                 // By definition we just loaded and tested the address/CS
                 // lines, immediately load the byte from RAM.  There's no load-
-                // use penalty here because we've alrady spent cycles since
+                // use penalty here because we've already spent cycles since
                 // loading the address lines.
                 LOAD_FROM_RAM
 
@@ -577,21 +577,21 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                 // penalty here.
                 SET_DATA_OUT
 
+            LABEL(ALG2_CS_ACTIVE_MID)
                 // Now store byte to data lines
                 STORE_TO_DATA
 
                 // Now test if CS has gone inactive again
                 LOAD_ADDR_CS
                 TEST_CS
-                BNE(ALG2_CS_INACTIVE)
 
-            LABEL(ALG2_CS_ACTIVE_MID_LOOP)
-                LOAD_ADDR_CS
-                TEST_CS
-                // If still active, load byte from address again in case the
-                // address lines changed.  Going backwards here is what the
-                // CPU will have predicted so saves a cycle.
-                BEQ(ALG2_CS_ACTIVE_MID_LOOP)
+                // Load from RAM before branching, just in case - the logic
+                // is this way around, instead of skipping this and branching
+                // NE (i.e. CS gone active), because this works on the C64, and
+                // the other doesn't.  (Both work on the PAL VIC-20 at around
+                // he same clock speed - 37-38 MHz.)
+                LOAD_FROM_RAM
+                BEQ(ALG2_CS_ACTIVE_MID)
 
                 // CS went inactive.  We need to set the data lines as inputs.  Fall through into this code, so no branch penalty.
             LABEL(ALG2_CS_INACTIVE)
@@ -636,15 +636,13 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             LABEL(ALG3_CS_ACTIVE)
                 LOAD_FROM_RAM
                 SET_DATA_OUT
+
+            LABEL(ALG3_CS_ACTIVE_MID)
                 STORE_TO_DATA
                 LOAD_ADDR_CS
                 TEST_CS_ANY
-                BEQ(ALG3_CS_INACTIVE)
-
-            LABEL(ALG3_CS_ACTIVE_MID_LOOP)
-                LOAD_ADDR_CS
-                TEST_CS_ANY
-                BNE(ALG3_CS_ACTIVE_MID_LOOP)
+                LOAD_FROM_RAM
+                BNE(ALG3_CS_ACTIVE_MID)
 
             LABEL(ALG3_CS_INACTIVE)
                 SET_DATA_IN
