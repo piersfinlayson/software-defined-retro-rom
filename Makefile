@@ -329,7 +329,7 @@ COLOUR_RED := $(shell echo -e '\033[31m')
 
 ifneq ($(SUPPRESS_OUTPUT),1)
   $(info ==========================================)
-  $(info Building SDRR)
+  $(info Building SDRR v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH))
   $(info ==========================================)
   $(info SDRR Makefile env settings:)
 endif
