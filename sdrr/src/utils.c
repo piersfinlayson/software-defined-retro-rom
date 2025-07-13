@@ -244,19 +244,6 @@ void set_flash_ws(void) {
 //
 
 #if defined(BOOT_LOGGING)
-const char *get_cs_str(sdrr_cs_state_t cs) {
-    switch (cs) {
-        case CS_ACTIVE_LOW:
-            return cs_low;
-        case CS_ACTIVE_HIGH:
-            return cs_high;
-        case CS_NOT_USED:
-            return cs_na;
-        default:
-            return unknown;
-    }
-}
-
 // Linker variables, used by log_init()
 extern uint32_t _flash_start;
 extern uint32_t _flash_end;
@@ -315,11 +302,13 @@ void log_init(void) {
         LOG("Bootloader: %s", disabled);
     }
 
+    // Port assignments
+    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
+
+
     LOG("%s", log_divider);
     LOG("Pin Configuration ...");
     
-    // Port assignments
-    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
     
     LOG("ROM emulation: %d pin ROM", sdrr_info.pins->rom_pins);
     
@@ -374,11 +363,10 @@ void log_init(void) {
                     break;
             }
 
-            const char *cs1_state_str = get_cs_str(rom->cs1_state);
-            const char *cs2_state_str = get_cs_str(rom->cs2_state); 
-            const char *cs3_state_str = get_cs_str(rom->cs3_state);
-
-            LOG("  ROM #%d: %s, %s, CS1: %s, CS2: %s, CS3: %s", jj, rom->filename, rom_type_str, cs1_state_str, cs2_state_str, cs3_state_str);
+            LOG("  ROM #%d: %s, %s, CS1: %s, CS2: %s, CS3: %s",
+                jj, rom->filename,
+                rom_type_str,
+                cs_values[rom->cs1_state], cs_values[rom->cs2_state], cs_values[rom->cs3_state]);
         }
     }
 
