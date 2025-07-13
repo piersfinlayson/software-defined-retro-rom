@@ -108,7 +108,8 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
                 if (active_rom >= 0) {
                     int loaded_rom_idx = overall_rom_idx + active_rom;
                     if (loaded_rom_idx < count) {
-                        printf("- ROM %d in set %d\n  - Type: %s, Name: %s\n", active_rom, set_idx, configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
+                        printf("- ROM %d in set %d - CS1=%d, X1=%d, X2=%d", active_rom, set_idx, cs1, x1, x2);
+                        printf("  - Type: %s, Name: %s\n", configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
                     } else {
                         printf("- ROM %d in set %d (ERROR: out of bounds)\n", active_rom, set_idx);
                     }
