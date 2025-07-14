@@ -83,10 +83,6 @@ extern const sdrr_info_t sdrr_info;
 #error "TIMER_TEST and TOGGLE_PA4 are mutually exclusive"
 #endif // TIMER_TEST/TOGGLE_PA4
 
-#if defined(HW_REV_D) && defined(STATUS_LED)
-#error "HW_REV_D does not support a status LED"
-#endif // HW_REV_D/STATUS_LED
-
 #if defined(MAIN_LOOP_LOGGING) && !defined(BOOT_LOGGING)
 #error "MAIN_LOOP_LOGGING requires BOOT_LOGGING to be defined"
 #endif // MAIN_LOOP_LOGGING/BOOT_LOGGING

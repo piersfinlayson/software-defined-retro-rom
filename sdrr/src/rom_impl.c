@@ -308,12 +308,12 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     uint32_t addr_cs;
     while (1) {
         ROM_IMPL_LOG("Waiting for CS to go active");
-        if (sdrr_info.status_led_enabled) {
-            GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-        }
 #else
     ROM_IMPL_LOG("Begin serving data");
 #endif // MAIN_LOOP_ONE_SHOT
+    if ((sdrr_info.status_led_enabled) && (sdrr_info.pins->status <= 15)) {
+        GPIOB_BSRR = (1 << (sdrr_info.pins->status + 16));
+    }
 
     // Start the appropriate main loop.  Includes preloading registers.
     //
@@ -363,10 +363,10 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             break;
     }
 
+    if ((sdrr_info.status_led_enabled) && (sdrr_info.pins->status <= 15)) {
+        GPIOB_BSRR = (1 << sdrr_info.pins->status);
+    }
 #if defined(MAIN_LOOP_ONE_SHOT)
-        if (sdrr_info.status_led_enabled) {
-            GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)
-        }
         ROM_IMPL_LOG("Address/CS: 0x%08X Byte: 0x%08X", addr_cs, byte);
     }
 #endif // MAIN_LOOP_ONE_SHOT
