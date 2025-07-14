@@ -13,6 +13,10 @@ All notables changes between versions are documented in this file.
 - Refactor `rom_impl.c`, breaking out assembly code to `rom_asm.h` to make the main_loop easier to read, and commonalising some code.
 - Added detection of hardware reported STM32F4 device and flash size at runtime, and comparison to firmware values.
 
+### Fixes
+
+- Fixed status LED behaviour, by placing outside of MAIN_LOOP_ONE_SHOT, and using the configured pin.
+
 ## v0.2.0 - 2025-07-13
 
 This version brings substantial improvements to the SDRR project, including:
