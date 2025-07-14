@@ -82,7 +82,7 @@
 
 // Tests whether the CS line is active (active low only) - zero flag set if so.
 // Saves a cycle over TEST_CS.
-#define TEST_CS_ACT_LOW "tst " R_CS_TEST ", " R_CS_CHECK_MASK "\n"
+#define TEST_CS_ACT_LOW "tst " R_ADDR_CS ", " R_CS_CHECK_MASK "\n"
 
 // Tests whether any of the CS lines are active - zero flash _not set_ if so.
 // BIC is bit clear - essentially destination = source & ~mask.  Note we need
@@ -93,7 +93,7 @@
 // Tests whether any of the CS lines are active (active low only) - zero flag
 // set if so.  Saves a cycle over TEST_CS_ANY.
 #define TEST_CS_ANY_ACT_LOW \
-                        "bics " R_CS_TEST ", " R_CS_CHECK_MASK ", " R_CS_TEST "\n"
+                        "bics " R_CS_TEST ", " R_CS_CHECK_MASK ", " R_ADDR_CS "\n"
 
 // Loads the data byte from the ROM table into R_DATA, based on the offset in
 // R_ADDR_CS

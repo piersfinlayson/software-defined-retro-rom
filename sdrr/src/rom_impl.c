@@ -46,12 +46,6 @@ ram_log_fn ROM_IMPL_DEBUG = do_log;
 extern uint32_t _ram_rom_image_start[];
 extern uint32_t _ram_rom_image_end[];
 
-
-
-// Assembly code macros
-
-
-
 void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t *set) {
 #ifdef MAIN_LOOP_LOGGING
     // Do a bunch of checking things are as we need them.  There's not much
