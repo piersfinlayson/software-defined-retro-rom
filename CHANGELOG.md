@@ -2,6 +2,16 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.2.1 - ???
+
+### Changes
+
+- Added pull-up/downs to X1/X2 in multi-ROM cases, so that when a multi-set ROM is configured, but X1/X2 are not connected, the other ROMs in the set still serve properly.
+- Improved serving algorithm `B` in the CS active low case.
+- Moved to algorithm `B` by default.
+- Measured performance of both algorithm on all targets.
+- Refactor `rom_impl.c`, breaking out assembly code to `rom_asm.h` to make the main_loop easier to read, and commonalising some code.
+
 ## v0.2.0 - 2025-07-13
 
 This version brings substantial improvements to the SDRR project, including:

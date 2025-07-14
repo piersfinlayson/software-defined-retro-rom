@@ -122,3 +122,16 @@ To use:
 - Reprogram the SDRR device.  It will then reboot, re-read the image select jumpers and start serving the appropriate image.
 
 Enabling this option means that the 16th image (if installed) cannot be selected.
+
+### `SERVE_ALG`
+
+This option allows you to select which serving algorithm to use.
+
+A - Checks address lines all the time, and applies to data lines (which are inputs when CS is not active).  CS is checked twice as frequently as the address lines.
+
+B - Checks address lines only when CS is active, and applies to data lines (which are already outptts).  CS and address lines are read with the same frequency.
+
+In all cases tested, `B` appears to be the superior algorithm, but `A` is kept in case it is incompatible with some systems.
+
+SDRR defaults to `B` is no algorithm is specified for single-ROM sets, and requires `B` (which is applies automatically, even if you specify `A`) for multi-ROM sets.
+
