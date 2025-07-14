@@ -29,15 +29,19 @@ Alternatively, either use an STM32F405 or STM32F446 and run at maximum clock spe
 
 | System | Video | ROM Type | Default Alg `B` | Optional Alg `A` | STM32F4 Variants | Release Measured | Notes |
 |--------|-------|----------|-------|-------|------------------------|------------------|-------|
-| PET 4032 | 40 Col 50Hz | Kernal | 26MHz | 29MHz | All | v0.2.1 | |
+| PET 4032 | 40 Col 50Hz | Kernal | 26MHz | 29MHz | All | v0.2.1 | $E000 tested |
 | PET 4032 | 40 Col 50Hz | Character | 18MHz | 26MHz | All | v0.2.1 | |
 | VIC 20 | PAL | Kernal | 32Mhz | 34MHz | All | v0.2.1 | |
 | VIC 20 | PAL | BASIC | 32MHz | 34MHz | All | v0.2.1 | |
 | VIC 20 | PAL | Character | 45MHz | 76MHz | All | v0.2.1 | |
 | C64 | PAL | Kernal | 79MHz | 79MHz | All | v0.2.1 | |
 | C64 | PAL | Character | 79MHz | 92MHz | All | v0.2.1 | |
+| 1541 | n/a | Kernal | 18MHz | 30MHz | All | v0.2.1 | $C000 tested |
 | VIC 20 | PAL | Multi-ROM Set | 32MHz | n/a | All | v0.2.1 | Kernal+BASIC |
-| C64 | PAL | Multi-ROM Set | 89MHz | n/a | F411/F405/F446 | v0.2.1 | Kernal+BASIC+Char |
+| C64 | PAL | Multi-ROM Set | 89MHz | n/a | *F411/F405/F446 | v0.2.1 | Kernal+BASIC+Char |
+| 1541 | n/a | Multi-ROM Set | 18MHz | n/a | All | v0.2.1 | $C000+$E000 |
+
+(*) Or a slightly overclocked F401.
 
 When running multiple SDRRs in a single system, you may find you have to run each SDRR faster than these speeds, to avoid each conflicting with the other.  In this case, consider using multi-ROM support.
 

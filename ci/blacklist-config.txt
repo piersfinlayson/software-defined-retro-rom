@@ -11,3 +11,4 @@ c64
 # Skipped because we're not currently building firmware with sets in - due to HW_REV=f requirement
 set-c64
 set-vic20-pal
+set-1541.mk
