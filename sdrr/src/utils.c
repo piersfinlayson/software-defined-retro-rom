@@ -257,9 +257,73 @@ void log_init(void) {
     LOG("Build date: %s", sdrr_info.build_date);
     LOG("Git commit: %s", sdrr_info.commit);
 
+    uint32_t idcode = DBGMCU_IDCODE;
+    const char *idcode_stm_variant;
+    idcode = idcode & DBGMCU_IDCODE_DEV_ID_MASK; 
+    switch (idcode) {
+        case IDCODE_F401XBC:
+            idcode_stm_variant = "F401XBC";
+            break;
+        case IDCODE_F401XDE:
+            idcode_stm_variant = "F401XDE";
+            break;
+        case IDCODE_F4X5:
+            idcode_stm_variant = "F405/415";
+            break;
+        case IDCODE_F411XCE:
+            idcode_stm_variant = "F411";
+            break;
+        case IDCODE_F42_43:
+            idcode_stm_variant = "F42X/43X";
+            break;
+        case IDCODE_F446:
+            idcode_stm_variant = "F446";
+            break;
+        default:
+            idcode_stm_variant = "Unknown";
+            break;
+    }
     LOG("%s", log_divider);
-    LOG("Hardware info ...");
+    LOG("Detected hardware info ...");
+    LOG("ID Code: STM32%s", idcode_stm_variant);
+    uint16_t hw_flash_size = FLASH_SIZE;
+    LOG("Flash: %dKB", hw_flash_size);
+
+    LOG("%s", log_divider);
+    LOG("Firmware hardware info ...");
     LOG("STM32%s", stm_variant);
+    int mismatch = 1;
+    switch (sdrr_info.stm_line) {
+        case F401:
+            if ((idcode == IDCODE_F401XBC) || (idcode == IDCODE_F401XDE)) {
+                mismatch = 0;
+            }
+            break;
+
+        case F405:
+            if (idcode == IDCODE_F4X5) {
+                mismatch = 0;
+            }
+            break;
+        
+        case F411:
+            if (idcode == IDCODE_F411XCE) {
+                mismatch = 0;
+            }
+            break;
+
+        case F446:
+            if (idcode == IDCODE_F446) {
+                mismatch = 0;
+            }
+            break;
+        default:
+            break;
+    }
+    if (mismatch) {
+        LOG("!!! STM32 Mismatch: actual %s, firmware expected %s", idcode_stm_variant, stm_variant);
+    }
+
     LOG("PCB rev %s", sdrr_info.hw_rev);
     uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
     uint32_t flash_kb = flash_bytes / 1024;
@@ -272,6 +336,9 @@ void log_init(void) {
 #else // DEBUG_LOGGING
     LOG("%s size: %dKB (%d bytes)", flash, STM_FLASH_SIZE_KB, STM_FLASH_SIZE);
     LOG("%s used: %dKB %d bytes", flash, flash_kb, flash_bytes);
+    if (flash_kb != flash_size) {
+        LOG("!!! Flash size mismatch: actual %dKB, firmware expected %dKB", flash_size, flash_kb);
+    }
 #endif
 
     uint32_t ram_size_bytes = (uint32_t)&_ram_size;

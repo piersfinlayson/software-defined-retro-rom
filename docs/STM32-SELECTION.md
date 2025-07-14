@@ -57,7 +57,7 @@ If you are using multi-ROM sets (of up to 3 images), each set consumes 64KB of f
 
 If you have a different variant, the easiest way to support it is to choose a version above which is of the same or higher power than your chosen variant, and select that version.
 
-If you want to add build support for another variant:
+If you want to add support for another variant:
 
 - Add it to [`Makefile`](/Makefile) - see the `STM` variable.
 - Add it to [`sddr-common`](/sdrr-common), in particular:
@@ -69,8 +69,12 @@ If you want to add build support for another variant:
   - [`sdrr-gen/src/rom_types.rs`](sdrr-gen/src/rom_types.rs):
     - `StmProcessor`
     - `StmVariant`
-- Add its max frequency to [`sdrr/include/include.h`](/sdrr/include/include.h) - search for the pre-processor `TARGET_FREQ_MHZ` tests.
-- Add any support specifically for this STM32 variant to [`sdrr/src/`](/sdrr/src/) and [`sdrr/include`](/sdrr/include/) - grep for "STM32F411" and "STM32F405" for examples of variant specific code.
+- Add it to the [`sdrr`] firmware:
+  - [`sdrr/src/config_base.h`](/sdrr/src/config_base.h)
+    - `stm_line_t`
+  - Add its max frequency to [`sdrr/include/include.h`](/sdrr/include/include.h) - search for the pre-processor `TARGET_FREQ_MHZ` tests.
+  - Add it to [`sdrr/src/utils.c`](/sdrr/src/utils.c) - `log_init` function.
+  - Add any support specifically for this STM32 variant - grep for "STM32F411" and "STM32F405" for examples of variant specific code.
 
 ## STM32F4 Family Comparisons
 
