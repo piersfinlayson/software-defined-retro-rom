@@ -300,38 +300,33 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
     // Port C for address and CS lines - set all pins as inputs
     GPIOC_MODER = 0;  // Set all pins as inputs
+    uint32_t gpioc_pupdr;
     if (set->rom_count == 1) {
         // Set pull-downs on PC14/15 only, so RAM lookup only takes 16KB.
         // We checked the address lines are lines 0-13 above, and in sdrr-gen
         // so this is reasonable.
-        GPIOC_PUPDR = 0xA0000000;
+        gpioc_pupdr = 0xA0000000;
     }
     else {
-        // Hardware revision F has PC14 and PC15 connected to pins X1/X2 on the
-        // PCB, so up to 2 extra ROM chip select lines can be terminated on SDRR.
-        if (set->rom_count == 2) {
-            // As we only have 2 ROMs in either set, we must _pull up_ X2, not
-            // pull it down, as that would be two CS lines pulled down, which
-            // means 0xAA being served.
-            // As the pin for X2 can be configured, choose the right value here.
-            GPIOC_PUPDR = (0b01 << (sdrr_info.pins->x2 * 2));
-        } else if (set->rom_count == 3) {
-            // No pull-downs - PC14/PC15 used to select second and third ROM images
-            GPIOC_PUPDR = 0;
+        // Hardware revision F has X1/X2 on the PCB, so up to 2 extra ROM chip
+        // select lines can be terminated on SDRR.  Set pull-ups or downs on
+        // these lines so they are default inactive, in case the user doesn't
+        // connect them.
+        //
+        // Note this introduces pull-ups/downs on the actual CS lines if they
+        // are connected.  However, they typically only serve the ROM we are
+        // emulating, come from a BCD IC or similar, and the pulls are weak -
+        // around 40K ohms.
+        uint32_t pull;
+        if (set->multi_rom_cs1_state == CS_ACTIVE_HIGH) {
+            pull = 0b10;  // Pull down
         } else {
-            // Handle gracefully by assuming one ROM image 
-            ROM_IMPL_LOG("!!! Unsupported ROM count: %d", set->rom_count);
-            GPIOC_PUPDR = 0xA0000000;
+            pull = 0b01;  // Pull up
         }
+        gpioc_pupdr = (pull << (sdrr_info.pins->x1 * 2)) |
+                        (pull << (sdrr_info.pins->x2 * 2));
     }
-
-#if 0
-    // Hack in fixed values
-    GPIOC_PUPDR = 0xA0000000;
-    cs_check_mask = (1 << pin_cs);
-    cs_invert_mask = 0;
-    serve_mode = SERVE_TWO_CS_ONE_ADDR;
-#endif
+    GPIOC_PUPDR = gpioc_pupdr;
 
     if (sdrr_info.status_led_enabled) {
         setup_status_led();
