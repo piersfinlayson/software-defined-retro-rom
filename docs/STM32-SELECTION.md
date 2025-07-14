@@ -4,16 +4,16 @@
 
 The following table provides details about the supported STM32 microcontrollers:
 
-| Model | Flash | RAM | Max Clock Speed | Max ROM Images | Build variant |
-|-------|-------|-----|-----------------|----------------|---------------|
-| STM32F401RBT6 | 128KB | 96KB | 84MHz | 6 | f401rb |
-| STM32F401RCT6 | 256KB | 96KB | 84MHz | 14 | f401rc |
-| STM32F401RET6 | 512KB | 96KB | 84MHz | 16 | f401re |
-| STM32F411RCT6 | 256KB | 128KB | 100MHz | 14 | f411rc |
-| STM32F411RET6 | 512KB | 128KB | 100MHz | 16 | f411re |
-| STM32F405RGT6 | 1024KB | 128KB | 168MHz | 16 | f405rg |
-| STM32F446RCT6 | 256KB | 128KB | 180MHz | 16 | f446rc |
-| STM32F446RETx | 512KB | 128KB | 180MHz | 16 | f446re |
+| Model | Flash | RAM | Max Clock Speed | Max single ROM Images | Max mult-ROM sets | Build variant |
+|-------|-------|-----|-----------------|-----------------------|-------------|---------------|
+| STM32F401RBT6 | 128KB | 96KB | 84MHz | 6 | 1 | f401rb |
+| STM32F401RCT6 | 256KB | 96KB | 84MHz | 14 | 3 | f401rc |
+| STM32F401RET6 | 512KB | 96KB | 84MHz | 16 | 7 | f401re |
+| STM32F411RCT6 | 256KB | 128KB | 100MHz | 14 | 3 | f411rc |
+| STM32F411RET6 | 512KB | 128KB | 100MHz | 16 | 7 | f411re |
+| STM32F405RGT6 | 1024KB | 128KB | 168MHz | 16 | 15 | f405rg |
+| STM32F446RCT6 | 256KB | 128KB | 180MHz | 16 | 3 | f446rc |
+| STM32F446RETx | 512KB | 128KB | 180MHz | 16 | 7 | f446re |
 
 ## Clock Speed Requirements
 
@@ -79,5 +79,9 @@ For completeness, all of the STM32F4xxR variants are compared in the following t
 | Feature | F401 | F405 | F410 | F411 | F412 | F413 | F415 | F423 | F446 |
 |---------|------|------|------|------|------|------|------|------|------|
 | **Max Freq** | 84 MHz | 168 MHz | 100 MHz | 100 MHz | 100 MHz | 100 MHz | 168 MHz | 100 MHz | 180 MHz |
-| **Flash** | 25128-512 KB | 512 KB-1 MB | 64-128 KB | 256-512 KB | 512 KB-1 MB | 1-1.5 MB | 512 KB-1 MB | 1-1.5 MB | 256-512 KB |
+| **Flash** | 128-512 KB | 512 KB-1 MB | 64-128 KB | 256-512 KB | 512 KB-1 MB | 1-1.5 MB | 512 KB-1 MB | 1-1.5 MB | 256-512 KB |
 | **SRAM** | 96 KB | 192 KB | 32 KB | 128 KB | 256 KB | 320 KB | 192 KB | 320 KB | 128 KB |
+
+## Clones
+
+Both GigaDevices and Geehy produce clones of the STM32F4xxR series, which are pin compatible, cheaper, and can be used in place of the STM32F4xxR series.  The GigaDevices GD32F405RGT6 and the Geehy APM32F405RGT6 are drop-in replacements for the STM32F405RGT6.  However, they are, as yet, untested.
