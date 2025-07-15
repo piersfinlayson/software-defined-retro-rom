@@ -670,10 +670,16 @@ clean-firmware:
 clean-gen:
 	rm -fr $(GEN_OUTPUT_DIR)
 
-clean-sdrr-gen:
-	cd sdrr-gen && cargo clean
+clean-sdrr-common:
+	cd rust/sdrr-common && cargo clean
 
-clean-sdrr-info:
-	cd sdrr-info && cargo clean
+clean-sdrr-gen: clean-sdrr-common
+	cd rust/sdrr-gen && cargo clean
+
+clean-sdrr-fw-parser:
+	cd rust/sdrr-fw-parser && cargo clean
+
+clean-sdrr-info: clean-sdrr-common clean-sdrr-fw-parser
+	cd rust/sdrr-info && cargo clean
 
 clean: clean-firmware clean-gen clean-sdrr-gen clean-sdrr-info
