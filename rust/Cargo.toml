@@ -3,6 +3,7 @@
 members = [
     "sdrr-gen",
     "sdrr-info", 
-    "sdrr-common"
+    "sdrr-common",
+    "sdrr-fw-parser",
 ]
 resolver = "2"

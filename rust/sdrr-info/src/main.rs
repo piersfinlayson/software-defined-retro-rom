@@ -29,7 +29,6 @@ pub const SDRR_VERSION_MINOR: u16 = 2;
 pub const SDRR_VERSION_PATCH: u16 = 0;
 
 // Modules
-mod symbols;
 mod load;
 mod args;
 mod utils;
@@ -41,7 +40,7 @@ use std::path::Path;
 use std::fs::metadata;
 use chrono::{DateTime, Local};
 
-use symbols::{SdrrInfo, SdrrStmPort};
+use sdrr_fw_parser::{SdrrInfo, SdrrStmPort};
 use load::load_sdrr_firmware;
 use args::{Args, Command, parse_args};
 use utils::add_commas;
@@ -387,7 +386,7 @@ fn lookup_range(
         let mut binary_data = Vec::new();
 
         for addr in start_addr..=end_addr {
-            let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2);
+            let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2)?;
             let byte = image[lookup_addr as usize];
 
             let output_byte = if output_mangled {
@@ -411,7 +410,7 @@ fn lookup_range(
         }
 
         for addr in start_addr..=end_addr {
-            let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2);
+            let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2)?;
             let byte = image[lookup_addr as usize];
 
             let output_byte = if output_mangled {
@@ -497,7 +496,13 @@ fn lookup(info: &SdrrInfo, args: &Args) {
     } else {
         // Single address lookup
         let addr = args.addr.expect("Internal error: address is required");
-        let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2);
+        let lookup_addr = match info.mangle_address(addr, cs1, cs2, cs3, x1, x2) {
+            Ok(lookup_addr) => lookup_addr,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                std::process::exit(1);
+            },
+        };
 
         if let Err(e) = lookup_byte_at_address(
             info,

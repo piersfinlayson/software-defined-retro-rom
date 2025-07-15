@@ -1,15 +1,18 @@
 [package]
-name = "sdrr-common"
+name = "sdrr-fw-parser"
 version = "0.2.1"
 edition = "2024"
 authors = ["Piers Finlayson <piers@piers.rocks>"]
-description = "Software Defined Retro ROM (SDRR) common Rust library"
+description = "Software Defined Retro ROM (SDRR) firmware parser"
 repository = "https://github.com/piersfinlayson/software-defined-retro-rom"
 readme = "README.md"
 license = "MIT"
 keywords = ["commodore", "embedded", "sdrr", "rom", "eeprom", "eprom", "flash"]
 
+[features]
+default = ["std"]
+std = ["deku/std"]
+
 [dependencies]
-anyhow = ">=1.0.98"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+deku = { version = "0.19", default-features = false, features = ["alloc"] }
+static_assertions = "1.1"

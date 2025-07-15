@@ -7,4 +7,4 @@ To update the version:
 - Update the version in [sddr-gen/Cargo.toml](/rust/sdrr-gen/Cargo.toml).
 - Update the version in [sddr-info/Cargo.toml](/rust/sdrr-info/Cargo.toml).
 - Update the version in [sdrr-common/Cargo.toml](/rust/sdrr-common/Cargo.toml).
-- Update the version in [sdrr-info/src/main.rs](/rust/sdrr-info/src/main.rs).
+- Update the version consts `MAX_VERSION_*` in [rust/sdrr-fw-parser/src/lib.rs](/rust/sdrr-fw-parser/src/lib.rs).
