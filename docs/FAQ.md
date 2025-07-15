@@ -102,7 +102,7 @@ A: Medium difficulty - some experience with surface mount soldering is recommend
 
 The rev D PCB uses a combination of 0402 and 0603 components.
 
-The rev E PCB uses all 0603 components, so is easier to solder.
+Rev E/F PCBs uses all 0603 components, so are easier to solder.
 
 All variants use an STM32 LQFP64 package, which requires soldering as it is close to other components.
 

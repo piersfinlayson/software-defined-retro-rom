@@ -1287,7 +1287,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-common"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "serde",
@@ -1296,7 +1296,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-gen"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1310,7 +1310,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-info"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "chrono",

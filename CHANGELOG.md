@@ -12,6 +12,8 @@ All notables changes between versions are documented in this file.
 - Measured performance of both algorithm on all targets.
 - Refactor `rom_impl.c`, breaking out assembly code to `rom_asm.h` to make the main_loop easier to read, and commonalising some code.
 - Added detection of hardware reported STM32F4 device and flash size at runtime, and comparison to firmware values.
+- Verified [hw revision e](/sdrr-pcb/verified/stm32f4-24-pin-rev-e/) - supports STM32F4x5 variants in addition to F401/F411, all passives are now 0603, a status LED and a 4th image select jumper.
+- Added [documentation](/docs/STM32-CLONES.md) on STM32 clones.
 
 ### Fixes
 

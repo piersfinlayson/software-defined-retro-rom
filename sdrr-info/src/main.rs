@@ -23,10 +23,10 @@
 //
 // MIT License
 
-// Versions supported by sdrr-info
+// Max version supported by sdrr-info
 pub const SDRR_VERSION_MAJOR: u16 = 0;
 pub const SDRR_VERSION_MINOR: u16 = 2;
-pub const SDRR_VERSION_PATCH: u16 = 0;
+pub const SDRR_VERSION_PATCH: u16 = 1;
 
 // Modules
 mod symbols;
