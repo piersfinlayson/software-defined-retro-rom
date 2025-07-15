@@ -321,7 +321,7 @@ void log_init(void) {
             break;
     }
     if (mismatch) {
-        LOG("!!! STM32 Mismatch: actual %s, firmware expected %s", idcode_stm_variant, stm_variant);
+        LOG("!!! MCU mismatch: actual %s, firmware expected %s", idcode_stm_variant, stm_variant);
     }
 
     LOG("PCB rev %s", sdrr_info.hw_rev);
