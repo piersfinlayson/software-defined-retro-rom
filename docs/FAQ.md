@@ -65,18 +65,22 @@ A: An internal oscillator was one of the microcontroller selection criteria, in 
 
 **Q: Why can't I find the STM32F4 for$2?**
 
-You need to look at Chinese sites including [aliexpress.com](https://www.aliexpress.com) and [LCSC](https://www.lcsc.com), JLC PCB's component supplier ARM.
+A: You need to look at Chinese sites including [aliexpress.com](https://www.aliexpress.com) and [LCSC](https://www.lcsc.com), JLC PCB's component supplier ARM.
 
 As of July 2025:
 
-- LCSC had STM32F401 for $1.93 in quantities of 1 - good enough for PET and VIC-20 ROMs
-- LCSC had STM32F411 for $2.69 in quantities of 1 - good enough for PET, VIC-20 and C64 ROMs
-- aliexpress had STM32F405 for $3 in quantities of 1 - faster than the F401/F411
-- aliexpress had GD32F405 $2.46 in quantities of 1 - GigaDevices produces clones of the STM32 parts
+- LCSC had STM32F401 for $1.93 in quantities of 1 - good enough for PET, VIC-20 and C64 single ROMs
+- LCSC had STM32F411 for $2.69 in quantities of 1 - also good enough for C64 multi-ROM sets
+- aliexpress had STM32F405 for $3.08 in quantities of 1 - faster than the F401/F411
+- aliexpress had GD32F405 $2.27 in quantities of 1 - GigaDevices produces clones of the STM32 parts
 
-The aliexpress seller referred to above was also offering free shipping when buying more than 4 parts.
+The aliexpress seller referred to above was also offering free shipping when buying more than 4 or 5 parts.
 
 SDRR is extremely flexible in the STM32F4xxR variants it supports, so you can choose the cheapest one that meets your requirements.
+
+**Q: Are clones just as good as the real deal STM32?**
+
+A: Mostly, but not entirely.  The GigaDevices GD32F405 takes longer to boot than the STM32F405, and the pins show different behaviour on reset.  However, it is unlikely you'd notice any difference in praactice.  See [STM32 Clones](/docs/STM32-CLONES.md) for more details.
 
 ## Installation and Setup
 

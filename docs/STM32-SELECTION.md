@@ -1,5 +1,7 @@
 # STM32 Selection
 
+All performance figures in this document are based on testing genuine STM32 parts.  For a discussion of clones, see [STM32-Clones](/docs/STM32-CLONES.md).
+
 ## Supported STM32 Microcontrollers
 
 The following table provides details about the supported STM32 microcontrollers:
@@ -85,7 +87,3 @@ For completeness, all of the STM32F4xxR variants are compared in the following t
 | **Max Freq** | 84 MHz | 168 MHz | 100 MHz | 100 MHz | 100 MHz | 100 MHz | 168 MHz | 100 MHz | 180 MHz |
 | **Flash** | 128-512 KB | 512 KB-1 MB | 64-128 KB | 256-512 KB | 512 KB-1 MB | 1-1.5 MB | 512 KB-1 MB | 1-1.5 MB | 256-512 KB |
 | **SRAM** | 96 KB | 192 KB | 32 KB | 128 KB | 256 KB | 320 KB | 192 KB | 320 KB | 128 KB |
-
-## Clones
-
-Both GigaDevices and Geehy produce clones of the STM32F4xxR series, which are pin compatible, cheaper, and can be used in place of the STM32F4xxR series.  The GigaDevices GD32F405RGT6 and the Geehy APM32F405RGT6 are drop-in replacements for the STM32F405RGT6.  However, they are, as yet, untested.

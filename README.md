@@ -118,7 +118,7 @@ The vast majority of ROMs can be emulated by the cheapest variant, the F401.  Th
 
 The F401 may require a small overclock for some systems, such as running the C64 multi-ROM set (~90MHz vs 84MHz rated maximum).
 
-There are also cheap [clones available](docs/STM32-SELECTION.md#clones), with a clone F405 coming in at around the same price as a genuine F411.
+There are also cheap [clones available](docs/STM32-CLONES.md), with a clone F405 coming in at around the same price as a genuine F411 (from LCSC).
 
 For more details about selecting the appropriate STM32 variant for your application, see [docs/STM32-SELECTION.md](docs/STM32-SELECTION.md).
 
