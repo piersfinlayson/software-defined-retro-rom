@@ -19,7 +19,7 @@ The firmware uses a number of techniques to reach the required performance:
 - The selected ROM image is pre-copied to RAM on boot, so the data is loaded very quickly based on the address pin state.
 - Each ROM image is stored in a separate 16KB chunk of data on the flash.  This is true for all ROM types, even though they only take up 8KB, 4KB or 2KB of space.  This is done to make the main loop faster, so it can access to the ROM image using the chip select line states as part of the address offset into the ROM image.
 - The ROM images are stored in flash in a "mangled" fashion - that is, to avoid having to remap the address lines and data lines in software when the ROM is being queried (as the PCB layout does not assign address and data lines to the equivalent STM32F4 GPIOs).  Therefore, if you look at the ROM images on the flash, they will appear very different to the original files you supplied.
-- Main ROM emulation loop is done in assembly - see [`rom_impl.c`](/sdrr/src/rom_impl.c).
+- Main ROM emulation loop is done in assembly - see [`rom_impl.c`](/sdrr/src/rom_impl.c) and [`rom_asm.h`](/sdrr/src/rom_asm.h).
 
   - The assembly code preloads all pre-known values into registers prior to its main loop, to avoid loading the values in the loop.  (Nearly every register is therefore used.)
   - The required chip select masks are precomputed to avoid having to do any calculations in the main loop.

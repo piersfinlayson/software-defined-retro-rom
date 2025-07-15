@@ -420,7 +420,7 @@ impl ServeAlg {
 
     pub fn c_value(&self) -> &str {
         match self {
-            ServeAlg::Default => "SERVE_TWO_CS_ONE_ADDR",
+            ServeAlg::Default => "SERVE_ADDR_ON_CS",
             ServeAlg::TwoCsOneAddr => "SERVE_TWO_CS_ONE_ADDR",
             ServeAlg::AddrOnCs => "SERVE_ADDR_ON_CS",
         }

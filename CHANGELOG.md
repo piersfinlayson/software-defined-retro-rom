@@ -2,6 +2,25 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.2.1 - ???
+
+### Changes
+
+- Added pull-up/downs to X1/X2 in multi-ROM cases, so that when a multi-set ROM is configured, but X1/X2 are not connected, the other ROMs in the set still serve properly.
+- Improved serving algorithm `B` in the CS active low case.
+- Moved to algorithm `B` by default.
+- Measured performance of both algorithm on all targets.
+- Refactor `rom_impl.c`, breaking out assembly code to `rom_asm.h` to make the main_loop easier to read, and commonalising some code.
+- Added detection of hardware reported STM32F4 device and flash size at runtime, and comparison to firmware values.
+- Verified [hw revision e](/sdrr-pcb/verified/stm32f4-24-pin-rev-e/) - supports STM32F4x5 variants in addition to F401/F411, all passives are now 0603, a status LED and a 4th image select jumper.
+- Added [documentation](/docs/STM32-CLONES.md) on STM32 clones.
+- Moved firmware parsing to [`rust/sdrr-fw-parser`](/rust/sdrr-fw-parser/README.md) crate, which can be used to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  Done in preparation for using from a separate WiFi Programmer.
+- Moved Rust code to [`rust/`](/rust/) directory.
+
+### Fixes
+
+- Fixed status LED behaviour, by placing outside of MAIN_LOOP_ONE_SHOT, and using the configured pin.
+
 ## v0.2.0 - 2025-07-13
 
 This version brings substantial improvements to the SDRR project, including:

@@ -183,4 +183,27 @@
 #define FLASH_ACR_ICEN      (0x01 << 9) // Instruction cache enable
 #define FLASH_ACR_DCEN      (0x01 << 10) // Data cache enable
 
+// Device ID and revision
+// - Bits 31:16 REV_ID[15:0] Revision identifier
+// - Bits 15:12 Reserved, must be kept at reset value.
+//   Bits 11:0 DEV_ID[11:0]: 
+//   - The device ID is 0x423 for STM32F401xB/C
+//   - The device ID is 0x433 for STM32F401xD/E
+//   - The device ID is 0x413 for STM32F405xx/07xx/STM32F415xx/17xx
+//   - The device ID is 0x431 for the STM32F411xC/E
+//   - The device ID is 0x419 for the STM32F42xxx and STM32F43xxx
+//   - The device ID is 0x421 for the STM32F446
+#define DBGMCU_IDCODE   (*(volatile uint32_t *)(0xE0042000))
+#define DBGMCU_IDCODE_DEV_ID_MASK (0xFFF << 0)
+
+#define IDCODE_F401XBC  0x423
+#define IDCODE_F401XDE  0x433
+#define IDCODE_F4X5     0x413
+#define IDCODE_F411XCE  0x431
+#define IDCODE_F42_43   0x419
+#define IDCODE_F446     0x421
+
+// Flash size - in KB
+#define FLASH_SIZE      (*(volatile uint16_t *)(0x1FFF7A22))
+
 #endif // REG_STM32F4_H

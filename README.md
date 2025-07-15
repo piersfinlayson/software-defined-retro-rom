@@ -98,24 +98,31 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 
 Most STM32F4xxR (LQFP-64) variants will work, but the following are supported out of the box by the build system:
 
-| Model | Max ROM Images | Build variant |
-|-------|----------------|---------------|
-| STM32F401RBT6 | 6 | f401rb |
-| STM32F401RCT6 | 14 | f401rc |
-| STM32F401RET6 | 16 | f401re |
-| STM32F411RCT6 | 14 | f411rc |
-| STM32F411RET6 | 16 | f411re |
-| STM32F405RGT6 | 16 | f405rg |
-| STM32F446RCT6 | 16 | f446rc |
-| STM32F446RETx | 16 | f446re |
+| Model | Max single ROM Images | Max multi-ROM Sets |Build variant |
+|-------|-----------------------|--------------------|--------------|
+| STM32F401RBT6 | 6  | 1 | f401rb |
+| STM32F401RCT6 | 14 | 3 | f401rc |
+| STM32F401RET6 | 16 | 7 | f401re |
+| STM32F411RCT6 | 14 | 3 | f411rc |
+| STM32F411RET6 | 16 | 7 | f411re |
+| STM32F405RGT6 | 16 | 15 | f405rg |
+| STM32F446RCT6 | 16 | 3 | f446rc |
+| STM32F446RET6 | 16 | 7 | f446re |
 
-The highest performance supported variant is the STM32F446RET6, primarily because it has the fastest max clock speed (180MHz vs 168MHz for the F405, 100MHz for the F411 and 84MHz for the F401).  This means it will support the widest range of retro systems.  However, it costs more, and will draw more power and generate more heat.
+Selecting between more than 8 ROM images or sets requires hardware revision E onwards, as the PCB has more jumpers to select the images.
 
-The largest flash capacity is the STM32F405RGT6, but this extra space if currently unused, and the F405 is also only supported from PCB rev E onwards.
+The vast majority of ROMs can be emulated by the cheapest variant, the F401.  The best bang for buck are likely to be either:
+
+- STM32F401RET6 - [currently $1.93 on LCSC](https://lcsc.com/product-detail/Microcontrollers-MCU-MPU-SOC_ST-STM32F401RET6_C116978.html)
+- STM32F411RET6 - [currently $2.69 on LCSC](https://lcsc.com/product-detail/Microcontrollers-MCU-MPU-SOC_ST-STM32F411RET6_C94355.html)
+
+The F401 may require a small overclock for some systems, such as running the C64 multi-ROM set (~90MHz vs 84MHz rated maximum).
+
+There are also cheap [clones available](docs/STM32-CLONES.md), with a clone F405 coming in at around the same price as a genuine F411 (from LCSC).
 
 For more details about selecting the appropriate STM32 variant for your application, see [docs/STM32-SELECTION.md](docs/STM32-SELECTION.md).
 
-If you'd like another variant supported, raise an issue via github.
+If you'd like another variant supported, raise an issue via github or [add it yourself](docs/STM32-SELECTION.md#supporting-other-variants) and submit a PR.
 
 ## Debugging
 
