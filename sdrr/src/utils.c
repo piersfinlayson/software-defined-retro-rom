@@ -285,7 +285,7 @@ void log_init(void) {
     }
     LOG("%s", log_divider);
     LOG("Detected hardware info ...");
-    LOG("ID Code: STM32%s", idcode_stm_variant);
+    LOG("ID Code: %s", idcode_stm_variant);
     uint16_t hw_flash_size = FLASH_SIZE;
     LOG("Flash: %dKB", hw_flash_size);
 
