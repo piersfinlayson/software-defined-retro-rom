@@ -231,15 +231,6 @@ typedef enum {
     SERVE_ADDR_ON_ANY_CS,
 } sdrr_serve_t;
 
-typedef enum {
-    PIN_NONE,
-    PIN_18,     // This is 23xx pin 18, so CS2 on 2316
-    PIN_20,     // This is 23xx pin 20, so CS1 on 2364, 2332 and 2316
-    PIN_21,     // This is 23xx pin 21, so CS3 on 2316, CS2 on 2332
-    PIN_X1,     // This is pin X1 on SDRR, aka STM32F4 PC14 in hw rev f
-    PIN_X2,     // This is pin X2 on SDRR, aka STM32F4 PC15 in hw rev f
-} sdrr_cs_pin_t;
-
 // ROM information structure
 typedef struct {
     const sdrr_rom_type_t rom_type;   // ROM type

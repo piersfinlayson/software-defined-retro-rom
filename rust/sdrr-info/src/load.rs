@@ -5,25 +5,10 @@
 use anyhow::Result;
 use goblin::elf::Elf;
 use std::path::Path;
-use std::{fmt, fs};
+use std::fs;
 
-use crate::symbols::SdrrInfo;
+use sdrr_fw_parser::{SdrrInfo, SdrrFileType};
 use crate::{SDRR_INFO_OFFSET, STM32F4_FLASH_BASE};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FileType {
-    Elf,
-    Orc,
-}
-
-impl fmt::Display for FileType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FileType::Elf => write!(f, "ELF (.elf)"),
-            FileType::Orc => write!(f, "Binary (.bin)"),
-        }
-    }
-}
 
 pub fn load_sdrr_firmware<P: AsRef<Path>>(path: P) -> Result<SdrrInfo> {
     let firmware_data = fs::read(path)?;
@@ -44,11 +29,9 @@ fn load_from_binary(firmware_data: Vec<u8>) -> Result<SdrrInfo> {
     let sdrr_data = &firmware_data[SDRR_INFO_OFFSET..];
 
     SdrrInfo::from_firmware_bytes(
-        FileType::Orc,
+        SdrrFileType::Orc,
         sdrr_data,
         &firmware_data,
-        STM32F4_FLASH_BASE,
-        SDRR_INFO_OFFSET,
         firmware_data.len(),
     )
     .map_err(|e| anyhow::anyhow!(e))
@@ -101,11 +84,9 @@ fn load_from_elf(firmware_data: Vec<u8>) -> Result<SdrrInfo> {
     // Parse using existing logic
     let sdrr_data = &synthetic_binary[SDRR_INFO_OFFSET..];
     SdrrInfo::from_firmware_bytes(
-        FileType::Elf,
+        SdrrFileType::Elf,
         sdrr_data,
         &synthetic_binary,
-        STM32F4_FLASH_BASE,
-        SDRR_INFO_OFFSET,
         firmware_data.len(),
     )
     .map_err(|e| anyhow::anyhow!(e))

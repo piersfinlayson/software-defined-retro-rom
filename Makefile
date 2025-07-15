@@ -494,9 +494,9 @@ endif
 
 # Set up CARGO_TARGET_DIR
 ifeq ($(CARGO_PROFILE),)
-  CARGO_TARGET_DIR := target/debug
+  CARGO_TARGET_DIR := rust/target/debug
 else
-  CARGO_TARGET_DIR := target/$(CARGO_PROFILE)
+  CARGO_TARGET_DIR := rust/target/$(CARGO_PROFILE)
 endif
 ifneq ($(SUPPRESS_OUTPUT),1)
 $(info - CARGO_TARGET_DIR=$(CARGO_TARGET_DIR))
@@ -576,7 +576,7 @@ sdrr-gen:
 	@echo "- retrieve ROM data"
 	@echo "- process ROM data into SDRR firmware files"
 	@echo "-----"
-	@cargo build --$(CARGO_PROFILE)
+	@cd rust && cargo build --$(CARGO_PROFILE)
 
 $(CARGO_TARGET_DIR)/sdrr-gen: sdrr-gen
 
@@ -596,7 +596,7 @@ sdrr-info:
 	@echo "- Validate SDRR firmware"
 	@echo "- Extract key SDRR firmware properties"
 	@echo "-----"
-	@cargo build --$(CARGO_PROFILE)
+	@cd rust && cargo build --$(CARGO_PROFILE)
 
 info: sdrr-info firmware
 	@echo "=========================================="
@@ -670,10 +670,16 @@ clean-firmware:
 clean-gen:
 	rm -fr $(GEN_OUTPUT_DIR)
 
-clean-sdrr-gen:
-	cd sdrr-gen && cargo clean
+clean-sdrr-common:
+	cd rust/sdrr-common && cargo clean
 
-clean-sdrr-info:
-	cd sdrr-info && cargo clean
+clean-sdrr-gen: clean-sdrr-common
+	cd rust/sdrr-gen && cargo clean
+
+clean-sdrr-fw-parser:
+	cd rust/sdrr-fw-parser && cargo clean
+
+clean-sdrr-info: clean-sdrr-common clean-sdrr-fw-parser
+	cd rust/sdrr-info && cargo clean
 
 clean: clean-firmware clean-gen clean-sdrr-gen clean-sdrr-info

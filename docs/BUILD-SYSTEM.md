@@ -121,7 +121,7 @@ OBJCOPY := $(TOOLCHAIN)/bin/arm-none-eabi-objcopy
 
 **Purpose**: Validate the build firmware and extract its key properties
 
-See [`sdrr-info`](/sdrr-info/README.md) for details on how to use this tool.
+See [`sdrr-info`](/rust/sdrr-info/README.md) for details on how to use this tool.
 
 ### 5. Test (Optional)
 

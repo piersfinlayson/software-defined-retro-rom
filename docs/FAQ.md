@@ -140,11 +140,11 @@ See the [Programming Guide](/docs/PROGRAMMING.md) for more details.
 
 **Q: How can I see what platform in my firmware image is for?**
 
-A: You can use [`sdrr-info`](/sdrr-info/README.md) to inspect firmware `.elf` and `.bin` files.
+A: You can use [`sdrr-info`](/rust/sdrr-info/README.md) to inspect firmware `.elf` and `.bin` files.
 
 **Q: How can I see what ROMs are in my firmware image?**
 
-A: You can use [`sdrr-info`](/sdrr-info/README.md) to inspect firmware `.elf` and `.bin` files.
+A: You can use [`sdrr-info`](/rust/sdrr-info/README.md) to inspect firmware `.elf` and `.bin` files.
 
 ## Configuration and Usage
 
@@ -202,7 +202,7 @@ A: The main [`sdrr`](/sdrr/) firmware is written in a combination of C and assem
 
 C was chosen above other lanuages in order to stay as close as possible to the hardware, for performance reasons.  The C code is fully bare-metal - no hardware abstraction layer or other libraries are used, except [SEGGER-RTT](https://github.com/piersfinlayson/segger-rtt) for logging.
 
-The [`sdrr-gen`](/sdrr-gen/) tool, which generates the ROM images and other code to embed in the main firmware is written in Rust.
+The [`sdrr-gen`](/rust/sdrr-gen/README.md) tool, which generates the ROM images and other code to embed in the main firmware is written in Rust.
 
 **Q: What does the build pipeline look like.**
 

@@ -3,8 +3,8 @@
 There are 4 parts to this project:
 
 1. [`sdrr`](/sdrr/README.md) - The main firmware source code for the STM32F4 microcontroller.
-2. [`sdrr-gen`](/sdrr-gen/README.md) - A program to generate the required custom SDRR firmware files for your ROM images and configurations.
-3. [`sdrr-tester`](/sdrr-tester/README.md) - A test program for the Raspberry Pi Pico to test the SDRR device.
+2. [`sdrr-gen`](/rust/sdrr-gen/README.md) - A program to generate the required custom SDRR firmware files for your ROM images and configurations.
+3. [`sdrr-tester`](/rust/sdrr-tester/README.md) - A test program for the Raspberry Pi Pico to test the SDRR device.
 4. [`sdrr-pcb`](/sdrr-pcb/) - The PCB design files for the SDRR device.
 
 ## Firmware

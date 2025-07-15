@@ -14,6 +14,8 @@ All notables changes between versions are documented in this file.
 - Added detection of hardware reported STM32F4 device and flash size at runtime, and comparison to firmware values.
 - Verified [hw revision e](/sdrr-pcb/verified/stm32f4-24-pin-rev-e/) - supports STM32F4x5 variants in addition to F401/F411, all passives are now 0603, a status LED and a 4th image select jumper.
 - Added [documentation](/docs/STM32-CLONES.md) on STM32 clones.
+- Moved firmware parsing to [`rust/sdrr-fw-parser`](/rust/sdrr-fw-parser/README.md) crate, which can be used to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  Done in preparation for using from a separate WiFi Programmer.
+- Moved Rust code to [`rust/`](/rust/) directory.
 
 ### Fixes
 
@@ -34,7 +36,7 @@ Care has been taken to avoid non-backwards compatible interface (such as CLI) ch
 ### New Features
 
 - Added support for ROM sets, allowing SDRR to serve multiple ROM images simultaneously, for certain combinations of ROM types.  This is done by connecting just the chip selects from other, empty sockets to be served, to pins X1/X2 (hardware revision 24-f onwards).  Currently tested only on VIC-20 (PAL) and C64 (PAL), serving kernal and BASIC ROMs simultaneously on VIC-20 and kernal/BASIC/character ROMs simultaneously on the C64.  See [Multi-ROM Sets](/docs/MULTI-ROM-SETS.md) for more details.
-- Added [`sdrr-info`](/sdrr-info/README.md) tool to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  In particular this allows
+- Added [`sdrr-info`](/rust/sdrr-info/README.md) tool to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  In particular this allows
   - listing which STM32F4 device the firmware was built for
   - extraction of ROM images from the firmware, for checksumming and/or comparing with the originals.
 - Moved hardware configuration to a dynamic model, where the supported hardware configurations are defined in configuration files, and the desired version is selected at build time.  Users can easily add configurations for their own PCB layouts, and either submit pull requests to include them in the main repository, or keep them locally.  For more details see [Custom Hardware](/docs/CUSTOM-HARDWARE.md).

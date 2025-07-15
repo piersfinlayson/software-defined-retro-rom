@@ -62,20 +62,20 @@ If you have a different variant, the easiest way to support it is to choose a ve
 If you want to add support for another variant:
 
 - Add it to [`Makefile`](/Makefile) - see the `STM` variable.
-- Add it to [`sddr-common`](/sdrr-common), in particular:
-  - [`sdrr-common/src/sdrr_types.rs`](sdrr-common/src/sdrr_types.rs):
+- Add it to [`/rust/sddr-common`](/rust/sdrr-common), in particular:
+  - [`/rust/sdrr-common/src/sdrr_types.rs`](/rust/sdrr-common/src/sdrr_types.rs):
     - `StmProcessor`
     - `StmVariant`
-  - [`sdrr-common/src/args.rs`](sdrr-common/src/args.rs):
+  - [`/rust/sdrr-common/src/args.rs`](/rust/sdrr-common/src/args.rs):
     - `parse_stm_variant()` function
-  - [`sdrr-gen/src/rom_types.rs`](sdrr-gen/src/rom_types.rs):
+  - [`/rust/sdrr-gen/src/rom_types.rs`](/rust/sdrr-gen/src/rom_types.rs):
     - `StmProcessor`
     - `StmVariant`
 - Add it to the [`sdrr`] firmware:
-  - [`sdrr/src/config_base.h`](/sdrr/src/config_base.h)
+  - [`/sdrr/src/config_base.h`](/sdrr/src/config_base.h)
     - `stm_line_t`
-  - Add its max frequency to [`sdrr/include/include.h`](/sdrr/include/include.h) - search for the pre-processor `TARGET_FREQ_MHZ` tests.
-  - Add it to [`sdrr/src/utils.c`](/sdrr/src/utils.c) - `log_init` function.
+  - Add its max frequency to [`/sdrr/include/include.h`](/sdrr/include/include.h) - search for the pre-processor `TARGET_FREQ_MHZ` tests.
+  - Add it to [`/sdrr/src/utils.c`](/sdrr/src/utils.c) - `log_init` function.
   - Add any support specifically for this STM32 variant - grep for "STM32F411" and "STM32F405" for examples of variant specific code.
 
 ## STM32F4 Family Comparisons
