@@ -337,8 +337,8 @@ void log_init(void) {
     LOG("%s size: %dKB (%d bytes)", flash, STM_FLASH_SIZE_KB, STM_FLASH_SIZE);
     LOG("%s used: %dKB %d bytes", flash, flash_kb, flash_bytes);
 #endif
-    if (flash_kb != hw_flash_size) {
-        LOG("!!! Flash size mismatch: actual %dKB, firmware expected %dKB", hw_flash_size, flash_kb);
+    if (hw_flash_size != STM_FLASH_SIZE_KB) {
+        LOG("!!! Flash size mismatch: actual %dKB, firmware expected %dKB", hw_flash_size, STM_FLASH_SIZE_KB);
     }
 
     uint32_t ram_size_bytes = (uint32_t)&_ram_size;
