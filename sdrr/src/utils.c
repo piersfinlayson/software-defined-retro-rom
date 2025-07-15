@@ -291,7 +291,7 @@ void log_init(void) {
 
     LOG("%s", log_divider);
     LOG("Firmware hardware info ...");
-    LOG("STM32%s", stm_variant);
+    LOG("%s", stm_variant);
     int mismatch = 1;
     switch (sdrr_info.stm_line) {
         case F401:
