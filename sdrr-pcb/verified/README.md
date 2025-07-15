@@ -4,6 +4,9 @@ This folder contains design and manufacturing files for verified revisions of th
 
 Revisions:
 
-- [STM32F4-24-pin Rev D](./stm32f4-24-pin-rev-d/README.md) - 24-pin ROM replacement:
+- [STM32F4 24 pin Rev E](./stm32f4-24-pin-rev-e/README.md) - Supports STM32F401, STM32F411, STM32F405 and STM32F415 variants.
+  - Tested with STM32F401, STM32F405 and GD32F405 variants
+  - Includes status LED.
+- [STM32F4 24 pin Rev D](./stm32f4-24-pin-rev-d/README.md) - 24-pin ROM replacement:
   - Tested with STM32F401 and STM32F411 variants
   - Tested as 2364 and 2332 ROM replacements in PET, VIC-20 and C64 (50Hz/PAL)

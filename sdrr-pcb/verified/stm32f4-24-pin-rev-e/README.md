@@ -1,13 +1,13 @@
 # STM32F4 24 Pin Rev E
 
-**Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
-
 23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
 
-This revision has two key improvements over rev D:
+This revision has four key improvements over rev D:
 
-- STM32F405 and STM32F415 variants are now supported - note there are some BOM differences between the F401/F411 and F405/F415 variants.
+- STM32F405 and STM32F415 variants are now supported - note there are some BOM differences between the F401/F411 and F405/F415 variants.  (F415 has not been tested, but is pin compatible with the F405 which has been.)
 - No 0402 passives are used - all passives are 0603, which is easier to hand solder.  The PCB footprint remains the same.
+- Additional image select jumper (4th jumper => allows up to 16 images/sets to be selected).
+- Status LED.
 
 <div style="text-align: center;">
   <a href="/sdrr-pcb/unverified/stm32f4-24-pin-rev-e/sdrr-rev-e.png">
@@ -28,7 +28,7 @@ This revision has two key improvements over rev D:
 
 ## Ordering Bare PCBs
 
-[![Order from OSH Park](https://oshpark.com/assets/badge-5b7ec47045b78aef6eb9d83b3bac6b1920de805e9a0c227658eac6e19a045b9c.png)](https://oshpark.com/shared_projects/9TJoAirm)
+[![Order from OSH Park](https://oshpark.c   om/assets/badge-5b7ec47045b78aef6eb9d83b3bac6b1920de805e9a0c227658eac6e19a045b9c.png)](https://oshpark.com/shared_projects/9TJoAirm)
 
 ## Errata
 
@@ -38,7 +38,10 @@ All corrections have been reflected in the BOM below, but not the schematic or g
 
 ## Notes
 
+- **F401/411/446 vs F405/F415 have slightly different [BOMs](#bom)**
 - Now supports STM32F405 and STM32F415 variants, in addition to the STM32F401 and STM32F411 variants.
+- Includes [status LED](/docs/CONFIGURATION.md#status_led).
+- All passives are 0603, making it easier to hand solder.
 
 ## Changelog
 
