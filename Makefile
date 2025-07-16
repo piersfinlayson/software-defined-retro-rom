@@ -334,6 +334,12 @@ ifneq ($(SUPPRESS_OUTPUT),1)
   $(info SDRR Makefile env settings:)
 endif
 
+ifneq ($(STM),)
+ifneq ($(SUPPRESS_OUTPUT),1)
+  $(info - STM=$(STM))
+endif
+endif
+
 ifneq ($(CONFIG),)
 ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - CONFIG=$(CONFIG))
