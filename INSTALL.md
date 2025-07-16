@@ -1,10 +1,12 @@
 # INSTALL
 
-0. Get hold of a [supported microcontroller](README.md#supported-stm32-microcontrollers) and the [PCB](sdrr-pcb) and solder the PCB up.
+Get hold of a [supported microcontroller](README.md#supported-stm32-microcontrollers) and the [PCB](sdrr-pcb) and solder the PCB up.
 
-    Get the rev D from here:
+Get rev E from here:
 
-    [![Order from OSH Park](https://oshpark.com/assets/badge-5b7ec47045b78aef6eb9d83b3bac6b1920de805e9a0c227658eac6e19a045b9c.png)](https://oshpark.com/shared_projects/E7lLKM9E)
+[![Order from OSH Park](https://oshpark.c   om/assets/badge-5b7ec47045b78aef6eb9d83b3bac6b1920de805e9a0c227658eac6e19a045b9c.png)](https://oshpark.com/shared_projects/9TJoAirm)
+
+At this point, you can choose to install the dependencies locally, or use the [Docker container](ci/docker/README.md) to build the SDRR firmware.
 
 1. Clone the repository:
 
