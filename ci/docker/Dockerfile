@@ -9,14 +9,6 @@ LABEL org.opencontainers.image.source="https://github.com/piersfinlayson/softwar
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.vendor="piers.rocks"
 
-# Build-time metadata
-ARG BUILD_DATE
-ARG VERSION
-ARG VCS_REF
-LABEL org.opencontainers.image.created=${BUILD_DATE}
-LABEL org.opencontainers.image.version=${VERSION}
-LABEL org.opencontainers.image.revision=${VCS_REF}
-
 # SDRR build args
 ARG CONFIG
 ARG STM
@@ -46,7 +38,8 @@ COPY config/docker/ /home/build/software-defined-retro-rom/config/docker/
 # Build SDRR
 WORKDIR /home/build/software-defined-retro-rom
 WORKDIR /home/build/software-defined-retro-rom
-RUN ${CONFIG:+CONFIG=$CONFIG} \
+RUN env \
+    ${CONFIG:+CONFIG=$CONFIG} \
     ${STM:+STM=$STM} \
     ${HW_REV:+HW_REV=$HW_REV} \
     ${ROM_CONFIGS:+ROM_CONFIGS="$ROM_CONFIGS"} \
@@ -73,7 +66,7 @@ RUN cp -r sdrr/build /home/build/output/
 
 # Output detailed firmware information
 RUN ELF_FILE=$(basename $(find sdrr/build -name "sdrr-stm32*.elf" -type f)) && \
-    /home/build/software-defined-retro-rom/rust/sdrr-info/target/release/sdrr-info info -d $ELF_FILE >> /home/build/output/sdrr-info.txt
+    /home/build/software-defined-retro-rom/rust/target/release/sdrr-info info -d /home/build/output/build/$ELF_FILE >> /home/build/output/sdrr-info.txt
 
 # Default to staying in the project directory
 WORKDIR /home/build/software-defined-retro-rom
