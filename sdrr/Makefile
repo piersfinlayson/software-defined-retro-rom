@@ -24,7 +24,7 @@ endif
 BUILD_DIR := build
 
 # Toolchain
-TOOLCHAIN ?= /opt/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi/bin
+TOOLCHAIN ?= /opt/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi/bin
 CC := $(TOOLCHAIN)/arm-none-eabi-gcc
 OBJDUMP := $(TOOLCHAIN)/arm-none-eabi-objdump
 OBJCOPY := $(TOOLCHAIN)/arm-none-eabi-objcopy

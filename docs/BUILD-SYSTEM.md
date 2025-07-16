@@ -101,7 +101,7 @@ Original ROM → Size Validation → Pin Mapping → Flash Layout → C Arrays
 **Toolchain Setup**:
 
 ```makefile
-TOOLCHAIN := /opt/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi
+TOOLCHAIN := /opt/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi
 CC := $(TOOLCHAIN)/bin/arm-none-eabi-gcc
 OBJCOPY := $(TOOLCHAIN)/bin/arm-none-eabi-objcopy
 ```

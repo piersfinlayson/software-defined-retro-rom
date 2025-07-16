@@ -18,9 +18,9 @@
     Recommended approach - download the toolchain from ARM's developer site (this is quite large, so may take a while):
 
     ```bash
-    wget https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
-    tar -xvf arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
-    sudo mv arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi /opt/
+    wget https://developer.arm.com/-/media/Files/downloads/gnu/14.3.rel1/binrel/arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz
+    tar -xvf arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi.tar.xz
+    sudo mv arm-gnu-toolchain-14.3.rel1-x86_64-arm-none-eabi /opt/
     ```
 
     Or install it via your package manager, e.g., on Debian/Ubuntu:
