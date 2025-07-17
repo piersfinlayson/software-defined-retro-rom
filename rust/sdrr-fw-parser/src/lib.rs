@@ -30,7 +30,7 @@ use core::fmt;
 use std::{vec::Vec, string::String};
 
 #[cfg(not(feature = "std"))]
-use alloc::{vec::Vec, string::String};
+use alloc::{vec, vec::Vec, string::{String, ToString}, format};
 
 use static_assertions::const_assert_eq;
 
