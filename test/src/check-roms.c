@@ -33,7 +33,9 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
         // switched sets are handled in the else.
         if (num_roms == 1) {
             int loaded_rom_idx = overall_rom_idx;
-            printf("- Testing ROM %d in set %d\n  - Type: %s, Name: %s\n", 0, set_idx, configs[overall_rom_idx].type, configs[loaded_rom_idx].filename);
+            printf("- Single ROM set\n");
+            printf("  - Testing ROM %d in set %d\n", 0, set_idx);
+            printf("    - Type: %s, Name: %s\n", configs[overall_rom_idx].type, configs[loaded_rom_idx].filename);
 
             // Single ROM: test both CS=0 and CS=1 against expected value.
             // 2332/2316 ROMs are tested by virtue of their extra CS line(s)
@@ -73,6 +75,11 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
             }
             overall_rom_idx++;
         } else {
+            if (serve == SERVE_ADDR_ON_ANY_CS) {
+                printf("- Multi-ROM set\n");
+            }  else {
+                printf("- Bank switched set\n");
+            }
             // Multi-ROM/bank switched set: test all 8 CS combinations
             int cs_combinations[8][3] = {
                 // X1 is set to 1 before X2 so the output is more logic
@@ -122,13 +129,13 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
                 if (active_rom >= 0) {
                     int loaded_rom_idx = overall_rom_idx + active_rom;
                     if (loaded_rom_idx < count) {
-                        printf("- ROM %d in set %d - CS1=%d, X1=%d, X2=%d", active_rom, set_idx, cs1, x1, x2);
-                        printf("  - Type: %s, Name: %s\n", configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
+                        printf("  - ROM %d in set %d - CS1=%d, X1=%d, X2=%d\n", active_rom, set_idx, cs1, x1, x2);
+                        printf("    - Type: %s, Name: %s\n", configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
                     } else {
-                        printf("- ROM %d in set %d (ERROR: out of bounds)\n", active_rom, set_idx);
+                        printf("  - ROM %d in set %d (ERROR: out of bounds)\n", active_rom, set_idx);
                     }
                 } else {
-                    printf("- Testing blank section CS1=%d, X1=%d, X2=%d\n", cs1, x1, x2);
+                    printf("  - Testing blank section CS1=%d, X1=%d, X2=%d\n", cs1, x1, x2);
                 }
                 
                 // Test all addresses for this combination
