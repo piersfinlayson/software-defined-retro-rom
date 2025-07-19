@@ -14,7 +14,8 @@ Emulates 2364, 2332 and 2316 ROMs using the STM32F4 family of microcontrollers. 
 - 🛠️ **Reflash in situ** - no need to remove the ROM from the host when reprogramming.
 - ⚙️ **Software configurable** chip select lines - no hardware jumpers required.
 - 💾 Stores up to **16 ROM images** of different sizes and chip select configurations.  Image selectable via jumpers.
-- 📦 One software ROM can **replace multiple ROMs** in a single system, e.g. all of C64 kernel, BASIC, character set.
+- 📦 **Replace multiple ROMs with one ROM** one SDRR can replace up to 3 original ROMs e.g. all of C64 kernel, BASIC, character set.
+- 🔀 **Dynamic bank switching** - switch between ROM images on the fly, e.g. different char ROMs.
 - 🧩 **Images combined automatically** - no need to manually build up your own larger PROM image containing multiple retro ROMs.
 - 🏭 **Two layer PCB**, component on single-side, limited BOM for low manufacturing cost/complexity.
 - 🎯 Supports multiple **STM32F4xxR** variants: F401, F411, F405, F446 (others can be added).
@@ -82,7 +83,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 - [Available Configurations](config/README.md#available-configurations) - Various pre-collated ROM collection configurations.
 - [STM32 Selection](docs/STM32-SELECTION.md) - How to select the appropriate STM32 variant for your application.
 - [Image Selection](docs/IMAGE-SELECTION.md) - How to tell SDRR which of the installed ROM images to serve.
-- [Multi-ROM Sets](docs/MULTI-ROM-SETS.md) - How to use a single SDRR to serve multiple ROMs simultaneously.
+- [Multi-ROM Sets](docs/MULTI-ROM-SETS.md) - How to use a single SDRR to support multiple ROMs simultaneously or to dynamically switch between images.
 - [Configuration](docs/CONFIGURATION.md) - SDRR configuration options.
 - [Logging](docs/LOGGING.md) - How to enable and use logging in SDRR.
 - [Technical Summary](docs/TECHNICAL-SUMMARY.md) - Overview of the SDRR architecture, operation and design decisions.

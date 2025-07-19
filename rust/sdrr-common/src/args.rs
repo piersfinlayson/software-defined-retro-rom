@@ -2,8 +2,8 @@
 //
 // MIT License
 
-use crate::hardware::{get_hw_config, HwConfig};
-use crate::sdrr_types::{StmVariant, ServeAlg};
+use crate::hardware::{HwConfig, get_hw_config};
+use crate::sdrr_types::{ServeAlg, StmVariant};
 
 pub fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
     StmVariant::from_str(s)
@@ -19,8 +19,12 @@ pub fn parse_hw_rev(hw_rev: &str) -> Result<HwConfig, String> {
         _ => hw_rev,
     };
 
-    let hw_config = get_hw_config(hw_rev)
-        .map_err(|e| format!("Failed to get hardware config: {} - use --list-hw-revs for options", e))?;
+    let hw_config = get_hw_config(hw_rev).map_err(|e| {
+        format!(
+            "Failed to get hardware config: {} - use --list-hw-revs for options",
+            e
+        )
+    })?;
 
     if hw_config.rom.pins.quantity != 24 {
         return Err(format!(
@@ -28,7 +32,7 @@ pub fn parse_hw_rev(hw_rev: &str) -> Result<HwConfig, String> {
             hw_rev, hw_config.rom.pins.quantity
         ));
     }
-    
+
     Ok(hw_config)
 }
 
@@ -40,4 +44,3 @@ pub fn parse_serve_alg(s: &str) -> Result<ServeAlg, String> {
         )
     })
 }
-

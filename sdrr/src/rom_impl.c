@@ -98,8 +98,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
     // Warn if serve mode is incorrectly set for multiple ROM images
     if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
-        ROM_IMPL_LOG("!!! Mutliple ROM images - wrong serve mode - rectifying");
-        serve_mode = SERVE_ADDR_ON_ANY_CS;
+        ROM_IMPL_LOG("Must be serving bank switched images");
     } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
         ROM_IMPL_LOG("!!! Single ROM image - wrong serve mode - defaulting");
         serve_mode = SERVE_TWO_CS_ONE_ADDR;
@@ -226,7 +225,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     // Port C for address and CS lines - set all pins as inputs
     GPIOC_MODER = 0;  // Set all pins as inputs
     uint32_t gpioc_pupdr;
-    if (set->rom_count == 1) {
+    if (serve_mode != SERVE_ADDR_ON_ANY_CS) {
         // Set pull-downs on PC14/15 only, so RAM lookup only takes 16KB.
         // We checked the address lines are lines 0-13 above, and in sdrr-gen
         // so this is reasonable.

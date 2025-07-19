@@ -1,16 +1,14 @@
 #![allow(dead_code)]
+use anyhow::{Context, Result, anyhow, bail};
+use serde::{Deserialize, Deserializer};
 /// Handles loading hardware configuration files and creating objects
 /// for use by sddr-gen/sdrr-info.
-
 // Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
 //
 // MIT License
-
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Deserializer};
-use anyhow::{anyhow, Result, bail, Context};
 
 use crate::sdrr_types::{RomType, StmFamily};
 
@@ -122,9 +120,8 @@ where
     D: serde::Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    StmFamily::from_str(&s).ok_or_else(|| {
-        serde::de::Error::custom(format!("Invalid STM family: {}", s))
-    })
+    StmFamily::from_str(&s)
+        .ok_or_else(|| serde::de::Error::custom(format!("Invalid STM family: {}", s)))
 }
 
 fn deserialize_rom_map<'de, D>(deserializer: D) -> Result<HashMap<RomType, u8>, D::Error>
@@ -133,18 +130,21 @@ where
 {
     let string_map: HashMap<String, u8> = HashMap::deserialize(deserializer)?;
     let mut rom_map = HashMap::new();
-    
+
     for (key, value) in string_map {
         match RomType::from_str(&key) {
             Some(rom_type) => {
                 rom_map.insert(rom_type, value);
-            },
+            }
             None => {
-                return Err(serde::de::Error::custom(format!("Invalid ROM type: {}", key)));
+                return Err(serde::de::Error::custom(format!(
+                    "Invalid ROM type: {}",
+                    key
+                )));
             }
         }
     }
-    
+
     Ok(rom_map)
 }
 
@@ -166,14 +166,17 @@ impl HwConfig {
         let mut config: HwConfig = serde_json::from_str(json)?;
         config.name = normalize_name(name);
         validate_config(&config.name, &config)?;
-        
+
         // Create pin maps for quick access
         let num_phys_addr_pins = if config.rom.pins.quantity == 24 {
             14 // 24-pin ROMs have maximum 13 address lines + 1 CS
         } else if config.rom.pins.quantity == 28 {
             16 // 28 pin ROMs have 14 address lines + 2 CS
         } else {
-            bail!("Unsupported ROM type {}, expected 24 or 28-pin ROM", config.rom.pins.quantity);
+            bail!(
+                "Unsupported ROM type {}, expected 24 or 28-pin ROM",
+                config.rom.pins.quantity
+            );
         };
 
         // Create address pin map.
@@ -196,7 +199,7 @@ impl HwConfig {
                 bail!("Missing data pin {} in config {}", phys_pin, config.name);
             }
         }
-        
+
         Ok(config)
     }
 
@@ -287,7 +290,7 @@ impl HwConfig {
             if let Some(x2) = self.stm.pins.x2 {
                 if x1 < 255 && x2 < 255 {
                     assert!(x1 <= 15 && x2 <= 15, "X1 and X2 pins must be less than 15");
-                    return true
+                    return true;
                 }
             }
         }
@@ -301,13 +304,22 @@ fn normalize_name(name: &str) -> String {
 
 fn validate_pin_number(pin: u8, pin_name: &str, config_name: &str) -> Result<()> {
     if pin > MAX_STM_PIN_NUM && pin != 255 {
-        bail!("{}: invalid pin number {} for {}, must be 0-{} or 255",
-              config_name, pin, pin_name, MAX_STM_PIN_NUM);
+        bail!(
+            "{}: invalid pin number {} for {}, must be 0-{} or 255",
+            config_name,
+            pin,
+            pin_name,
+            MAX_STM_PIN_NUM
+        );
     }
     Ok(())
 }
 
-fn validate_rom_types(rom_map: &HashMap<RomType, u8>, pin_type: &str, config_name: &str) -> Result<()> {
+fn validate_rom_types(
+    rom_map: &HashMap<RomType, u8>,
+    pin_type: &str,
+    config_name: &str,
+) -> Result<()> {
     for (rom_type, &pin) in rom_map {
         validate_pin_number(pin, &format!("{}[{:?}]", pin_type, rom_type), config_name)?;
     }
@@ -320,26 +332,47 @@ fn validate_pin_array(pins: &[u8], pin_type: &str, config_name: &str, max_pins: 
     for &pin in pins {
         validate_pin_number(pin, pin_type, config_name)?;
         if !seen.insert(pin) {
-            bail!("{}: duplicate pin {} in {} array", config_name, pin, pin_type);
+            bail!(
+                "{}: duplicate pin {} in {} array",
+                config_name,
+                pin,
+                pin_type
+            );
         }
         num_pins += 1;
     }
     if num_pins > max_pins as usize {
-        bail!("{}: too many pins in {} array, maximum is {}", config_name, pin_type, max_pins);
+        bail!(
+            "{}: too many pins in {} array, maximum is {}",
+            config_name,
+            pin_type,
+            max_pins
+        );
     }
     Ok(())
 }
 /// min_valid - minimum number of valid pins expected in the array.
 /// valid_value - maximum valid pin value
-fn validate_pin_values(pins: &[u8], pin_type: &str, config_name: &str, min_valid: usize, valid_value: u8) -> Result<()> {
+fn validate_pin_values(
+    pins: &[u8],
+    pin_type: &str,
+    config_name: &str,
+    min_valid: usize,
+    valid_value: u8,
+) -> Result<()> {
     let mut ii = 0;
     for &pin in pins {
         if ii >= min_valid {
             break;
         }
         if pin > valid_value {
-            bail!("{}: invalid pin value {} in {} array, must be 0-{}",
-                  config_name, pin, pin_type, valid_value);
+            bail!(
+                "{}: invalid pin value {} in {} array, must be 0-{}",
+                config_name,
+                pin,
+                pin_type,
+                valid_value
+            );
         }
         ii += 1
     }
@@ -349,9 +382,13 @@ fn validate_pin_values(pins: &[u8], pin_type: &str, config_name: &str, min_valid
 fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
     // Check data pins are exactly 8
     if config.stm.pins.data.len() != 8 {
-        bail!("{}: data pins must be exactly 8, found {}", name, config.stm.pins.data.len());
+        bail!(
+            "{}: data pins must be exactly 8, found {}",
+            name,
+            config.stm.pins.data.len()
+        );
     }
-    
+
     // Validate pins consistent within pin arrays
     validate_pin_array(&config.stm.pins.data, "data", name, 8)?;
     validate_pin_array(&config.stm.pins.addr, "addr", name, 16)?;
@@ -371,9 +408,13 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
             // used for an address line - CE/OE can be anywhere in the port
             validate_pin_values(&config.stm.pins.addr, "addr", name, 14, 15)?
         }
-        _ => bail!("{}: unsupported ROM type {}, expected 24 or 28-pin ROM", name, config.rom.pins.quantity),
+        _ => bail!(
+            "{}: unsupported ROM type {}, expected 24 or 28-pin ROM",
+            name,
+            config.rom.pins.quantity
+        ),
     }
-    
+
     // Validate ROM type mappings
     validate_rom_types(&config.stm.pins.cs1, "cs1", name)?;
     validate_rom_types(&config.stm.pins.cs2, "cs2", name)?;
@@ -383,18 +424,34 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
 
     // Validate ports
     if config.stm.ports.data_port != Port::A {
-        bail!("{}: data port must be A, found {:?}", name, config.stm.ports.data_port);
+        bail!(
+            "{}: data port must be A, found {:?}",
+            name,
+            config.stm.ports.data_port
+        );
     }
     if config.stm.ports.addr_port != Port::C {
-        bail!("{}: address port must be C, found {:?}", name, config.stm.ports.addr_port);
+        bail!(
+            "{}: address port must be C, found {:?}",
+            name,
+            config.stm.ports.addr_port
+        );
     }
     if config.stm.ports.cs_port != Port::C {
-        bail!("{}: CS port must be C, found {:?}", name, config.stm.ports.cs_port);
+        bail!(
+            "{}: CS port must be C, found {:?}",
+            name,
+            config.stm.ports.cs_port
+        );
     }
     if config.stm.ports.sel_port != Port::B {
-        bail!("{}: SEL port must be B, found {:?}", name, config.stm.ports.sel_port);
+        bail!(
+            "{}: SEL port must be B, found {:?}",
+            name,
+            config.stm.ports.sel_port
+        );
     }
-    
+
     // Validate optional pins
     if let Some(pin) = config.stm.pins.x1 {
         validate_pin_number(pin, "x1", name)?;
@@ -405,108 +462,153 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
 
     // Group pins by port for conflict checking
     let mut port_pins: HashMap<Port, Vec<(&str, u8)>> = HashMap::new();
-    
+
     // Add data pins
     for &pin in &config.stm.pins.data {
-        port_pins.entry(config.stm.ports.data_port)
-                 .or_default()
-                 .push(("data", pin));
+        port_pins
+            .entry(config.stm.ports.data_port)
+            .or_default()
+            .push(("data", pin));
     }
-    
+
     // Add address pins
     for &pin in &config.stm.pins.addr {
-        port_pins.entry(config.stm.ports.addr_port)
-                 .or_default()
-                 .push(("addr", pin));
+        port_pins
+            .entry(config.stm.ports.addr_port)
+            .or_default()
+            .push(("addr", pin));
     }
-    
+
     // Add sel pins
     for &pin in &config.stm.pins.sel {
-        port_pins.entry(config.stm.ports.sel_port)
-                 .or_default()
-                 .push(("sel", pin));
+        port_pins
+            .entry(config.stm.ports.sel_port)
+            .or_default()
+            .push(("sel", pin));
     }
-    
+
     // Add CS pins
     for &pin in config.stm.pins.cs1.values() {
-        port_pins.entry(config.stm.ports.cs_port)
-                 .or_default()
-                 .push(("cs1", pin));
+        port_pins
+            .entry(config.stm.ports.cs_port)
+            .or_default()
+            .push(("cs1", pin));
     }
     for &pin in config.stm.pins.cs2.values() {
-        port_pins.entry(config.stm.ports.cs_port)
-                 .or_default()
-                 .push(("cs2", pin));
+        port_pins
+            .entry(config.stm.ports.cs_port)
+            .or_default()
+            .push(("cs2", pin));
     }
     for &pin in config.stm.pins.cs3.values() {
-        port_pins.entry(config.stm.ports.cs_port)
-                 .or_default()
-                 .push(("cs3", pin));
+        port_pins
+            .entry(config.stm.ports.cs_port)
+            .or_default()
+            .push(("cs3", pin));
     }
-    
+
     // Add optional pins
     if let Some(pin) = config.stm.pins.x1 {
-        port_pins.entry(config.stm.ports.cs_port)  // Assuming x1/x2 are on cs_port
-                 .or_default()
-                 .push(("x1", pin));
+        port_pins
+            .entry(config.stm.ports.cs_port) // Assuming x1/x2 are on cs_port
+            .or_default()
+            .push(("x1", pin));
     }
     if let Some(pin) = config.stm.pins.x2 {
-        port_pins.entry(config.stm.ports.cs_port)
-                 .or_default()
-                 .push(("x2", pin));
+        port_pins
+            .entry(config.stm.ports.cs_port)
+            .or_default()
+            .push(("x2", pin));
     }
-    
+
     for &pin in config.stm.pins.ce.values() {
-        port_pins.entry(config.stm.ports.cs_port)
-                 .or_default()
-                 .push(("ce", pin));
+        port_pins
+            .entry(config.stm.ports.cs_port)
+            .or_default()
+            .push(("ce", pin));
     }
     for &pin in config.stm.pins.oe.values() {
-        port_pins.entry(config.stm.ports.cs_port)
-                 .or_default()
-                 .push(("oe", pin));
+        port_pins
+            .entry(config.stm.ports.cs_port)
+            .or_default()
+            .push(("oe", pin));
     }
     let pin = config.stm.pins.status;
-    port_pins.entry(config.stm.ports.status_port)
-                .or_default()
-                .push(("status", pin));
+    port_pins
+        .entry(config.stm.ports.status_port)
+        .or_default()
+        .push(("status", pin));
+
+    // Validate X1/X2 pins are fixed at 14/15 if provided
+    if let Some(x1_pin) = config.stm.pins.x1 {
+        if x1_pin != 14 {
+            bail!("{}: X1 pin must be 14, found {}", name, x1_pin);
+        }
+    }
+    if let Some(x2_pin) = config.stm.pins.x2 {
+        if x2_pin != 15 {
+            bail!("{}: X2 pin must be 15, found {}", name, x2_pin);
+        }
+    }
+
+    // Both X1 and X2 must be provided together for multi-ROM support
+    if config.stm.pins.x1.is_some() != config.stm.pins.x2.is_some() {
+        bail!(
+            "{}: X1 and X2 pins must both be provided or both omitted",
+            name
+        );
+    }
 
     // Check for conflicts within each port
     for (port, pins) in port_pins {
         let mut used_pins: HashMap<u8, Vec<&str>> = HashMap::new();
-        
+
         for (pin_type, pin_num) in pins {
             used_pins.entry(pin_num).or_default().push(pin_type);
         }
-        
+
         for (pin_num, pin_types) in used_pins {
             if pin_types.len() > 1 {
                 // Check if this is an allowed overlap
-                let cs_types: HashSet<&str> = ["cs1", "cs2", "cs3", "ce", "oe"].into_iter().collect();
+                let cs_types: HashSet<&str> =
+                    ["cs1", "cs2", "cs3", "ce", "oe"].into_iter().collect();
                 let has_cs = pin_types.iter().any(|t| cs_types.contains(t));
-                let all_cs_or_addr = pin_types.iter().all(|t| cs_types.contains(t) || *t == "addr");
-                
+                let all_cs_or_addr = pin_types
+                    .iter()
+                    .all(|t| cs_types.contains(t) || *t == "addr");
+
                 if !(has_cs && all_cs_or_addr) {
-                    bail!("{}: pin {} on port {:?} used by multiple incompatible functions: {:?}", 
-                          name, pin_num, port, pin_types);
+                    bail!(
+                        "{}: pin {} on port {:?} used by multiple incompatible functions: {:?}",
+                        name,
+                        pin_num,
+                        port,
+                        pin_types
+                    );
                 }
             }
         }
     }
-    
+
     Ok(())
 }
 
 fn get_config_dirs() -> Result<Vec<PathBuf>> {
     // Find first existing root directory
-    let root = HW_CONFIG_DIRS.iter()
+    let root = HW_CONFIG_DIRS
+        .iter()
         .map(|dir| Path::new(dir))
         .find(|path| path.exists())
-        .ok_or_else(|| anyhow!("No hardware configuration directories found. Searched: {:?}", HW_CONFIG_DIRS))?;
+        .ok_or_else(|| {
+            anyhow!(
+                "No hardware configuration directories found. Searched: {:?}",
+                HW_CONFIG_DIRS
+            )
+        })?;
 
     // Build list starting with root, then existing subdirs
     let mut dirs = vec![root.to_path_buf()];
-    
+
     for subdir in HW_CONFIG_SUB_DIRS.iter() {
         let subdir_path = root.join(subdir);
         if subdir_path.exists() {
@@ -521,7 +623,7 @@ fn get_config_dirs() -> Result<Vec<PathBuf>> {
 
 pub fn list_available_configs() -> Result<Vec<(String, String)>> {
     let config_dirs = get_config_dirs()?;
-    
+
     let mut configs = Vec::new();
     let mut seen_names: HashMap<String, PathBuf> = HashMap::new();
 
@@ -529,38 +631,47 @@ pub fn list_available_configs() -> Result<Vec<(String, String)>> {
         for entry in fs::read_dir(config_dir)? {
             let entry = entry?;
             let path = entry.path();
-            
+
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                let filename = path.file_stem()
-                                .and_then(|s| s.to_str())
-                                .ok_or_else(|| anyhow::anyhow!("Invalid filename"))?;
-                
+                let filename = path
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .ok_or_else(|| anyhow::anyhow!("Invalid filename"))?;
+
                 let normalized = normalize_name(filename);
                 if normalized != filename {
-                    bail!("Invalid hardware revision name '{}', must be lower-case with dashes, not underscores", path.display());
+                    bail!(
+                        "Invalid hardware revision name '{}', must be lower-case with dashes, not underscores",
+                        path.display()
+                    );
                 }
-                
+
                 // Check for duplicates
                 if let Some(first_path) = seen_names.get(&normalized) {
-                    bail!("Duplicate hardware revision '{}' found in {} and {}", 
-                        filename, first_path.display(), path.display());
+                    bail!(
+                        "Duplicate hardware revision '{}' found in {} and {}",
+                        filename,
+                        first_path.display(),
+                        path.display()
+                    );
                 }
                 seen_names.insert(normalized.clone(), path.clone());
-                
+
                 // Parse JSON to get description
                 let content = fs::read_to_string(&path)?;
-                let config = HwConfig::new(&content, &normalized)
-                    .with_context(|| format!("Failed to parse hardware config: {}", path.display()))?;
+                let config = HwConfig::new(&content, &normalized).with_context(|| {
+                    format!("Failed to parse hardware config: {}", path.display())
+                })?;
 
                 configs.push((filename.to_string(), config.description));
             }
         }
     }
-    
+
     if configs.is_empty() {
         bail!("No valid hardware configurations found");
     }
-    
+
     configs.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(configs)
 }
@@ -574,21 +685,25 @@ pub fn get_hw_config(name: &str) -> Result<HwConfig> {
     // Now load the config we've been asked for.
     let normalized = normalize_name(name);
     let config_dirs = get_config_dirs()?;
-    
+
     for config_dir in config_dirs {
         let config_path = config_dir.join(format!("{}.json", normalized));
-        
+
         match fs::read_to_string(&config_path) {
             Ok(content) => {
-                let config = HwConfig::new(&content, &normalized)
-                    .with_context(|| format!("Failed to parse hardware config '{}'", config_path.display()))?;
-                
+                let config = HwConfig::new(&content, &normalized).with_context(|| {
+                    format!(
+                        "Failed to parse hardware config '{}'",
+                        config_path.display()
+                    )
+                })?;
+
                 return Ok(config);
             }
             Err(_) => continue, // Try next directory
         }
     }
-    
+
     bail!("Hardware config '{}' not found", normalized);
 }
 

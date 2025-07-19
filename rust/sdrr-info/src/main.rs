@@ -29,20 +29,20 @@ pub const SDRR_VERSION_MINOR: u16 = 2;
 pub const SDRR_VERSION_PATCH: u16 = 1;
 
 // Modules
-mod load;
 mod args;
+mod load;
 mod utils;
 
 // External crates
 use anyhow::Result;
+use chrono::{DateTime, Local};
+use std::fs::metadata;
 use std::io::Write;
 use std::path::Path;
-use std::fs::metadata;
-use chrono::{DateTime, Local};
 
-use sdrr_fw_parser::{SdrrInfo, SdrrStmPort};
-use load::load_sdrr_firmware;
 use args::{Args, Command, parse_args};
+use load::load_sdrr_firmware;
+use sdrr_fw_parser::{SdrrInfo, SdrrStmPort, SdrrServe};
 use utils::add_commas;
 
 // SDRR info structure offset in firmware binary
@@ -73,7 +73,10 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => {
             print_header();
             eprintln!("Error loading firmware");
-            eprintln!("Did you supply an SDRR v{}.{}.{} or later .elf or .bin file?", SDRR_VERSION_MAJOR, SDRR_VERSION_MINOR, SDRR_VERSION_PATCH);
+            eprintln!(
+                "Did you supply an SDRR v{}.{}.{} or later .elf or .bin file?",
+                SDRR_VERSION_MAJOR, SDRR_VERSION_MINOR, SDRR_VERSION_PATCH
+            );
             eprintln!("Detailed error: {}", e);
             std::process::exit(1);
         }
@@ -101,7 +104,8 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
 
     println!("Core Firmware Properties");
     println!("------------------------");
-    println!("File name:     {}", 
+    println!(
+        "File name:     {}",
         Path::new(&args.firmware)
             .file_name()
             .map(|n| n.to_string_lossy())
@@ -116,7 +120,11 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         .unwrap_or_else(|_| "error".to_string());
     println!("File modified: {}", modified_str);
     println!("File type:     {}", info.file_type);
-    println!("File size:     {} bytes ({}KB)", add_commas(info.file_size as u64), (info.file_size + 1023) / 1024);
+    println!(
+        "File size:     {} bytes ({}KB)",
+        add_commas(info.file_size as u64),
+        (info.file_size + 1023) / 1024
+    );
     println!(
         "Version:       {}.{}.{} (build {})",
         info.major_version, info.minor_version, info.patch_version, info.build_number
@@ -163,20 +171,28 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         "false"
     };
     println!("MCO enabled:      {}", mco);
-    println!("Boot config:      0x{:2X}{:2X}{:2X}{:2X} - Reserved, should be 0xFFFFFFFF",
-        info.boot_config[0], info.boot_config[1], info.boot_config[2], info.boot_config[3]);
+    println!(
+        "Boot config:      0x{:2X}{:2X}{:2X}{:2X} - Reserved, should be 0xFFFFFFFF",
+        info.boot_config[0], info.boot_config[1], info.boot_config[2], info.boot_config[3]
+    );
     println!();
 
     if args.detail {
         let pins = &info.pins;
         println!("Pin Configuration");
         println!("-----------------");
-        
+
         println!();
         println!("Data pin mapping:");
         for (ii, &pin) in pins.data.iter().enumerate() {
             if pin != 0xFF {
-                println!("  D{}: {}P{}{}", ii, if ii < 10 { " " } else { "" }, pins.data_port, pin);
+                println!(
+                    "  D{}: {}P{}{}",
+                    ii,
+                    if ii < 10 { " " } else { "" },
+                    pins.data_port,
+                    pin
+                );
             }
         }
 
@@ -184,29 +200,63 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         println!("Address pin mapping:");
         for (ii, &pin) in pins.addr.iter().enumerate() {
             if pin != 0xFF {
-                println!("  A{}: {}P{}{}", ii, if ii < 10 { " " } else { "" }, pins.addr_port, pin);
+                println!(
+                    "  A{}: {}P{}{}",
+                    ii,
+                    if ii < 10 { " " } else { "" },
+                    pins.addr_port,
+                    pin
+                );
             }
         }
-        
+
         println!();
         println!("Chip select pins:");
-        if pins.cs1_2364 != 0xFF { println!("  2364 CS1: P{}{}", pins.cs_port, pins.cs1_2364); }
-        if pins.cs1_2332 != 0xFF { println!("  2332 CS1: P{}{}", pins.cs_port, pins.cs1_2332); }
-        if pins.cs2_2332 != 0xFF { println!("  2332 CS2: P{}{}", pins.cs_port, pins.cs2_2332); }
-        if pins.cs1_2316 != 0xFF { println!("  2316 CS1: P{}{}", pins.cs_port, pins.cs1_2316); }
-        if pins.cs2_2316 != 0xFF { println!("  2316 CS2: P{}{}", pins.cs_port, pins.cs2_2316); }
-        if pins.cs3_2316 != 0xFF { println!("  2316 CS3: P{}{}", pins.cs_port, pins.cs3_2316); }
-        if pins.ce_23128 != 0xFF { println!("  23128 CE: P{}{}", pins.cs_port, pins.ce_23128); }
-        if pins.oe_23128 != 0xFF { println!("  23128 OE: P{}{}", pins.cs_port, pins.oe_23128); }
-        if pins.x1 != 0xFF { println!("  Multi X1: P{}{}", pins.cs_port, pins.x1); }
-        if pins.x2 != 0xFF { println!("  Multi X2: P{}{}", pins.cs_port, pins.x2); }
+        if pins.cs1_2364 != 0xFF {
+            println!("  2364 CS1: P{}{}", pins.cs_port, pins.cs1_2364);
+        }
+        if pins.cs1_2332 != 0xFF {
+            println!("  2332 CS1: P{}{}", pins.cs_port, pins.cs1_2332);
+        }
+        if pins.cs2_2332 != 0xFF {
+            println!("  2332 CS2: P{}{}", pins.cs_port, pins.cs2_2332);
+        }
+        if pins.cs1_2316 != 0xFF {
+            println!("  2316 CS1: P{}{}", pins.cs_port, pins.cs1_2316);
+        }
+        if pins.cs2_2316 != 0xFF {
+            println!("  2316 CS2: P{}{}", pins.cs_port, pins.cs2_2316);
+        }
+        if pins.cs3_2316 != 0xFF {
+            println!("  2316 CS3: P{}{}", pins.cs_port, pins.cs3_2316);
+        }
+        if pins.ce_23128 != 0xFF {
+            println!("  23128 CE: P{}{}", pins.cs_port, pins.ce_23128);
+        }
+        if pins.oe_23128 != 0xFF {
+            println!("  23128 OE: P{}{}", pins.cs_port, pins.oe_23128);
+        }
+        if pins.x1 != 0xFF {
+            println!("  Multi X1: P{}{}", pins.cs_port, pins.x1);
+        }
+        if pins.x2 != 0xFF {
+            println!("  Multi X2: P{}{}", pins.cs_port, pins.x2);
+        }
 
         println!();
         println!("Image select pins:");
-        if pins.sel0 != 0xFF { println!("  SEL0: P{}{}", pins.sel_port, pins.sel0); }
-        if pins.sel1 != 0xFF { println!("  SEL1: P{}{}", pins.sel_port, pins.sel1); }
-        if pins.sel2 != 0xFF { println!("  SEL2: P{}{}", pins.sel_port, pins.sel2); }
-        if pins.sel3 != 0xFF { println!("  SEL3: P{}{}", pins.sel_port, pins.sel3); }
+        if pins.sel0 != 0xFF {
+            println!("  SEL0: P{}{}", pins.sel_port, pins.sel0);
+        }
+        if pins.sel1 != 0xFF {
+            println!("  SEL1: P{}{}", pins.sel_port, pins.sel1);
+        }
+        if pins.sel2 != 0xFF {
+            println!("  SEL2: P{}{}", pins.sel_port, pins.sel2);
+        }
+        if pins.sel3 != 0xFF {
+            println!("  SEL3: P{}{}", pins.sel_port, pins.sel3);
+        }
 
         println!();
         println!("Status LED pin:");
@@ -222,13 +272,12 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
     println!("-------------");
     println!("Total sets: {}", info.rom_set_count);
     // Count up total number of ROM images across all sets
-    let total_roms: usize = info.rom_sets.iter().map(|set| set
-        .roms.len()).sum();
+    let total_roms: usize = info.rom_sets.iter().map(|set| set.roms.len()).sum();
     println!("Total ROMs: {}", total_roms);
 
     if args.detail {
         println!();
-        println!("ROM Details: {}", info.rom_set_count);
+        println!("ROM Details:");
         println!("--------------");
 
         for (ii, rom_set) in info.rom_sets.iter().enumerate() {
@@ -236,20 +285,28 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
                 println!("-----------");
             }
             println!("ROM Set: {}", ii);
-            println!("  Size: {} bytes", rom_set.size);
+            let set_type = if rom_set.serve == SdrrServe::AddrOnAnyCs {
+                "Multi-ROM socket"
+            } else if rom_set.rom_count > 1 {
+                "Dynamic bank switching"
+            } else {
+                "Single ROM image"
+            };
+            println!("  Set type:      {}", set_type);
+            println!("  Size:          {} bytes", rom_set.size);
             println!("  ROM Count:     {}", rom_set.rom_count);
             println!("  Algorithm:     {}", rom_set.serve);
             println!("  Multi-ROM CS1: {}", rom_set.multi_rom_cs1_state);
 
             for (jj, rom) in rom_set.roms.iter().enumerate() {
                 println!("  ROM: {}", jj);
-                println!("    Type:      {}", rom.rom_type);
+                println!("    Type:        {}", rom.rom_type);
                 println!(
-                    "    Name:      {}",
+                    "    Name:        {}",
                     rom.filename.as_deref().unwrap_or("<not present>")
                 );
                 println!(
-                    "    CS States: {}/{}/{}",
+                    "    CS States:   {}/{}/{}",
                     rom.cs1_state, rom.cs2_state, rom.cs3_state
                 );
             }
@@ -320,8 +377,15 @@ fn lookup_raw(info: &SdrrInfo, args: &Args) {
         .output_mangled
         .expect("Internal error: output_mangled is required");
 
-    if let Err(e) = lookup_byte_at_address(info, args.detail, set, addr, addr, output_mangled, "Mangled address")
-    {
+    if let Err(e) = lookup_byte_at_address(
+        info,
+        args.detail,
+        set,
+        addr,
+        addr,
+        output_mangled,
+        "Mangled address",
+    ) {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
@@ -366,20 +430,14 @@ fn lookup_range(
         ));
     }
     if cs2.is_some() && !rom_type.supports_cs2() {
-        return Err(format!(
-            "ROM type {} does not support CS2 line",
-            rom_type
-        ));
+        return Err(format!("ROM type {} does not support CS2 line", rom_type));
     }
     if cs3.is_some() && !rom_type.supports_cs3() {
-        return Err(format!(
-            "ROM type {} does not support CS3 line",
-            rom_type
-        ));
+        return Err(format!("ROM type {} does not support CS3 line", rom_type));
     }
     if (x1.is_some() || x2.is_some()) && info.rom_sets[set as usize].roms.len() < 2 {
         return Err("Multi-ROM X1/X2 lines can only be used with multi-ROM sets".to_string());
-    } 
+    }
 
     if output_binary {
         // Collect bytes for binary output
@@ -425,7 +483,7 @@ fn lookup_range(
             if byte_pos % 16 == 0 {
                 print!("{:04X}: ", addr);
             }
-            
+
             // Print the byte
             print!("{:02X}", output_byte);
 
@@ -501,7 +559,7 @@ fn lookup(info: &SdrrInfo, args: &Args) {
             Err(e) => {
                 eprintln!("Error: {}", e);
                 std::process::exit(1);
-            },
+            }
         };
 
         if let Err(e) = lookup_byte_at_address(

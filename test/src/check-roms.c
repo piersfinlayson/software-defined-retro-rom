@@ -27,11 +27,15 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
         int checked = 0;
         
         uint8_t num_roms = rom_set[set_idx].rom_count;
+        sdrr_serve_t serve = rom_set[set_idx].serve;
 
-
+        // Single ROM sets are handled in the if.  Both multi-ROM and bank
+        // switched sets are handled in the else.
         if (num_roms == 1) {
             int loaded_rom_idx = overall_rom_idx;
-            printf("- Testing ROM %d in set %d\n  - Type: %s, Name: %s\n", 0, set_idx, configs[overall_rom_idx].type, configs[loaded_rom_idx].filename);
+            printf("- Single ROM set\n");
+            printf("  - Testing ROM %d in set %d\n", 0, set_idx);
+            printf("    - Type: %s, Name: %s\n", configs[overall_rom_idx].type, configs[loaded_rom_idx].filename);
 
             // Single ROM: test both CS=0 and CS=1 against expected value.
             // 2332/2316 ROMs are tested by virtue of their extra CS line(s)
@@ -71,10 +75,16 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
             }
             overall_rom_idx++;
         } else {
-            // Multi-ROM set: test all 8 CS combinations
+            if (serve == SERVE_ADDR_ON_ANY_CS) {
+                printf("- Multi-ROM set\n");
+            }  else {
+                printf("- Bank switched set\n");
+            }
+            // Multi-ROM/bank switched set: test all 8 CS combinations
             int cs_combinations[8][3] = {
-                {0, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 1, 1},
-                {1, 0, 0}, {1, 0, 1}, {1, 1, 0}, {1, 1, 1}
+                // X1 is set to 1 before X2 so the output is more logic
+                {0, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 1, 1},
+                {1, 0, 0}, {1, 1, 0}, {1, 0, 1}, {1, 1, 1}
             };
             
             for (int combo_idx = 0; combo_idx < 8; combo_idx++) {
@@ -86,35 +96,46 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
                 int active_rom = -1;
                 
                 // Check if this CS combination matches one of the 3 active patterns
-                for (int rom_idx = 0; rom_idx < rom_set[set_idx].rom_count; rom_idx++) {
-                    int loaded_rom_idx = overall_rom_idx + rom_idx;
-                    if (loaded_rom_idx >= count) {
-                        printf("  Internal error - ran out of ROMs");
-                        continue;
+                if (serve == SERVE_ADDR_ON_ANY_CS) {
+                    // Multi-ROM set
+                    for (int rom_idx = 0; rom_idx < rom_set[set_idx].rom_count; rom_idx++) {
+                        int loaded_rom_idx = overall_rom_idx + rom_idx;
+                        if (loaded_rom_idx >= count) {
+                            printf("  Internal error - ran out of ROMs");
+                            continue;
+                        }
+                        
+                        int expected_active = (configs[loaded_rom_idx].cs1 == 0) ? 0 : 1;
+                        int expected_inactive = (expected_active == 0) ? 1 : 0;
+                        
+                        if ((rom_idx == 0 && cs1 == expected_active && x1 == expected_inactive && x2 == expected_inactive) ||
+                            (rom_idx == 1 && x1 == expected_active && cs1 == expected_inactive && x2 == expected_inactive) ||
+                            (rom_idx == 2 && x2 == expected_active && cs1 == expected_inactive && x1 == expected_inactive)) {
+                            active_rom = rom_idx;
+                            break;
+                        }
                     }
+                } else {
+                    // Bank switched set
                     
-                    int expected_active = (configs[loaded_rom_idx].cs1 == 0) ? 0 : 1;
-                    int expected_inactive = (expected_active == 0) ? 1 : 0;
+                    // CS1 state doesn't matter - X1/X2 select the bank (0-3)
+                    int bank = (x2 << 1) | x1;
                     
-                    if ((rom_idx == 0 && cs1 == expected_active && x1 == expected_inactive && x2 == expected_inactive) ||
-                        (rom_idx == 1 && x1 == expected_active && cs1 == expected_inactive && x2 == expected_inactive) ||
-                        (rom_idx == 2 && x2 == expected_active && cs1 == expected_inactive && x1 == expected_inactive)) {
-                        active_rom = rom_idx;
-                        break;
-                    }
+                    // Wrap around if we have fewer ROMs than banks
+                    active_rom = bank % rom_set[set_idx].rom_count;
                 }
                 
                 // Print header for this combination
                 if (active_rom >= 0) {
                     int loaded_rom_idx = overall_rom_idx + active_rom;
                     if (loaded_rom_idx < count) {
-                        printf("- ROM %d in set %d - CS1=%d, X1=%d, X2=%d", active_rom, set_idx, cs1, x1, x2);
-                        printf("  - Type: %s, Name: %s\n", configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
+                        printf("  - ROM %d in set %d - CS1=%d, X1=%d, X2=%d\n", active_rom, set_idx, cs1, x1, x2);
+                        printf("    - Type: %s, Name: %s\n", configs[loaded_rom_idx].type, configs[loaded_rom_idx].filename);
                     } else {
-                        printf("- ROM %d in set %d (ERROR: out of bounds)\n", active_rom, set_idx);
+                        printf("  - ROM %d in set %d (ERROR: out of bounds)\n", active_rom, set_idx);
                     }
                 } else {
-                    printf("- Testing blank section CS1=%d, X1=%d, X2=%d\n", cs1, x1, x2);
+                    printf("  - Testing blank section CS1=%d, X1=%d, X2=%d\n", cs1, x1, x2);
                 }
                 
                 // Test all addresses for this combination

@@ -12,3 +12,6 @@ c64
 set-c64
 set-vic20-pal
 set-1541
+bank-1541
+bank-c64-char
+bank-vic20-char

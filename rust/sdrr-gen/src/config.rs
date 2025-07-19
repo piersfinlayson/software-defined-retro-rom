@@ -2,11 +2,11 @@
 //
 // MIT License
 
-use sdrr_common::sdrr_types::{CsLogic, RomType, ServeAlg, StmVariant};
 use crate::preprocessor::{RomImage, RomSet};
 use sdrr_common::hardware::HwConfig;
-use std::path::PathBuf;
+use sdrr_common::sdrr_types::{CsLogic, RomType, ServeAlg, StmVariant};
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -49,6 +49,7 @@ pub struct RomConfig {
     pub cs_config: CsConfig,
     pub size_handling: SizeHandling,
     pub set: Option<usize>,
+    pub bank: Option<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -172,24 +173,126 @@ impl Config {
         }
 
         // Validate ROM sets (basic validation that doesn't need ROM images)
-        let mut sets: Vec<usize> = self.roms.iter()
-            .filter_map(|rom| rom.set)
-            .collect();
-        
+        let mut sets: Vec<usize> = self.roms.iter().filter_map(|rom| rom.set).collect();
+
         if !sets.is_empty() {
             // Check if all ROMs have sets specified
             let roms_with_sets = self.roms.iter().filter(|rom| rom.set.is_some()).count();
             if roms_with_sets != self.roms.len() {
                 return Err("When using sets, all ROMs must specify a set number".to_string());
             }
-            
+
             // Sort and check sequential from 0
             sets.sort();
             sets.dedup();
-            
+
             for (i, &set_num) in sets.iter().enumerate() {
                 if set_num != i {
-                    return Err(format!("ROM sets must be numbered sequentially starting from 0. Missing set {}", i));
+                    return Err(format!(
+                        "ROM sets must be numbered sequentially starting from 0. Missing set {}",
+                        i
+                    ));
+                }
+            }
+
+            // Enhanced set validation for banking and multi-ROM modes
+            for &set_id in &sets {
+                let roms_in_set: Vec<_> = self
+                    .roms
+                    .iter()
+                    .filter(|rom| rom.set == Some(set_id))
+                    .collect();
+
+                // Check if this set uses banking
+                let banked_roms: Vec<_> = roms_in_set
+                    .iter()
+                    .filter(|rom| rom.bank.is_some())
+                    .collect();
+
+                let is_banked_set = !banked_roms.is_empty();
+
+                if is_banked_set {
+                    // Banking mode validation
+
+                    // All ROMs in set must have bank specified
+                    if banked_roms.len() != roms_in_set.len() {
+                        return Err(format!(
+                            "Set {}: when using banks, all ROMs in the set must specify a bank number",
+                            set_id
+                        ));
+                    }
+
+                    // Max 4 ROMs for banked sets
+                    if roms_in_set.len() > 4 {
+                        return Err(format!(
+                            "Set {}: banked sets can contain maximum 4 ROMs, found {}",
+                            set_id,
+                            roms_in_set.len()
+                        ));
+                    }
+
+                    // Banks must be sequential from 0
+                    let mut banks: Vec<usize> =
+                        roms_in_set.iter().map(|rom| rom.bank.unwrap()).collect();
+                    banks.sort();
+                    banks.dedup();
+
+                    for (i, &bank_num) in banks.iter().enumerate() {
+                        if bank_num != i {
+                            return Err(format!(
+                                "Set {}: bank numbers must be sequential starting from 0. Missing bank {}",
+                                set_id, i
+                            ));
+                        }
+                    }
+
+                    // All ROMs must have same type
+                    let first_rom_type = &roms_in_set[0].rom_type;
+                    for rom in &roms_in_set[1..] {
+                        if rom.rom_type != *first_rom_type {
+                            return Err(format!(
+                                "Set {}: all ROMs in a banked set must have the same type. Found {} and {}",
+                                set_id,
+                                first_rom_type.name(),
+                                rom.rom_type.name()
+                            ));
+                        }
+                    }
+
+                    // All ROMs must have same CS configuration
+                    let first_cs_config = &roms_in_set[0].cs_config;
+                    for rom in &roms_in_set[1..] {
+                        if rom.cs_config.cs1 != first_cs_config.cs1
+                            || rom.cs_config.cs2 != first_cs_config.cs2
+                            || rom.cs_config.cs3 != first_cs_config.cs3
+                        {
+                            return Err(format!(
+                                "Set {}: all ROMs in a banked set must have the same CS configuration",
+                                set_id
+                            ));
+                        }
+                    }
+                } else {
+                    // Multi-ROM mode validation
+
+                    // Ensure no ROMs have bank specified
+                    for rom in &roms_in_set {
+                        if rom.bank.is_some() {
+                            return Err(format!(
+                                "Set {}: mixed banking modes not allowed - either all ROMs specify bank or none do",
+                                set_id
+                            ));
+                        }
+                    }
+
+                    // Max 3 ROMs for multi-ROM sets
+                    if roms_in_set.len() > 3 {
+                        return Err(format!(
+                            "Set {}: multi-ROM sets can contain maximum 3 ROMs, found {}",
+                            set_id,
+                            roms_in_set.len()
+                        ));
+                    }
                 }
             }
         }
@@ -198,59 +301,90 @@ impl Config {
     }
 
     pub fn create_rom_sets(&self, rom_images: &[RomImage]) -> Result<Vec<RomSet>, String> {
-        // Collect all sets
-        let sets: Vec<usize> = self.roms.iter()
-            .filter_map(|rom| rom.set)
-            .collect();
-        
+        let sets: Vec<usize> = self.roms.iter().filter_map(|rom| rom.set).collect();
+
         if sets.is_empty() {
-            // No sets specified - backward compatibility mode: each ROM gets its own set
-            let rom_sets: Vec<RomSet> = self.roms.iter().zip(rom_images.iter()).enumerate()
-                .map(|(ii, (rom_config, rom_image))| {
-                    RomSet {
-                        id: ii,
-                        roms: vec![RomInSet {
-                            config: rom_config.clone(),
-                            image: rom_image.clone(),
-                            original_index: ii,
-                        }],
-                    }
+            let rom_sets: Vec<RomSet> = self
+                .roms
+                .iter()
+                .zip(rom_images.iter())
+                .enumerate()
+                .map(|(ii, (rom_config, rom_image))| RomSet {
+                    id: ii,
+                    roms: vec![RomInSet {
+                        config: rom_config.clone(),
+                        image: rom_image.clone(),
+                        original_index: ii,
+                    }],
+                    is_banked: false,
                 })
                 .collect();
             return Ok(rom_sets);
         }
 
         if !self.hw.supports_multi_rom_sets() {
-            return Err("Multiple ROMs per set is only supported on hardware revision F".to_string());
+            return Err(
+                "Multi-ROM and bank switching sets of ROMs are only supported on hardware revision F".to_string(),
+            );
         }
 
-        // Create ROM sets map
+        let mut unique_sets: Vec<usize> = sets.clone();
+        unique_sets.sort();
+        unique_sets.dedup();
+
         let mut rom_sets_map = BTreeMap::new();
-        
-        for (original_index, (rom_config, rom_image)) in self.roms.iter().zip(rom_images.iter()).enumerate() {
-            let set_id = rom_config.set.unwrap(); // We know all ROMs have sets at this point
-            let roms_in_set = rom_sets_map.entry(set_id).or_insert_with(Vec::new);
-            
 
-            // CS lines: 10 (standard), 14 (X1), 15 (X2) 
-            // Note: X1 and X2 pins only available on hardware revision F
-            let index = roms_in_set.len();
-            if index >= 3 {
-                return Err(format!("Set {} has more than the maximum 3 ROMs", set_id));
+        for &set_id in &unique_sets {
+            let roms_in_set: Vec<_> = self
+                .roms
+                .iter()
+                .zip(rom_images.iter())
+                .enumerate()
+                .filter(|(_, (rom_config, _))| rom_config.set == Some(set_id))
+                .collect();
+
+            let is_banked = roms_in_set
+                .iter()
+                .any(|(_, (rom_config, _))| rom_config.bank.is_some());
+
+            let mut rom_set_entries = Vec::new();
+
+            if is_banked {
+                let mut banked_roms: Vec<_> = roms_in_set.into_iter().collect();
+                banked_roms.sort_by_key(|(_, (rom_config, _))| rom_config.bank.unwrap());
+
+                for (original_index, (rom_config, rom_image)) in banked_roms {
+                    rom_set_entries.push(RomInSet {
+                        config: rom_config.clone(),
+                        image: rom_image.clone(),
+                        original_index,
+                    });
+                }
+            } else {
+                for (original_index, (rom_config, rom_image)) in roms_in_set {
+                    rom_set_entries.push(RomInSet {
+                        config: rom_config.clone(),
+                        image: rom_image.clone(),
+                        original_index,
+                    });
+                }
             }
-            
-            roms_in_set.push(RomInSet {
-                config: rom_config.clone(),
-                image: rom_image.clone(),
-                original_index,
-            });
+
+            rom_sets_map.insert(
+                set_id,
+                RomSet {
+                    id: set_id,
+                    roms: rom_set_entries,
+                    is_banked,
+                },
+            );
         }
-        
-        // Convert to final ROM sets vector
-        let rom_sets: Vec<RomSet> = rom_sets_map.into_iter()
-            .map(|(id, roms)| RomSet { id, roms })
+
+        let rom_sets: Vec<RomSet> = unique_sets
+            .into_iter()
+            .map(|set_id| rom_sets_map.remove(&set_id).unwrap())
             .collect();
-            
+
         Ok(rom_sets)
     }
 }

@@ -25,18 +25,18 @@ impl RomType {
 
     pub fn num_addr_lines(&self) -> usize {
         match self {
-            RomType::Rom2316 => 11, // 2^11 = 2048 bytes
-            RomType::Rom2332 => 12, // 2^12 = 4096 bytes
-            RomType::Rom2364 => 13, // 2^13 = 8192 bytes
+            RomType::Rom2316 => 11,  // 2^11 = 2048 bytes
+            RomType::Rom2332 => 12,  // 2^12 = 4096 bytes
+            RomType::Rom2364 => 13,  // 2^13 = 8192 bytes
             RomType::Rom23128 => 14, // 2^14 = 16384 bytes
         }
     }
 
     pub fn size_bytes(&self) -> usize {
         match self {
-            RomType::Rom2316 => 2048, // 2KB
-            RomType::Rom2332 => 4096, // 4KB
-            RomType::Rom2364 => 8192, // 8KB
+            RomType::Rom2316 => 2048,   // 2KB
+            RomType::Rom2332 => 4096,   // 4KB
+            RomType::Rom2364 => 8192,   // 8KB
             RomType::Rom23128 => 16384, // 16KB
         }
     }
@@ -229,14 +229,10 @@ impl StmVariant {
 
     pub fn line_enum(&self) -> &str {
         match self {
-            StmVariant::F446RC |
-            StmVariant::F446RE => "F446",
-            StmVariant::F411RC |
-            StmVariant::F411RE => "F411",
+            StmVariant::F446RC | StmVariant::F446RE => "F446",
+            StmVariant::F411RC | StmVariant::F411RE => "F411",
             StmVariant::F405RG => "F405",
-            StmVariant::F401RE |
-            StmVariant::F401RB |
-            StmVariant::F401RC => "F401",
+            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => "F401",
         }
     }
 

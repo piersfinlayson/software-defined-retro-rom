@@ -61,6 +61,7 @@ key1=value1,key2=value2,...,command1,command2
 
 Supported key/value pairs are:
 
+- `set`: Optional.  Use for multi-ROMs sets, with multiple images in a set.  You need a line per image within the set, so multiple lines with the same `set` value.  If not specified, the image is in its own set.
 - `file`: Required.  The path to the ROM file to include in the firmware.  This can be a local file, or a URL.
 - `extract`: Optional.  Valid only if `file` is a URL, and the file to be downloaded is a ZIP file.  This specifies the path within the ZIP file to extract the ROM from.  Use URL encoding to encode any special characters in the path, such as spaces (%20).
 - `licence`: Optional.  URL to path for this ROM image's licence.  Including this causes the build process to force the user to explicitly acknowledge they accept the licence terms before the firmware is built.
@@ -134,4 +135,3 @@ B - Checks address lines only when CS is active, and applies to data lines (whic
 In all cases tested, `B` appears to be the superior algorithm, but `A` is kept in case it is incompatible with some systems.
 
 SDRR defaults to `B` is no algorithm is specified for single-ROM sets, and requires `B` (which is applies automatically, even if you specify `A`) for multi-ROM sets.
-
