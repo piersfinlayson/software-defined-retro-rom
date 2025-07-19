@@ -17,6 +17,7 @@ All notables changes between versions are documented in this file.
 - Moved firmware parsing to [`rust/sdrr-fw-parser`](/rust/sdrr-fw-parser/README.md) crate, which can be used to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  Done in preparation for using from a separate WiFi Programmer.
 - Moved Rust code to [`rust/`](/rust/) directory.
 - Added [build containers](/ci/docker/README.md) to assist with building SDRR, and doing so with the recommended build environment.
+- Added dynamic [bank switchable](docs/MULTI-ROM-SETS.md#dynamic-bank-switching) ROM image support, using X1/X2 (when not using multiple simultaneous ROMs).
 
 ### Fixes
 
