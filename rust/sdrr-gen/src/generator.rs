@@ -281,22 +281,24 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                     "All ROMs in a multi-ROM set must have the same CS1 configuration"
                 ));
             }
-
-            // Check that every ROM in this set has CS2 and CS3 ignored.
-            if rom_set.roms.iter().any(|rom| {
-                rom.config
-                    .cs_config
-                    .cs2
-                    .is_some_and(|cs| cs != CsLogic::Ignore)
-                    || rom
-                        .config
+            
+            if !rom_set.is_banked {
+                // Check that every ROM in this set has CS2 and CS3 ignored.
+                if rom_set.roms.iter().any(|rom| {
+                    rom.config
                         .cs_config
-                        .cs3
+                        .cs2
                         .is_some_and(|cs| cs != CsLogic::Ignore)
-            }) {
-                return Err(anyhow::anyhow!(
-                    "All ROMs in a multi-ROM set must have CS2 and CS3 ignored or not present"
-                ));
+                        || rom
+                            .config
+                            .cs_config
+                            .cs3
+                            .is_some_and(|cs| cs != CsLogic::Ignore)
+                }) {
+                    return Err(anyhow::anyhow!(
+                        "All ROMs in a multi-ROM set must have CS2 and CS3 ignored or not present"
+                    ));
+                }
             }
 
             // Use the CS1 state from any ROM image, as they must be the same
