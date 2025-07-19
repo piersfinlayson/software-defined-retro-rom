@@ -39,6 +39,9 @@ test-hw-rev-F:HW_REV=f,STM=f411re,CONFIG=config/test-sdrr-0.mk
 test-set-c64-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-c64.mk
 test-set-vic20-pal-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-vic20-pal.mk
 
+# Test each bank switching config
+bank-switching-f401rb:STM=f401rb,HW_REV=f,CONFIG=config/bank-1541.mk
+
 # Test different hardware revisions
 hw-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 hw-rev-e:HW_REV=24-e,STM=f401rb,CONFIG=config/test-sdrr-0.mk

@@ -32,10 +32,14 @@ set -e  # Exit immediately on any command failure
 # Determine script and project directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BLACKLIST_FILE="${SCRIPT_DIR}/blacklist-config.txt"
-STM_VARIANTS_FILE="${SCRIPT_DIR}/stm-variants.txt"
-SIZE_INCOMPATIBLE_FILE="${SCRIPT_DIR}/size-incompatible.txt"
-TESTS_FILE="${SCRIPT_DIR}/tests.txt"
+BLACKLIST_FILENAME="blacklist-config.txt"
+STM_VARIANTS_FILENAME="stm-variants.txt"
+SIZE_INCOMPATIBLE_FILENAME="size-incompatible.txt"
+TESTS_FILENAME="tests.txt"
+BLACKLIST_FILE="${SCRIPT_DIR}/${BLACKLIST_FILENAME}"
+STM_VARIANTS_FILE="${SCRIPT_DIR}/${STM_VARIANTS_FILENAME}"
+SIZE_INCOMPATIBLE_FILE="${SCRIPT_DIR}/${SIZE_INCOMPATIBLE_FILENAME}"
+TESTS_FILE="${SCRIPT_DIR}/${TESTS_FILENAME}"
 
 #
 # Display usage information and exit
@@ -49,10 +53,10 @@ usage() {
     echo "  clean             - Delete builds/ directory"
     echo ""
     echo "Configuration files:"
-    echo "  ${STM_VARIANTS_FILE}      - STM32 variants to build"
-    echo "  ${BLACKLIST_FILE}  - Configs to skip"
-    echo "  ${SIZE_INCOMPATIBLE_FILE} - Size-incompatible combinations"
-    echo "  ${TESTS_FILE}             - Specific test combinations"
+    echo "  ci/${STM_VARIANTS_FILENAME}      - STM32 variants to build"
+    echo "  ci/${BLACKLIST_FILENAME}  - Configs to skip"
+    echo "  ci/${SIZE_INCOMPATIBLE_FILENAME} - Size-incompatible combinations"
+    echo "  ci/${TESTS_FILENAME}             - Specific test combinations"
     exit 1
 }
 
