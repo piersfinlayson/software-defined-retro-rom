@@ -42,7 +42,7 @@ use std::path::Path;
 
 use args::{Args, Command, parse_args};
 use load::load_sdrr_firmware;
-use sdrr_fw_parser::{SdrrInfo, SdrrStmPort};
+use sdrr_fw_parser::{SdrrInfo, SdrrStmPort, SdrrServe};
 use utils::add_commas;
 
 // SDRR info structure offset in firmware binary
@@ -277,7 +277,7 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
 
     if args.detail {
         println!();
-        println!("ROM Details: {}", info.rom_set_count);
+        println!("ROM Details:");
         println!("--------------");
 
         for (ii, rom_set) in info.rom_sets.iter().enumerate() {
@@ -285,20 +285,28 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
                 println!("-----------");
             }
             println!("ROM Set: {}", ii);
-            println!("  Size: {} bytes", rom_set.size);
+            let set_type = if rom_set.serve == SdrrServe::AddrOnAnyCs {
+                "Multi-ROM socket"
+            } else if rom_set.rom_count > 1 {
+                "Dynamic bank switching"
+            } else {
+                "Single ROM image"
+            };
+            println!("  Set type:      {}", set_type);
+            println!("  Size:          {} bytes", rom_set.size);
             println!("  ROM Count:     {}", rom_set.rom_count);
             println!("  Algorithm:     {}", rom_set.serve);
             println!("  Multi-ROM CS1: {}", rom_set.multi_rom_cs1_state);
 
             for (jj, rom) in rom_set.roms.iter().enumerate() {
                 println!("  ROM: {}", jj);
-                println!("    Type:      {}", rom.rom_type);
+                println!("    Type:        {}", rom.rom_type);
                 println!(
-                    "    Name:      {}",
+                    "    Name:        {}",
                     rom.filename.as_deref().unwrap_or("<not present>")
                 );
                 println!(
-                    "    CS States: {}/{}/{}",
+                    "    CS States:   {}/{}/{}",
                     rom.cs1_state, rom.cs2_state, rom.cs3_state
                 );
             }
