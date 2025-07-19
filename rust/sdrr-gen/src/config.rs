@@ -324,7 +324,7 @@ impl Config {
 
         if !self.hw.supports_multi_rom_sets() {
             return Err(
-                "Multiple ROMs per set is only supported on hardware revision F".to_string(),
+                "Multi-ROM and bank switching sets of ROMs are only supported on hardware revision F".to_string(),
             );
         }
 
