@@ -10,6 +10,7 @@ If you are using an STM32F4xxR based system:
 
 - You **must** assign all of the address lines and chip select lines to Port C.
 - You **must** "right justify" the address and chip select lines, so they start at PC0, and use contiguous lines.
+- If you provide X1/X2 they **must** follow the address and CS lines, so be PC14/PC15.
 - You **must** assign the data lines to pins PA0-7 inclusive.
 
 With the above requirements, the address and chip select lines, and data lines, can be assigned to the specified range of pins in any order.  Address and CS lines can be mixed together.
