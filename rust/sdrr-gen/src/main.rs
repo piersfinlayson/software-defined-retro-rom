@@ -8,12 +8,12 @@ mod preprocessor;
 
 use crate::config::{Config, CsConfig, SizeHandling};
 use crate::generator::generate_files;
-use sdrr_common::sdrr_types::{CsLogic, RomType, StmVariant, ServeAlg};
-use sdrr_common::hardware::{HwConfig, list_available_configs};
-use sdrr_common::args::{parse_stm_variant, parse_hw_rev, parse_serve_alg};
 use anyhow::{Context, Result};
 use clap::Parser;
 use preprocessor::RomImage;
+use sdrr_common::args::{parse_hw_rev, parse_serve_alg, parse_stm_variant};
+use sdrr_common::hardware::{HwConfig, list_available_configs};
+use sdrr_common::sdrr_types::{CsLogic, RomType, ServeAlg, StmVariant};
 use std::io::{self, Read, Write};
 use std::path::PathBuf;
 use tempfile::{NamedTempFile, TempPath};
@@ -223,6 +223,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
     let mut cs3 = None;
     let mut size_handling = SizeHandling::None;
     let mut set = None;
+    let mut bank = None;
 
     for pair in s.split(',') {
         let parts: Vec<&str> = pair.split('=').collect();
@@ -230,11 +231,25 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
         match parts[0] {
             "set" => {
                 if parts.len() != 2 {
-                    return Err("Invalid 'set' parameter format - must include set number".to_string());
+                    return Err(
+                        "Invalid 'set' parameter format - must include set number".to_string()
+                    );
                 }
-                let set_num: usize = parts[1].parse()
+                let set_num: usize = parts[1]
+                    .parse()
                     .map_err(|_| format!("Invalid set number: {}", parts[1]))?;
                 set = Some(set_num);
+            }
+            "bank" => {
+                if parts.len() != 2 {
+                    return Err(
+                        "Invalid 'bank' parameter format - must include bank number".to_string()
+                    );
+                }
+                let bank_num: usize = parts[1]
+                    .parse()
+                    .map_err(|_| format!("Invalid bank number: {}", parts[1]))?;
+                bank = Some(bank_num);
             }
             "file" => {
                 let original_source = parts[1].to_string();
@@ -276,36 +291,42 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
             }
             "cs1" => {
                 if parts.len() != 2 {
-                    return Err("Invalid 'cs1' parameter format - must include cs1 value".to_string());
+                    return Err(
+                        "Invalid 'cs1' parameter format - must include cs1 value".to_string()
+                    );
                 }
                 if cs1.is_some() {
                     return Err("cs1 specified multiple times".to_string());
                 }
-                cs1 = CsLogic::from_str(parts[1])
-                    .map(Some)
-                    .ok_or_else(|| format!("Invalid cs1 value: {} (use 0, 1, or ignore)", parts[1]))?
+                cs1 = CsLogic::from_str(parts[1]).map(Some).ok_or_else(|| {
+                    format!("Invalid cs1 value: {} (use 0, 1, or ignore)", parts[1])
+                })?
             }
             "cs2" => {
                 if parts.len() != 2 {
-                    return Err("Invalid 'cs2' parameter format - must include cs2 value".to_string());
+                    return Err(
+                        "Invalid 'cs2' parameter format - must include cs2 value".to_string()
+                    );
                 }
                 if cs2.is_some() {
                     return Err("cs2 specified multiple times".to_string());
                 }
-                cs2 = CsLogic::from_str(parts[1])
-                    .map(Some)
-                    .ok_or_else(|| format!("Invalid cs2 value: {} (use 0, 1, or ignore)", parts[1]))?
+                cs2 = CsLogic::from_str(parts[1]).map(Some).ok_or_else(|| {
+                    format!("Invalid cs2 value: {} (use 0, 1, or ignore)", parts[1])
+                })?
             }
             "cs3" => {
                 if parts.len() != 2 {
-                    return Err("Invalid 'cs3' parameter format - must include cs3 value".to_string());
+                    return Err(
+                        "Invalid 'cs3' parameter format - must include cs3 value".to_string()
+                    );
                 }
                 if cs3.is_some() {
                     return Err("cs3 specified multiple times".to_string());
                 }
-                cs3 = CsLogic::from_str(parts[1])
-                    .map(Some)
-                    .ok_or_else(|| format!("Invalid cs3 value: {} (use 0, 1, or ignore)", parts[1]))?
+                cs3 = CsLogic::from_str(parts[1]).map(Some).ok_or_else(|| {
+                    format!("Invalid cs3 value: {} (use 0, 1, or ignore)", parts[1])
+                })?
             }
             "dup" => {
                 if parts.len() != 1 {
@@ -358,6 +379,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
             cs_config: CsConfig::new(cs1, cs2, cs3),
             size_handling,
             set,
+            bank,
         },
         temp_handles,
     ))
@@ -442,9 +464,7 @@ fn main() -> Result<()> {
     }
 
     // Set the frequency based on the STM32 variant or user input
-    let stm_variant = args
-        .stm
-        .expect("Default STM32 variant must be valid");
+    let stm_variant = args.stm.expect("Default STM32 variant must be valid");
     let freq = args
         .freq
         .unwrap_or_else(|| stm_variant.processor().max_sysclk_mhz());
@@ -516,7 +536,11 @@ fn main() -> Result<()> {
         .create_rom_sets(&rom_images)
         .map_err(|e| anyhow::anyhow!("ROM set creation error: {}", e))?;
 
-    println!("Successfully loaded {} ROM file(s) in {} set(s)", rom_images.len(), rom_sets.len());
+    println!(
+        "Successfully loaded {} ROM file(s) in {} set(s)",
+        rom_images.len(),
+        rom_sets.len()
+    );
 
     // Generate output files
     generate_files(&config, &rom_sets).with_context(|| "Failed to generate output files")?;

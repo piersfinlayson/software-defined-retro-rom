@@ -94,7 +94,7 @@ enum Commands {
     /// Outputting a range as binary data can be useful if you want
     /// to compare an entire stored ROM image stored in the firmware
     /// with the original file.
-    /// 
+    ///
     /// Note that this lookup is done using the address/data/CS pins
     /// configured in the firmware image, and does no validation
     /// against the hardware configuration used to create firmware,
@@ -182,121 +182,134 @@ fn parse_range(s: &str) -> Result<(u32, u32), String> {
 pub fn parse_args() -> Result<Args, String> {
     let cli = Cli::parse();
 
-    let (command, firmware, detail, set, addr, range, cs1, cs2, cs3, x1, x2, output_mangled, output_binary) =
-        match cli.command {
-            Some(Commands::Info { firmware, detail }) => (
-                Command::Info,
-                firmware,
-                detail,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ),
+    let (
+        command,
+        firmware,
+        detail,
+        set,
+        addr,
+        range,
+        cs1,
+        cs2,
+        cs3,
+        x1,
+        x2,
+        output_mangled,
+        output_binary,
+    ) = match cli.command {
+        Some(Commands::Info { firmware, detail }) => (
+            Command::Info,
+            firmware,
+            detail,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ),
 
-            Some(Commands::LookupRaw {
-                firmware,
-                detail,
-                set,
-                addr,
-                output_mangled,
-            }) => (
-                Command::LookupRaw,
+        Some(Commands::LookupRaw {
+            firmware,
+            detail,
+            set,
+            addr,
+            output_mangled,
+        }) => (
+            Command::LookupRaw,
+            firmware,
+            detail,
+            Some(set),
+            Some(addr),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(output_mangled),
+            None,
+        ),
+
+        Some(Commands::Lookup {
+            firmware,
+            detail,
+            set,
+            addr,
+            range,
+            cs1,
+            cs2,
+            cs3,
+            x1,
+            x2,
+            output_mangled,
+            output_binary,
+        }) => {
+            if addr.is_some() && range.is_some() {
+                return Err("Cannot specify both --addr and --range".to_string());
+            }
+            if addr.is_none() && range.is_none() {
+                return Err("Must specify either --addr or --range".to_string());
+            }
+            if range.is_none() && output_binary {
+                if output_binary {
+                    return Err("--output-binary only valid when using --range".to_string());
+                }
+            }
+            if output_binary {
+                if range.is_none() {
+                    return Err("--output-binary requires --range to be specified".to_string());
+                }
+                if detail {
+                    return Err("--output-binary cannot be used with --detail".to_string());
+                }
+            }
+
+            (
+                Command::Lookup,
                 firmware,
                 detail,
                 Some(set),
-                Some(addr),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(output_mangled),
-                None,
-            ),
-
-            Some(Commands::Lookup {
-                firmware,
-                detail,
-                set,
                 addr,
                 range,
-                cs1,
+                Some(cs1),
                 cs2,
                 cs3,
                 x1,
                 x2,
-                output_mangled,
-                output_binary,
-            }) => {
-                if addr.is_some() && range.is_some() {
-                    return Err("Cannot specify both --addr and --range".to_string());
-                }
-                if addr.is_none() && range.is_none() {
-                    return Err("Must specify either --addr or --range".to_string());
-                }
-                if range.is_none() && output_binary {
-                    if output_binary {
-                        return Err("--output-binary only valid when using --range".to_string());
-                    }
-                }
-                if output_binary {
-                    if range.is_none() {
-                        return Err("--output-binary requires --range to be specified".to_string());
-                    }
-                    if detail {
-                        return Err("--output-binary cannot be used with --detail".to_string());
-                    }
-                }
+                Some(output_mangled),
+                Some(output_binary),
+            )
+        }
 
+        None => {
+            if let Some(firmware) = cli.firmware {
                 (
-                    Command::Lookup,
+                    Command::Info,
                     firmware,
-                    detail,
-                    Some(set),
-                    addr,
-                    range,
-                    Some(cs1),
-                    cs2,
-                    cs3,
-                    x1,
-                    x2,
-                    Some(output_mangled),
-                    Some(output_binary),
+                    false,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
                 )
+            } else {
+                return Err(
+                    "No firmware file specified. Use --help for usage information.".to_string(),
+                );
             }
-
-            None => {
-                if let Some(firmware) = cli.firmware {
-                    (
-                        Command::Info,
-                        firmware,
-                        false,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                    )
-                } else {
-                    return Err(
-                        "No firmware file specified. Use --help for usage information.".to_string(),
-                    );
-                }
-            }
-        };
+        }
+    };
 
     // Validate firmware file exists
     if !firmware.exists() {

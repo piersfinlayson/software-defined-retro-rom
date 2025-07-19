@@ -4,11 +4,11 @@
 
 use anyhow::Result;
 use goblin::elf::Elf;
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
-use sdrr_fw_parser::{SdrrInfo, SdrrFileType};
 use crate::{SDRR_INFO_OFFSET, STM32F4_FLASH_BASE};
+use sdrr_fw_parser::{SdrrFileType, SdrrInfo};
 
 pub fn load_sdrr_firmware<P: AsRef<Path>>(path: P) -> Result<SdrrInfo> {
     let firmware_data = fs::read(path)?;

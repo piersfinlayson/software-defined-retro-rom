@@ -3,9 +3,9 @@
 // MIT License
 
 use crate::config::Config;
-use sdrr_common::sdrr_types::{CsLogic, RomType};
 use crate::preprocessor::RomSet;
 use anyhow::{Context, Result};
+use sdrr_common::sdrr_types::{CsLogic, RomType};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -257,7 +257,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
     for rom_set in rom_sets {
         let ii = rom_set.id;
         let num_roms = rom_set.roms.len();
-        let serve_alg = if num_roms == 1 {
+        let serve_alg = if num_roms == 1 || rom_set.is_banked {
             config.serve_alg.c_value()
         } else {
             config.serve_alg.c_value_multi_rom_set()
@@ -272,7 +272,11 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
             "CS_NOT_USED"
         } else {
             // Check that every ROM in this set has the same CS1 configuration
-            if rom_set.roms.iter().any(|rom| rom.config.cs_config.cs1 != rom_set.roms[0].config.cs_config.cs1) {
+            if rom_set
+                .roms
+                .iter()
+                .any(|rom| rom.config.cs_config.cs1 != rom_set.roms[0].config.cs_config.cs1)
+            {
                 return Err(anyhow::anyhow!(
                     "All ROMs in a multi-ROM set must have the same CS1 configuration"
                 ));
@@ -280,8 +284,15 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
 
             // Check that every ROM in this set has CS2 and CS3 ignored.
             if rom_set.roms.iter().any(|rom| {
-                rom.config.cs_config.cs2.is_some_and(|cs| cs != CsLogic::Ignore) ||
-                rom.config.cs_config.cs3.is_some_and(|cs| cs != CsLogic::Ignore)
+                rom.config
+                    .cs_config
+                    .cs2
+                    .is_some_and(|cs| cs != CsLogic::Ignore)
+                    || rom
+                        .config
+                        .cs_config
+                        .cs3
+                        .is_some_and(|cs| cs != CsLogic::Ignore)
             }) {
                 return Err(anyhow::anyhow!(
                     "All ROMs in a multi-ROM set must have CS2 and CS3 ignored or not present"
@@ -290,7 +301,6 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
 
             // Use the CS1 state from any ROM image, as they must be the same
             cs_logic_to_enum(rom_set.roms[0].config.cs_config.cs1)
-
         };
         writeln!(file, "        .multi_rom_cs1_state = {},", set_cs_state)?;
         writeln!(file, "    }},")?;
@@ -306,12 +316,17 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
         let image_size = if rom_set.roms.len() == 1 {
             16384
         } else {
+            // Multi-ROM/banked sets: combined 64KB image
             65536
         };
         let ii = rom_set.id;
 
         writeln!(file, "// ROM set {} data", rom_set.id)?;
-        writeln!(file, "static const uint8_t rom_set_{}_data[ROM_SET_{}_DATA_SIZE] = {{", ii, ii)?;
+        writeln!(
+            file,
+            "static const uint8_t rom_set_{}_data[ROM_SET_{}_DATA_SIZE] = {{",
+            ii, ii
+        )?;
 
         fn format_binary_spaced(num: impl std::fmt::Binary, width: usize) -> String {
             let binary = format!("{:0width$b}", num, width = width);
@@ -333,7 +348,12 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                 }
 
                 // Output address in hex and binary
-                writeln!(file, "    // Address 0x{:04x}, {}", address, format_binary_spaced(address, 16))?;
+                writeln!(
+                    file,
+                    "    // Address 0x{:04x}, {}",
+                    address,
+                    format_binary_spaced(address, 16)
+                )?;
                 if rom_set.roms.len() > 1 {
                     writeln!(
                         file,
@@ -372,7 +392,10 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
     writeln!(file, "#define SDRR_CONFIG_H")?;
     writeln!(file)?;
 
-    writeln!(file, "// Created within main.c but required by sdrr_config.c")?;
+    writeln!(
+        file,
+        "// Created within main.c but required by sdrr_config.c"
+    )?;
     writeln!(file, "extern const char sdrr_build_date[];")?;
     writeln!(file)?;
 
@@ -602,7 +625,14 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "    .ce_23128 = {},", hw.pin_ce(&RomType::Rom23128))?;
     writeln!(file, "    .oe_23128 = {},", hw.pin_oe(&RomType::Rom23128))?;
     writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
-    writeln!(file, "    .sel = {{ {}, {}, {}, {} }},", hw.pin_sel(0), hw.pin_sel(1), hw.pin_sel(2), hw.pin_sel(3))?;
+    writeln!(
+        file,
+        "    .sel = {{ {}, {}, {}, {} }},",
+        hw.pin_sel(0),
+        hw.pin_sel(1),
+        hw.pin_sel(2),
+        hw.pin_sel(3)
+    )?;
     writeln!(file, "    .reserved4 = {{0, 0, 0, 0}},")?;
     writeln!(file, "    .status = {},", hw.pin_status())?;
     writeln!(file, "    .reserved5 = {{0, 0, 0}},")?;
@@ -615,42 +645,80 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     writeln!(file, "static const char sdrr_hw_rev[] = \"{}\";", hw.name)?;
 
     // Main info structure
-    writeln!(file, "// Main SDRR information structure, located at known point in flash")?;
-    writeln!(file, "__attribute__((section(\".sdrr_info\"))) const sdrr_info_t sdrr_info = {{")?;
-    
+    writeln!(
+        file,
+        "// Main SDRR information structure, located at known point in flash"
+    )?;
+    writeln!(
+        file,
+        "__attribute__((section(\".sdrr_info\"))) const sdrr_info_t sdrr_info = {{"
+    )?;
+
     // Magic bytes
     writeln!(file, "    .magic = {{'S', 'D', 'R', 'R'}},")?;
-    
+
     // Version info - these would come from environment or build system
     writeln!(file, "    .major_version = SDRR_VERSION_MAJOR,")?;
     writeln!(file, "    .minor_version = SDRR_VERSION_MINOR,")?;
     writeln!(file, "    .patch_version = SDRR_VERSION_PATCH,")?;
     writeln!(file, "    .build_number = SDRR_BUILD_NUMBER,")?;
-    
+
     // Build date pointer
     writeln!(file, "    .build_date = sdrr_build_date,")?;
-    
+
     // Git commit - this would come from build system
     writeln!(file, "    .commit = SDRR_GIT_COMMIT,")?;
-    
+
     // Hardware revision
     writeln!(file, "    .hw_rev = sdrr_hw_rev,")?;
-    
+
     // STM32 info
     writeln!(file, "    .stm_line = {},", config.stm_variant.line_enum())?;
-    writeln!(file, "    .stm_storage = {},", config.stm_variant.storage_enum())?;
-    
+    writeln!(
+        file,
+        "    .stm_storage = {},",
+        config.stm_variant.storage_enum()
+    )?;
+
     // Frequency and overclock
     writeln!(file, "    .freq = {},", config.freq)?;
-    writeln!(file, "    .overclock = {},", if config.overclock { 1 } else { 0 })?;
-    
+    writeln!(
+        file,
+        "    .overclock = {},",
+        if config.overclock { 1 } else { 0 }
+    )?;
+
     // Feature flags
-    writeln!(file, "    .swd_enabled = {},", if config.swd { 1 } else { 0 })?;
-    writeln!(file, "    .preload_image_to_ram = {},", if config.preload_to_ram { 1 } else { 0 })?;
-    writeln!(file, "    .bootloader_capable = {},", if config.bootloader { 1 } else { 0 })?;
-    writeln!(file, "    .status_led_enabled = {},", if config.status_led { 1 } else { 0 })?;
-    writeln!(file, "    .boot_logging_enabled = {},", if config.boot_logging { 1 } else { 0 })?;
-    writeln!(file, "    .mco_enabled = {},", if config.mco { 1 } else { 0 })?;
+    writeln!(
+        file,
+        "    .swd_enabled = {},",
+        if config.swd { 1 } else { 0 }
+    )?;
+    writeln!(
+        file,
+        "    .preload_image_to_ram = {},",
+        if config.preload_to_ram { 1 } else { 0 }
+    )?;
+    writeln!(
+        file,
+        "    .bootloader_capable = {},",
+        if config.bootloader { 1 } else { 0 }
+    )?;
+    writeln!(
+        file,
+        "    .status_led_enabled = {},",
+        if config.status_led { 1 } else { 0 }
+    )?;
+    writeln!(
+        file,
+        "    .boot_logging_enabled = {},",
+        if config.boot_logging { 1 } else { 0 }
+    )?;
+    writeln!(
+        file,
+        "    .mco_enabled = {},",
+        if config.mco { 1 } else { 0 }
+    )?;
 
     // ROM set info
     writeln!(file, "    .rom_set_count = {},", rom_sets.len())?;
@@ -660,7 +728,7 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
 
     // Boot configuration - reserved for future use, set to 0xff
     writeln!(file, "    .boot_config = {{0xff, 0xff, 0xff, 0xff}},")?;
-    
+
     writeln!(file, "}};")?;
 
     Ok(())

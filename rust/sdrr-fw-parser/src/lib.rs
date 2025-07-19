@@ -1,5 +1,5 @@
 //! sdrr-fw-parser
-//! 
+//!
 //! no_std compatible library to parse SDRR firmware files.  Used by
 //! - `sdrr-info` - PC based tool to analyse SDRR firmware files
 //! - `sdrr-wifi-prog` - WiFi SDRR programmer based on the ESP32
@@ -23,14 +23,19 @@ pub const MAX_VERSION_PATCH: u16 = 1;
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
-use deku::prelude::*;
 use core::fmt;
+use deku::prelude::*;
 
 #[cfg(feature = "std")]
-use std::{vec::Vec, string::String};
+use std::{string::String, vec::Vec};
 
 #[cfg(not(feature = "std"))]
-use alloc::{vec, vec::Vec, string::{String, ToString}, format};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 
 use static_assertions::const_assert_eq;
 
@@ -333,8 +338,8 @@ const SDRR_PINS_SIZE: usize = 64;
 ///
 /// All pin fields refer to the physical STM32 port pin number.
 /// Indexes of arrays/Vecs are the address/data lines (Ax/Dx).
-/// 
-/// A pin value of 255 is used to indicate that the pin is not used. 
+///
+/// A pin value of 255 is used to indicate that the pin is not used.
 #[derive(Debug, DekuRead, DekuWrite)]
 pub struct SdrrPins {
     pub data_port: SdrrStmPort,
@@ -370,7 +375,10 @@ pub struct SdrrPins {
 }
 
 const ROM_INFO_BASIC_SIZE: usize = 4;
-const_assert_eq!(core::mem::size_of::<SdrrRomInfoBasic>(), ROM_INFO_BASIC_SIZE);
+const_assert_eq!(
+    core::mem::size_of::<SdrrRomInfoBasic>(),
+    ROM_INFO_BASIC_SIZE
+);
 
 #[derive(Debug, DekuRead, DekuWrite)]
 struct SdrrRomInfoBasic {
@@ -381,7 +389,10 @@ struct SdrrRomInfoBasic {
 }
 
 const ROM_INFO_WITH_LOGGING_SIZE: usize = 8;
-const_assert_eq!(core::mem::size_of::<SdrrRomInfoWithLogging>(), ROM_INFO_WITH_LOGGING_SIZE);
+const_assert_eq!(
+    core::mem::size_of::<SdrrRomInfoWithLogging>(),
+    ROM_INFO_WITH_LOGGING_SIZE
+);
 #[derive(Debug, DekuRead, DekuWrite)]
 struct SdrrRomInfoWithLogging {
     pub rom_type: SdrrRomType,
@@ -412,7 +423,10 @@ pub struct SdrrRomInfo {
 }
 
 const ROM_SET_HEADER_SIZE: usize = 16;
-const_assert_eq!(ROM_SET_HEADER_SIZE, core::mem::size_of::<SdrrRomSetHeader>());
+const_assert_eq!(
+    ROM_SET_HEADER_SIZE,
+    core::mem::size_of::<SdrrRomSetHeader>()
+);
 #[derive(Debug, DekuRead, DekuWrite)]
 struct SdrrRomSetHeader {
     #[deku(endian = "little")]
@@ -428,22 +442,22 @@ struct SdrrRomSetHeader {
 }
 
 /// Information about a set of ROMs in an SDRR firmware
-/// 
+///
 /// If individual ROMs are being servd, there is a set for each ROM image.
 /// If multiple ROMs are being served, all ROMs served together are contained
 /// in a single set.
-/// 
+///
 /// Current maximum number of ROMs in a set is 3.
 #[derive(Debug)]
 pub struct SdrrRomSet {
     /// The ROM image data for this set - this is post-processed, so as stored
     /// in the firmware, and used by the firmware to serve data bytes.
-    /// 
+    ///
     /// To look up bytes in this using a true address, use `mangle_address()`.
     pub data: Vec<u8>,
 
     /// The size of the ROM image data in bytes.
-    /// 
+    ///
     /// Currently 16KB for single ROM sets, 64KB for multi-ROM sets.
     pub size: u32,
 
@@ -503,7 +517,7 @@ struct SdrrInfoHeader {
 }
 
 /// Main SDRR firmware information data structure.  Contains all data parsed
-/// from the firmware file. 
+/// from the firmware file.
 #[derive(Debug)]
 pub struct SdrrInfo {
     pub file_type: SdrrFileType,
@@ -533,7 +547,7 @@ pub struct SdrrInfo {
 
 impl SdrrInfo {
     /// Creates a new `SdrrInfo` instance from the firmware bytes.
-    /// 
+    ///
     /// Arguments:
     /// * `file_type` - The type of the firmware file, ELF or Orc (Binary)
     /// * `data` - Pointer to the start of the sdrr_info structure in the
@@ -551,7 +565,8 @@ impl SdrrInfo {
         Self::validate_version(&header)?;
 
         // Resolve string pointers
-        let build_date = read_string_at_ptr(full_firmware, header.build_date_ptr, STM32F4_FLASH_BASE)?;
+        let build_date =
+            read_string_at_ptr(full_firmware, header.build_date_ptr, STM32F4_FLASH_BASE)?;
         let hw_rev = read_string_at_ptr(full_firmware, header.hw_rev_ptr, STM32F4_FLASH_BASE)?;
 
         // Parse ROM sets and pins
@@ -563,7 +578,8 @@ impl SdrrInfo {
             header.boot_logging_enabled != 0,
         )?;
 
-        let pins = SdrrPins::from_firmware_data(full_firmware, header.pins_ptr, STM32F4_FLASH_BASE)?;
+        let pins =
+            SdrrPins::from_firmware_data(full_firmware, header.pins_ptr, STM32F4_FLASH_BASE)?;
 
         // Build final structure
         Ok(SdrrInfo {
@@ -606,7 +622,7 @@ impl SdrrInfo {
 
     fn validate_version(header: &SdrrInfoHeader) -> Result<(), String> {
         let version_ok = header.major_version <= MAX_VERSION_MAJOR
-            && header.minor_version <= MAX_VERSION_MINOR 
+            && header.minor_version <= MAX_VERSION_MINOR
             && header.patch_version <= MAX_VERSION_PATCH;
 
         if !version_ok {
@@ -625,7 +641,7 @@ impl SdrrInfo {
 
     /// Demangles a byte from the physical pin representation to the logical
     /// representation which is served on D0-D7.  Use when looking up a byte
-    /// from the ROM image data to get the "real" byte. 
+    /// from the ROM image data to get the "real" byte.
     pub fn demangle_byte(&self, byte: u8) -> u8 {
         assert!(self.pins.data.len() == 8, "Expected 8 data pins");
         let mut result = 0u8;
@@ -663,9 +679,15 @@ impl SdrrInfo {
 
         let num_roms = self.rom_sets[0].rom_count as usize;
         if num_roms > 1 {
-            assert!(self.pins.x1 < 16 && self.pins.x2 < 16, "X1 and X2 pins must be less than 16");
-            assert!(pin_to_addr_map[self.pins.x1 as usize].is_none() && pin_to_addr_map[self.pins.x2 as usize].is_none(),
-                    "X1 and X2 pins must not overlap with other address pins");
+            assert!(
+                self.pins.x1 < 16 && self.pins.x2 < 16,
+                "X1 and X2 pins must be less than 16"
+            );
+            assert!(
+                pin_to_addr_map[self.pins.x1 as usize].is_none()
+                    && pin_to_addr_map[self.pins.x2 as usize].is_none(),
+                "X1 and X2 pins must not overlap with other address pins"
+            );
             pin_to_addr_map[self.pins.x1 as usize] = Some(14);
             pin_to_addr_map[self.pins.x2 as usize] = Some(15);
         }
@@ -673,21 +695,39 @@ impl SdrrInfo {
         let rom_type = self.rom_sets[0].roms[0].rom_type;
         let addr_mask = match rom_type {
             SdrrRomType::Rom2364 => {
-                assert!(self.pins.cs1_2364 < 16, "CS1 pin for 2364 must be less than 16");
+                assert!(
+                    self.pins.cs1_2364 < 16,
+                    "CS1 pin for 2364 must be less than 16"
+                );
                 pin_to_addr_map[self.pins.cs1_2364 as usize] = Some(13);
                 0x1FFF // 13-bit address
             }
             SdrrRomType::Rom2332 => {
-                assert!(self.pins.cs1_2332 < 16, "CS1 pin for 2332 must be less than 16");
-                assert!(self.pins.cs2_2332 < 16, "CS2 pin for 2332 must be less than 16");
+                assert!(
+                    self.pins.cs1_2332 < 16,
+                    "CS1 pin for 2332 must be less than 16"
+                );
+                assert!(
+                    self.pins.cs2_2332 < 16,
+                    "CS2 pin for 2332 must be less than 16"
+                );
                 pin_to_addr_map[self.pins.cs1_2332 as usize] = Some(13);
                 pin_to_addr_map[self.pins.cs2_2332 as usize] = Some(12);
                 0x0FFF // 12-bit address
             }
             SdrrRomType::Rom2316 => {
-                assert!(self.pins.cs1_2316 < 16, "CS1 pin for 2316 must be less than 16");
-                assert!(self.pins.cs2_2316 < 16, "CS2 pin for 2316 must be less than 16");
-                assert!(self.pins.cs3_2316 < 16, "CS3 pin for 2316 must be less than 16");
+                assert!(
+                    self.pins.cs1_2316 < 16,
+                    "CS1 pin for 2316 must be less than 16"
+                );
+                assert!(
+                    self.pins.cs2_2316 < 16,
+                    "CS2 pin for 2316 must be less than 16"
+                );
+                assert!(
+                    self.pins.cs3_2316 < 16,
+                    "CS3 pin for 2316 must be less than 16"
+                );
                 pin_to_addr_map[self.pins.cs1_2316 as usize] = Some(13);
                 pin_to_addr_map[self.pins.cs2_2316 as usize] = Some(11);
                 pin_to_addr_map[self.pins.cs3_2316 as usize] = Some(12);
@@ -781,13 +821,15 @@ impl SdrrRomSet {
         let rom_data = if header.data_ptr >= base_addr {
             let data_offset = (header.data_ptr - base_addr) as usize;
             let data_end = data_offset.saturating_add(header.size as usize);
-            
+
             if data_end <= data.len() {
                 data[data_offset..data_end].to_vec()
             } else {
                 return Err(format!(
-                    "ROM data out of bounds: offset={}, size={}, data_len={}", 
-                    data_offset, header.size, data.len()
+                    "ROM data out of bounds: offset={}, size={}, data_len={}",
+                    data_offset,
+                    header.size,
+                    data.len()
                 ));
             }
         } else {
@@ -832,7 +874,7 @@ impl SdrrRomInfo {
 
         for i in 0..count {
             let ptr_offset = offset + (i as usize * 4);
-            
+
             if ptr_offset + 4 > data.len() {
                 return Err(format!("ROM info pointer {} out of bounds", i));
             }
@@ -845,9 +887,9 @@ impl SdrrRomInfo {
             ]);
 
             // Delegate to single rom info constructor
-            let rom_info = Self::from_firmware_data(
-                data, rom_info_ptr, base_addr, boot_logging_enabled
-            ).map_err(|e| format!("Failed to parse ROM info {}: {}", i, e))?;
+            let rom_info =
+                Self::from_firmware_data(data, rom_info_ptr, base_addr, boot_logging_enabled)
+                    .map_err(|e| format!("Failed to parse ROM info {}: {}", i, e))?;
 
             rom_infos.push(rom_info);
         }
@@ -868,7 +910,7 @@ impl SdrrRomInfo {
 
         let info_offset = (ptr - base_addr) as usize;
         let required_size = if boot_logging_enabled { 8 } else { 4 };
-        
+
         if info_offset + required_size > data.len() {
             return Err("ROM info data out of bounds".into());
         }
@@ -885,12 +927,24 @@ impl SdrrRomInfo {
                 None
             };
 
-            (rom_info.rom_type, rom_info.cs1_state, rom_info.cs2_state, rom_info.cs3_state, filename)
+            (
+                rom_info.rom_type,
+                rom_info.cs1_state,
+                rom_info.cs2_state,
+                rom_info.cs3_state,
+                filename,
+            )
         } else {
             let (_, rom_info) = SdrrRomInfoBasic::from_bytes((info_data, 0))
                 .map_err(|e| format!("Failed to parse ROM info basic: {}", e))?;
 
-            (rom_info.rom_type, rom_info.cs1_state, rom_info.cs2_state, rom_info.cs3_state, None)
+            (
+                rom_info.rom_type,
+                rom_info.cs1_state,
+                rom_info.cs2_state,
+                rom_info.cs3_state,
+                None,
+            )
         };
 
         Ok(SdrrRomInfo {
@@ -909,7 +963,7 @@ impl SdrrPins {
         if offset + SDRR_PINS_SIZE > data.len() {
             return Err("Pins data out of bounds".into());
         }
-        
+
         let pins_data = &data[offset..offset + SDRR_PINS_SIZE];
         SdrrPins::from_bytes((pins_data, 0))
             .map_err(|e| format!("Failed to parse pins: {}", e))
@@ -955,7 +1009,7 @@ fn read_rom_sets(
 
     for i in 0..count {
         let set_offset = offset + (i as usize * ROM_SET_HEADER_SIZE);
-        
+
         if set_offset + ROM_SET_HEADER_SIZE > data.len() {
             return Err(format!("ROM set header {} out of bounds", i));
         }
@@ -966,8 +1020,12 @@ fn read_rom_sets(
 
         // Delegate to the type-specific constructor
         let rom_set = SdrrRomSet::from_header_and_firmware_data(
-            header, data, base_addr, boot_logging_enabled
-        ).map_err(|e| format!("Failed to construct ROM set {}: {}", i, e))?;
+            header,
+            data,
+            base_addr,
+            boot_logging_enabled,
+        )
+        .map_err(|e| format!("Failed to construct ROM set {}: {}", i, e))?;
 
         rom_sets.push(rom_set);
     }
