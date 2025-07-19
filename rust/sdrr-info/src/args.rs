@@ -84,8 +84,8 @@ enum Commands {
     /// address bus, using a non-mangled address.  Use this to detect
     /// what byte the STM32F4 will output on the data lines in
     /// response to a particular address on the address bus.  This
-    /// option requires CS line states, including, for multi-rom sets,
-    /// the X1 and X2 pins.
+    /// option requires CS line states, including, for multi-rom and
+    /// bank switched sets, the X1 and X2 pins.
     ///
     /// This option allows a single byte or range of bytes to be
     /// looked up.  The output can be output as text (2 byte hex
@@ -124,11 +124,10 @@ enum Commands {
         /// CS3 line state (0 or 1) - valid for 2316 ROMs only
         #[arg(long, value_parser = parse_cs_line)]
         cs3: Option<u8>,
-        /// X1 line state (0 or 1) - valid for multi-ROM sets only
+        /// X1 line state (0 or 1) - valid for multi-ROM/bank switched sets only
         #[arg(long, value_parser = parse_cs_line)]
         x1: Option<u8>,
-        /// X2 line state (0 or 1) - valid for multi-ROM sets only
-        /// #[arg(long, value_parser = parse_cs_line)]
+        /// X2 line state (0 or 1) - valid for multi-ROM/bank switched sets only
         #[arg(long, value_parser = parse_cs_line)]
         x2: Option<u8>,
         /// Output mangled data byte(s)
