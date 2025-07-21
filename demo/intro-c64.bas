@@ -1,0 +1,87 @@
+10 rem *** sdrr flashy demo by piers ***
+20 rem *** piers.rocks/u/sdrr ***
+30 print chr$(147):rem clear screen
+40 poke 53280,15:rem pale grey border
+45 poke 53281,0:rem black background
+50 print chr$(5):rem white text
+55 dim t$(71):rem text lines array
+60 gosub 2000:rem setup text
+70 rem *** main scroll loop ***
+80 for i=1 to 71
+90 print t$(i)
+100 for k=1 to 80:next k:rem delay between lines
+110 next i
+140 goto 80:rem loop forever
+2000 rem *** setup text ***
+2010 t$(1)=""
+2020 t$(2)="   ================================="
+2030 t$(3)=""
+2040 t$(4)="          software"
+2050 t$(5)="               defined"
+2060 t$(6)="                    retro"
+2070 t$(7)="                         rom"
+2080 t$(8)=""
+2090 t$(9)="   ================================="
+2100 t$(10)=""
+2110 t$(11)="          brought to you by"
+2115 t$(12)=""
+2120 t$(13)="             piers.rocks"
+2130 t$(14)=""
+2140 t$(15)="   ================================="
+2150 t$(16)=""
+2160 t$(17)="   the most flexible rom replacement"
+2180 t$(18)=""
+2182 t$(19)="   ---------------------------------"
+2185 t$(20)=""
+2190 t$(21)="         *** key features ***"
+2200 t$(22)=""
+2210 t$(23)="    > emulates 2364/2332/2316"
+2220 t$(24)="    > original footprint"
+2230 t$(25)="    > 16+ rom images in one chip"
+2235 t$(26)="    > replace multiple roms in one"
+2240 t$(27)="    > dynamic bank switching"
+2250 t$(28)="    > reprogram in-situ"
+2260 t$(29)="    > 3-wire programming"
+2270 t$(30)="    > open source"
+2280 t$(31)=""
+2290 t$(32)="   ---------------------------------"
+2300 t$(33)=""
+2310 t$(34)="        *** systems tested ***"
+2320 t$(35)=""
+2330 t$(36)="          > commodore 64"
+2340 t$(37)="          > vic-20"
+2350 t$(38)="          > pet computers"
+2360 t$(39)="          > 1541 disk drives"
+2380 t$(40)=""
+2390 t$(41)="   ---------------------------------"
+2400 t$(42)=""
+2410 t$(43)="       *** supported stm32s ***"
+2420 t$(44)=""
+2430 t$(45)="           > f401rb/rc/re"
+2440 t$(46)="           > f405rg"
+2450 t$(47)="           > f411rc/re"
+2460 t$(48)="           > f446rc"
+2470 t$(49)=""
+2480 t$(50)="   ================================="
+2490 t$(51)=""
+2500 t$(52)="        *** get the project ***"
+2520 t$(53)=""
+2530 t$(54)="          piers.rocks/u/sdrr"
+2540 t$(55)=""
+2550 t$(56)="   ================================="
+2560 t$(57)=""
+2570 t$(58)="        thanks for watching!"
+2580 t$(59)=""
+2582 t$(60)="     www.youtube.com/@piers" + chr$(164) + "rocks"
+2586 t$(61)=""
+2590 t$(62)="   ================================="
+2600 t$(63)=""
+2610 t$(64)=""
+2620 t$(65)=""
+2630 t$(66)=""
+2640 t$(67)=""
+2650 t$(68)=""
+2660 t$(69)=""
+2670 t$(70)=""
+2680 t$(71)=""
+2990 return

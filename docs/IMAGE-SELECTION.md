@@ -1,5 +1,7 @@
 # Image Selection
 
+This article describes stock image switching, which allows different images, or sets of images, to be selected __at boot time__ using the image select jumpers.  For multi-ROM sets and bank switchinging see [Multiple ROM Sets](/docs/MULTI-ROM-SETS.md).
+
 As above, up to 16 ROM images can be stored on the SDRR device, and selected at boot time using the jumpers on the PCB.  The SDRR image select jumpers are labelled om the underside `1`, `2`, `4` and `8`.  The jumper being open is a `0` and closed is a `1`.
 
 Do not confuse the image select jumpers with the BOOT0 jumper, labelled `B0`.  This is provided to assist with [problems flashing](/README.md#flashing-problems).
