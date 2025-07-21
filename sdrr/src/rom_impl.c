@@ -314,6 +314,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         GPIOB_BSRR = (1 << (sdrr_info.pins->status + 16));
     }
 
+#if !defined(C_MAIN_LOOP)
     // Start the appropriate main loop.  Includes preloading registers.
     //
     // See `rom_asm.h` for the macros used here.
@@ -325,7 +326,6 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     switch (serve_mode)
     {
         // Default case - test CS twice as often as loading the byte from RAM
-        default:
         case SERVE_TWO_CS_ONE_ADDR:
             if (cs_invert_mask == 0) {
                 // CS active low
@@ -339,6 +339,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         // Serve data byte once CS has gone active.  Simpler code, but may not
         // work as well as slower clock speeds as the default algorithm.  Or
         // may work better!  See `rom_asm.h` for more details.
+        default:
         case SERVE_ADDR_ON_CS:
             if (cs_invert_mask == 0) {
                 // CS active low
@@ -361,6 +362,67 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             }
             break;
     }
+#else // C_MAIN_LOOP
+    uint32_t addr_cs_lines;
+    uint8_t data_byte;
+    uint32_t cs_check;
+    switch (serve_mode) {
+        // For now we'll just have a single C main loop implemenation which
+        // serves address on C
+        default:
+        case SERVE_TWO_CS_ONE_ADDR:
+        case SERVE_ADDR_ON_CS:
+            if (cs_invert_mask == 0) {
+                while (1) {
+                    addr_cs_lines = GPIOC_IDR;
+                    while (!(cs_check_mask & addr_cs_lines)) {
+                        data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
+                        GPIOA_MODER = data_output_mask_val;
+                        GPIOA_ODR = data_byte;
+                        addr_cs_lines = GPIOC_IDR;
+                    }
+                    GPIOA_MODER = data_input_mask_val;
+                }
+            } else {
+                addr_cs_lines = GPIOC_IDR;
+                cs_check = addr_cs_lines ^ cs_invert_mask; // needed only when cs_invert_mask != 0
+                while (!(cs_check_mask & cs_check)) {
+                    data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
+                    GPIOA_MODER = data_output_mask_val;
+                    GPIOA_ODR = data_byte;
+                    addr_cs_lines = GPIOC_IDR;
+                }
+                GPIOA_MODER = data_input_mask_val;
+            }
+            break;
+
+        case SERVE_ADDR_ON_ANY_CS:
+            if (cs_invert_mask == 0) {
+                while (1) {
+                    addr_cs_lines = GPIOC_IDR;
+                    while (cs_check_mask & ~addr_cs_lines) {
+                        data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
+                        GPIOA_MODER = data_output_mask_val;
+                        GPIOA_ODR = data_byte;
+                        addr_cs_lines = GPIOC_IDR;
+                    }
+                    GPIOA_MODER = data_input_mask_val;
+                }
+            } else {
+                addr_cs_lines = GPIOC_IDR;
+                cs_check = addr_cs_lines ^ cs_invert_mask; // needed only when cs_invert_mask != 0
+                while (cs_check_mask & ~cs_check) {
+                    data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
+                    GPIOA_MODER = data_output_mask_val;
+                    GPIOA_ODR = data_byte;
+                    addr_cs_lines = GPIOC_IDR;
+                }
+                GPIOA_MODER = data_input_mask_val;
+            }
+            break;
+
+    }
+#endif // !C_MAIN_LOOP
 
     if ((sdrr_info.status_led_enabled) && (sdrr_info.pins->status <= 15)) {
         GPIOB_BSRR = (1 << sdrr_info.pins->status);
