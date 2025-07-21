@@ -7,7 +7,7 @@
 70 rem *** main scroll loop ***
 80 for i=1 to 73
 90 print t$(i)
-100 for k=1 to 80:next k:rem delay between lines
+100 for k=1 to 160:next k:rem delay between lines
 110 next i
 140 goto 80:rem loop forever
 2000 rem *** setup text ***
