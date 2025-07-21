@@ -4,7 +4,7 @@
 # 0 - 8KB Kernal ROM, 901486-07
 # 1 - 8KB Basic ROM, 901486-01
 # 2 - 4KB Character ROM, 901460-03
-# 3 - 8KB Dead Test Kernal ROM, V1.1.01
+# 3 - 8KB Dead Test Kernal ROM (PAL), V1.1.01
 
 ROM_CONFIGS = \
 	file=http://www.zimmers.net/anonftp/pub/cbm/firmware/computers/vic20/kernal.901486-07.bin,type=2364,cs1=0 \
