@@ -363,7 +363,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             break;
     }
 #else // C_MAIN_LOOP
-    uint32_t addr_cs_lines;
+    uint16_t addr_cs_lines;
     uint8_t data_byte;
     uint32_t cs_check;
     switch (serve_mode) {
@@ -374,25 +374,28 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         case SERVE_ADDR_ON_CS:
             if (cs_invert_mask == 0) {
                 while (1) {
-                    addr_cs_lines = GPIOC_IDR;
-                    while (!(cs_check_mask & addr_cs_lines)) {
-                        data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
-                        GPIOA_MODER = data_output_mask_val;
-                        GPIOA_ODR = data_byte;
-                        addr_cs_lines = GPIOC_IDR;
-                    }
-                    GPIOA_MODER = data_input_mask_val;
+                    addr_cs_lines = GPIOC_IDR;  // ALG2_ALL_LOW
+                    while (!(cs_check_mask & addr_cs_lines)) {  // ALG2_ALL_LOW
+                        data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);  // ALG2_ALL_LOW
+                        GPIOA_MODER = data_output_mask_val;  // ALG2_ALL_LOW
+                        GPIOA_ODR = data_byte;  // ALG2_ALL_LOW
+                        addr_cs_lines = GPIOC_IDR;  // ALG2_ALL_LOW
+                    }  // ALG2_ALL_LOW
+                    GPIOA_MODER = data_input_mask_val;  // ALG2_ALL_LOW
                 }
             } else {
-                addr_cs_lines = GPIOC_IDR;
-                cs_check = addr_cs_lines ^ cs_invert_mask; // needed only when cs_invert_mask != 0
-                while (!(cs_check_mask & cs_check)) {
-                    data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
-                    GPIOA_MODER = data_output_mask_val;
-                    GPIOA_ODR = data_byte;
-                    addr_cs_lines = GPIOC_IDR;
+                while (1) {
+                    addr_cs_lines = GPIOC_IDR;  // ALG2_MIXED
+                    cs_check = addr_cs_lines ^ cs_invert_mask;  // ALG2_MIXED
+                    while (!(cs_check_mask & cs_check)) {  // ALG2_MIXED
+                        data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);// ALG2_MIXED
+                        GPIOA_MODER = data_output_mask_val;  // ALG2_MIXED
+                        GPIOA_ODR = data_byte;  // ALG2_MIXED
+                        addr_cs_lines = GPIOC_IDR;  // ALG2_MIXED
+                        cs_check = addr_cs_lines ^ cs_invert_mask; // ALG2_MIXED
+                    }  // ALG2_MIXED
+                    GPIOA_MODER = data_input_mask_val;  // ALG2_MIXED
                 }
-                GPIOA_MODER = data_input_mask_val;
             }
             break;
 
@@ -409,15 +412,18 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                     GPIOA_MODER = data_input_mask_val;
                 }
             } else {
-                addr_cs_lines = GPIOC_IDR;
-                cs_check = addr_cs_lines ^ cs_invert_mask; // needed only when cs_invert_mask != 0
-                while (cs_check_mask & ~cs_check) {
-                    data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
-                    GPIOA_MODER = data_output_mask_val;
-                    GPIOA_ODR = data_byte;
+                while (1) {
                     addr_cs_lines = GPIOC_IDR;
+                    cs_check = addr_cs_lines ^ cs_invert_mask; // needed only when cs_invert_mask != 0
+                    while (cs_check_mask & ~cs_check) {
+                        data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
+                        GPIOA_MODER = data_output_mask_val;
+                        GPIOA_ODR = data_byte;
+                        addr_cs_lines = GPIOC_IDR;
+                        cs_check = addr_cs_lines ^ cs_invert_mask;
+                    }
+                    GPIOA_MODER = data_input_mask_val;
                 }
-                GPIOA_MODER = data_input_mask_val;
             }
             break;
 
