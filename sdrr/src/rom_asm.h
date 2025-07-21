@@ -35,6 +35,13 @@
 // CPU registers - we prefer low registers (r0-r7) to high registers as
 // instructions using the low registers tend to be 16-bit vs 32-bit, which
 // means they are fetched from flash (or RAM) faster. 
+//
+// Our high registers are _only_ used during eor, bics and tst instructions,
+// which have to be 32 bit, anyway, so we might as well use high registers for
+// them.  If we run out of registers we can combine registers by using a single
+// register with GPIOA_BASE and then use immediate offsets from this for the
+// data MODER and ODR registers, and the addr/CS IDR register.  However, the
+// code will take up more space that way (but likely not be any slower/faster).
 #define R_ADDR_CS       "r0"
 #define R_DATA          "r1"
 #define R_ROM_TABLE     "r2"
