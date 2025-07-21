@@ -239,7 +239,7 @@ build_combination() {
     local success=0
 
     while [[ $attempt -le $max_attempts ]]; do
-        echo "Attempt $attempt: Building STM=${stm} CONFIG=${config_file}"
+        echo "    - Attempt $attempt: Building STM=${stm} CONFIG=${config_file}"
         if STM="$stm" CONFIG="$config_file" make > /dev/null; then
             success=1
             break
@@ -326,7 +326,7 @@ execute_test() {
     local success=0
 
     while [[ $attempt -le $max_attempts ]]; do
-        echo "Attempt $attempt: Executing test '$test_name'"
+        echo "    - Attempt $attempt: Executing test '$test_name'"
         if eval "$make_cmd" > /dev/null; then
             success=1
             break

@@ -29,6 +29,7 @@ test-c64-no-destestmax-f411re:STM=f411re,CONFIG=config/c64-no-destestmax.mk
 test-ieee-diag-f411re:STM=f411re,CONFIG=config/ieee-diag.mk
 test-pet-4-40-50-f411re:STM=f411re,CONFIG=config/pet-4-40-50.mk
 test-vic20-pal-f411re:STM=f411re,CONFIG=config/vic20-pal.mk
+test-vic20-ntsc-f411re:STM=f411re,CONFIG=config/vic20-ntsc.mk
 
 # Test old config set letters
 test-hw-rev-D:HW_REV=d,STM=f411re,CONFIG=config/test-sdrr-0.mk
