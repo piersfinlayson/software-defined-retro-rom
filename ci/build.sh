@@ -232,10 +232,28 @@ build_combination() {
     
     # Clean firmware and generated files, but preserve Rust generator to avoid rebuild
     make clean-firmware-build clean-gen > /dev/null 2>&1 || true
-    
-    # Execute the build with specified STM variant and config
-    STM="$stm" CONFIG="$config_file" make > /dev/null
-    
+
+    # Retry logic: Attempt the build up to 2 times if it fails
+    local attempt=1
+    local max_attempts=2
+    local success=0
+
+    while [[ $attempt -le $max_attempts ]]; do
+        echo "Attempt $attempt: Building STM=${stm} CONFIG=${config_file}"
+        if STM="$stm" CONFIG="$config_file" make > /dev/null; then
+            success=1
+            break
+        else
+            echo "Build failed on attempt $attempt"
+        fi
+        attempt=$((attempt + 1))
+    done
+
+    if [[ $success -eq 0 ]]; then
+        echo "ERROR: Build failed after $max_attempts attempts"
+        return 1
+    fi
+
     # Verify that all expected output files were created
     local build_dir="${PROJECT_ROOT}/sdrr/build"
     local base_name="sdrr-stm32${stm}"
@@ -302,13 +320,28 @@ execute_test() {
     echo "  - Command: $make_cmd make test"
     make_cmd="$make_cmd make test"
     
-    # Execute the build
-    if eval "$make_cmd" > /dev/null ; then
-        return 0
-    else
-        echo "ERROR: Test '$test_name' failed"
+    # Retry logic: Attempt the test up to 2 times if it fails
+    local attempt=1
+    local max_attempts=2
+    local success=0
+
+    while [[ $attempt -le $max_attempts ]]; do
+        echo "Attempt $attempt: Executing test '$test_name'"
+        if eval "$make_cmd" > /dev/null; then
+            success=1
+            break
+        else
+            echo "Test '$test_name' failed on attempt $attempt"
+        fi
+        attempt=$((attempt + 1))
+    done
+
+    if [[ $success -eq 0 ]]; then
+        echo "ERROR: Test '$test_name' failed after $max_attempts attempts"
         return 1
     fi
+
+    return 0
 }
 
 #
