@@ -98,3 +98,6 @@ overclock-f446re:OVERCLOCK=1,FREQ=200,STM=f446re,CONFIG=config/test-sdrr-0.mk
 # Build with different serve algorithms
 serve-algorithm-a-f401rb:SERVE_ALG=a,STM=f401rb,CONFIG=config/test-sdrr-0.mk
 serve-algorithm-b-f401rb:SERVE_ALG=b,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+
+# Build with c main loop - not supported in production, but want to keep compiling
+c-main-loop-f405rg:EXTRA_CFLAGS=-DC_MAIN_LOOP,HW_REV=f,STM=f405rg,CONFIG=config/bank-1541.mk
