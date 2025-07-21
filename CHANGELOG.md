@@ -18,6 +18,7 @@ All notables changes between versions are documented in this file.
 - Moved Rust code to [`rust/`](/rust/) directory.
 - Added [build containers](/ci/docker/README.md) to assist with building SDRR, and doing so with the recommended build environment.
 - Added dynamic [bank switchable](docs/MULTI-ROM-SETS.md#dynamic-bank-switching) ROM image support, using X1/X2 (when not using multiple simultaneous ROMs).
+- Added fun banked character ROM configs.
 
 ### Fixes
 
