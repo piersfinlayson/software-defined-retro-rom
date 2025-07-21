@@ -42,7 +42,7 @@ use std::path::Path;
 
 use args::{Args, Command, parse_args};
 use load::load_sdrr_firmware;
-use sdrr_fw_parser::{SdrrInfo, SdrrStmPort, SdrrServe};
+use sdrr_fw_parser::{SdrrInfo, SdrrStmPort, SdrrServe, StmLine};
 use utils::add_commas;
 
 // SDRR info structure offset in firmware binary
@@ -135,13 +135,22 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         std::str::from_utf8(&info.commit).unwrap_or("<error>")
     );
     println!("Hardware:      {}", info.hw_rev);
-    println!(
-        "STM32:         {:?}R{} ({}KB flash, {}KB RAM)",
-        info.stm_line,
-        info.stm_storage.package_code(),
-        info.stm_storage.kb(),
-        info.stm_line.ram_kb()
-    );
+    if (info.stm_line == StmLine::F401BC) || (info.stm_line == StmLine::F401BC) {
+        println!(
+            "STM32:         F401R{} ({}KB flash, {}KB RAM)",
+            info.stm_storage.package_code(),
+            info.stm_storage.kb(),
+            info.stm_line.ram_kb()
+        );
+    } else {
+        println!(
+            "STM32:         {:?}R{} ({}KB flash, {}KB RAM)",
+            info.stm_line,
+            info.stm_storage.package_code(),
+            info.stm_storage.kb(),
+            info.stm_line.ram_kb()
+        );
+    }
     println!(
         "Frequency:     {} MHz (Overclocking: {})",
         info.freq, info.overclock

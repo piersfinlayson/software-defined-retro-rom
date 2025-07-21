@@ -8,14 +8,16 @@ The following table provides details about the supported STM32 microcontrollers:
 
 | Model | Flash | RAM | Max Clock Speed | Max single ROM Images | Max mult-ROM sets | Build variant |
 |-------|-------|-----|-----------------|-----------------------|-------------|---------------|
-| STM32F401RBT6 | 128KB | 96KB | 84MHz | 6 | 1 | f401rb |
-| STM32F401RCT6 | 256KB | 96KB | 84MHz | 14 | 3 | f401rc |
+| STM32F401RBT6 | 128KB | 64KB | 84MHz | 6 | - | f401rb |
+| STM32F401RCT6 | 256KB | 64KB | 84MHz | 14 | - | f401rc |
 | STM32F401RET6 | 512KB | 96KB | 84MHz | 16 | 7 | f401re |
 | STM32F411RCT6 | 256KB | 128KB | 100MHz | 14 | 3 | f411rc |
 | STM32F411RET6 | 512KB | 128KB | 100MHz | 16 | 7 | f411re |
 | STM32F405RGT6 | 1024KB | 128KB | 168MHz | 16 | 15 | f405rg |
 | STM32F446RCT6 | 256KB | 128KB | 180MHz | 16 | 3 | f446rc |
 | STM32F446RETx | 512KB | 128KB | 180MHz | 16 | 7 | f446re |
+
+Neither STM32F401RBT6 and STM32F401RCT6 have sufficient RAM to serve multi-ROM or banked sets of images, but they can serve single ROM images.
 
 ## Clock Speed Requirements
 

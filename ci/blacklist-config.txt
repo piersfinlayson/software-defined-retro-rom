@@ -15,3 +15,5 @@ set-1541
 bank-1541
 bank-c64-char
 bank-vic20-char
+bank-c64-char-fun
+bank-vic20-char-fun

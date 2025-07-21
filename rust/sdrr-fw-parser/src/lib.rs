@@ -71,7 +71,7 @@ const ROM_SET_IMAGE_SIZE: usize = 65536;
 pub enum StmLine {
     /// F401
     #[deku(id = "0x0000")]
-    F401,
+    F401DE,
 
     /// F405
     #[deku(id = "0x0001")]
@@ -84,15 +84,19 @@ pub enum StmLine {
     /// F446
     #[deku(id = "0x0003")]
     F446,
+
+    #[deku(id = "0x0004")]
+    F401BC,
 }
 
 impl fmt::Display for StmLine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StmLine::F401 => write!(f, "STM32F401"),
+            StmLine::F401DE => write!(f, "STM32F401DE"),
             StmLine::F405 => write!(f, "STM32F405"),
             StmLine::F411 => write!(f, "STM32F411"),
             StmLine::F446 => write!(f, "STM32F446"),
+            StmLine::F401BC => write!(f, "STM32F401BC"),
         }
     }
 }
@@ -101,7 +105,8 @@ impl StmLine {
     /// Returns the amount of SRAM of the device (not including any CCM RAM)
     pub fn ram_kb(&self) -> &str {
         match self {
-            StmLine::F401 => "96",
+            StmLine::F401DE => "96",
+            StmLine::F401BC => "64",
             StmLine::F405 | StmLine::F411 | StmLine::F446 => "128",
         }
     }

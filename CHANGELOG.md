@@ -22,6 +22,7 @@ All notables changes between versions are documented in this file.
 ### Fixes
 
 - Fixed status LED behaviour, by placing outside of MAIN_LOOP_ONE_SHOT, and using the configured pin.
+- Got `sdrr` firmware working on STM32F401RB/RC variants.  These have 64KB RAM, so cannot support banked or multi-set ROMs.  However, they can serve single ROM images, with the quantity limited by the flash.
 
 ## v0.2.0 - 2025-07-13
 

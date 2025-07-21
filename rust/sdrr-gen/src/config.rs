@@ -214,6 +214,21 @@ impl Config {
                 if is_banked_set {
                     // Banking mode validation
 
+                    // Check hardware variant supports banked sets
+                    if !self.hw.supports_banked_roms() {
+                        return Err(
+                            "Bank switched sets of ROMs are only supported on hardware revision F onwards".to_string(),
+                        );
+                    }            
+
+                    // Check STM variant supports banked sets
+                    if !self.stm_variant.supports_banked_roms() {
+                        return Err(format!(
+                            "Set {}: banked ROMs are not supported on STM32 variant {} due to lack of RAM and/or flash",
+                            set_id, self.stm_variant.makefile_var()
+                        ));
+                    }
+
                     // All ROMs in set must have bank specified
                     if banked_roms.len() != roms_in_set.len() {
                         return Err(format!(
@@ -275,11 +290,28 @@ impl Config {
                 } else {
                     // Multi-ROM mode validation
 
+                    // Check hardware variant supports multi-rom sets
+                    if !self.hw.supports_multi_rom_sets() {
+                        return Err(
+                            "Multi-ROM sets of ROMs are only supported on hardware revision F onwards".to_string(),
+                        );
+                    }            
+
+                    // Check this STM variant supports multi-ROM sets
+                    if roms_in_set.len() > 1 {
+                        if !self.stm_variant.supports_multi_rom_sets() {
+                            return Err(format!(
+                                "Set {}: multi-set ROMs are not supported on STM32 variant {} due to lack of RAM and/or flash",
+                                set_id, self.stm_variant.makefile_var()
+                            ));
+                        }
+                    }
+                    
                     // Ensure no ROMs have bank specified
                     for rom in &roms_in_set {
                         if rom.bank.is_some() {
                             return Err(format!(
-                                "Set {}: mixed banking modes not allowed - either all ROMs specify bank or none do",
+                                "Set {}: mixed banking modes not allowed - either all or no ROMs in set must specify bank",
                                 set_id
                             ));
                         }
@@ -293,6 +325,7 @@ impl Config {
                             roms_in_set.len()
                         ));
                     }
+
                 }
             }
         }
@@ -320,12 +353,6 @@ impl Config {
                 })
                 .collect();
             return Ok(rom_sets);
-        }
-
-        if !self.hw.supports_multi_rom_sets() {
-            return Err(
-                "Multi-ROM and bank switching sets of ROMs are only supported on hardware revision F".to_string(),
-            );
         }
 
         let mut unique_sets: Vec<usize> = sets.clone();

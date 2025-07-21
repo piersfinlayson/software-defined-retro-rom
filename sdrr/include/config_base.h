@@ -11,10 +11,11 @@
 #include <stdint.h>
 
 typedef enum {
-    F401 = 0x0000,
+    F401DE = 0x0000,  // 96 KB RAM
     F405 = 0x0001,
     F411 = 0x0002,
     F446 = 0x0003,
+    F401BC = 0x0004,  // Only 64KB RAM
     STM_LINE_FORCE_UINT16 = 0xFFFF,
 } stm_line_t;
 

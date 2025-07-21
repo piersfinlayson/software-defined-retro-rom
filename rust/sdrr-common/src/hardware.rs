@@ -284,6 +284,10 @@ impl HwConfig {
         }
     }
 
+    pub fn supports_banked_roms(&self) -> bool {
+        self.supports_multi_rom_sets()
+    }
+
     pub fn supports_multi_rom_sets(&self) -> bool {
         // Requires both pins X1 and X2
         if let Some(x1) = self.stm.pins.x1 {

@@ -93,7 +93,8 @@ impl fmt::Display for StmFamily {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StmProcessor {
-    F401,
+    F401BC,
+    F401DE,
     F405,
     F411,
     F446,
@@ -102,7 +103,8 @@ pub enum StmProcessor {
 impl StmProcessor {
     pub fn vco_min_mhz(&self) -> u32 {
         match self {
-            StmProcessor::F401 => 192,
+            StmProcessor::F401BC => 192,
+            StmProcessor::F401DE => 192,
             StmProcessor::F405 => 100,
             StmProcessor::F411 => 100,
             StmProcessor::F446 => 100,
@@ -115,7 +117,8 @@ impl StmProcessor {
 
     pub fn max_sysclk_mhz(&self) -> u32 {
         match self {
-            StmProcessor::F401 => 84,
+            StmProcessor::F401BC => 84,
+            StmProcessor::F401DE => 84,
             StmProcessor::F405 => 168,
             StmProcessor::F411 => 100,
             StmProcessor::F446 => 180,
@@ -208,7 +211,7 @@ pub enum StmVariant {
     F411RE, // STM32F411RE (6 or 7), 64-pins, 128KB SRAM, 512KB Flash
     F405RG, // STM32F405RE (6 or 7), 64-pins, 128KB SRAM, 1024KB Flash (+ 64KB CCM RAM)
     F401RE, // STM32F401RE (6 or 7), 64-pins, 96KB SRAM, 512KB Flash
-    F401RB, // STM32F401RB (6 or 7), 64-pins, 96KB SRAM, 128KB Flash
+    F401RB, // STM32F401RB (6 or 7), 64-pins, 64KB SRAM, 128KB Flash
     F401RC, // STM32F401RC (6 or 7), 64-pins, 96KB SRAM, 256KB Flash
 }
 
@@ -232,7 +235,8 @@ impl StmVariant {
             StmVariant::F446RC | StmVariant::F446RE => "F446",
             StmVariant::F411RC | StmVariant::F411RE => "F411",
             StmVariant::F405RG => "F405",
-            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => "F401",
+            StmVariant::F401RE => "F401DE",
+            StmVariant::F401RB | StmVariant::F401RC => "F401BC",
         }
     }
 
@@ -271,8 +275,26 @@ impl StmVariant {
             StmVariant::F446RC | StmVariant::F446RE => 128,
             StmVariant::F411RC | StmVariant::F411RE => 128,
             StmVariant::F405RG => 128, // +64KB CCM RAM
-            StmVariant::F401RB | StmVariant::F401RC | StmVariant::F401RE => 96,
+            StmVariant::F401RB | StmVariant::F401RC => 64,
+            StmVariant::F401RE => 96,
         }
+    }
+
+    pub fn supports_banked_roms(&self) -> bool {
+        // 72 KB RAM as requires:
+        // - 64KB for total of 4 16KB banked images
+        // - 4KB for logging buffer
+        // - 4KB for everything else
+        //
+        // 96KB flash as requires:
+        // - 64KB for total of 1 set of 4x16KB banked images
+        // - 32KB for firmware
+        self.ram_kb() > 72 && self.flash_storage_kb() >= 96
+    }
+
+    pub fn supports_multi_rom_sets(&self) -> bool {
+        // Same criteria as banked roms
+        self.supports_banked_roms()
     }
 
     pub fn ccm_ram_kb(&self) -> Option<usize> {
@@ -304,9 +326,8 @@ impl StmVariant {
             StmVariant::F446RC | StmVariant::F446RE => "#define STM32F446      1",
             StmVariant::F411RC | StmVariant::F411RE => "#define STM32F411      1",
             StmVariant::F405RG => "#define STM32F405      1",
-            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => {
-                "#define STM32F401      1"
-            }
+            StmVariant::F401RE => "#define STM32F401DE    1",
+            StmVariant::F401RB | StmVariant::F401RC => "#define STM32F401BC    1",
         }
     }
 
@@ -328,7 +349,8 @@ impl StmVariant {
             StmVariant::F446RC | StmVariant::F446RE => StmProcessor::F446,
             StmVariant::F411RC | StmVariant::F411RE => StmProcessor::F411,
             StmVariant::F405RG => StmProcessor::F405,
-            StmVariant::F401RE | StmVariant::F401RB | StmVariant::F401RC => StmProcessor::F401,
+            StmVariant::F401RE => StmProcessor::F401DE,
+            StmVariant::F401RB | StmVariant::F401RC => StmProcessor::F401BC,
         }
     }
 

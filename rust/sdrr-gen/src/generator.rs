@@ -779,6 +779,12 @@ fn generate_linker_script(config: &Config) -> Result<()> {
     }
     writeln!(file, "}}")?;
     writeln!(file)?;
+    if config.stm_variant.ram_kb() > 72 {
+        writeln!(file, "_Ram_Rom_Image_Size = 0x10000;  /* 64 KB */")?;
+    } else {
+        writeln!(file, "_Ram_Rom_Image_Size = 0x04000;  /* 16 KB */")?;
+    }
+    writeln!(file)?;
     writeln!(file, "INCLUDE stm32f-common.ld")?;
 
     Ok(())

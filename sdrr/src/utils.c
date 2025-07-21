@@ -294,8 +294,14 @@ void log_init(void) {
     LOG("%s", stm_variant);
     int mismatch = 1;
     switch (sdrr_info.stm_line) {
-        case F401:
-            if ((idcode == IDCODE_F401XBC) || (idcode == IDCODE_F401XDE)) {
+        case F401BC:
+            if (idcode == IDCODE_F401XBC) {
+                mismatch = 0;
+            }
+            break;
+
+        case F401DE:
+            if (idcode == IDCODE_F401XDE) {
                 mismatch = 0;
             }
             break;

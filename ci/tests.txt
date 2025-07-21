@@ -43,6 +43,8 @@ test-set-vic20-pal-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-vic20-pal.mk
 bank-1541-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-1541.mk
 bank-c64-char-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-c64-char.mk
 bank-vic20-char-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-vic20-char.mk
+bank-c64-char-fun-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-c64-char-fun.mk
+bank-vic20-char-fun-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-vic20-char-fun.mk
 
 # Test different hardware revisions
 hw-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
