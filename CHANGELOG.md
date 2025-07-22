@@ -28,6 +28,7 @@ In other news:
 - Added fun banked character ROM configs.
 - Added VIC-20 NTSC config.
 - Added retry in [ci/build.sh](ci/build.sh) to allow for intermittent network issues when downloading dependencies.
+- Added [demo programs](demo/README.md) for C64 and VIC-20 to list SDRR features and other information/
 
 ### Fixes
 
