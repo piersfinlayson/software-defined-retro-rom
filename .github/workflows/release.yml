@@ -39,35 +39,36 @@ jobs:
     - name: Read release notes
       id: release_notes
       run: |
-        if [ -f "release.md" ]; then
-          echo "RELEASE_BODY<<EOF" >> $GITHUB_OUTPUT
-          cat release.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+        if [ -f "docs/release-notes-common.md" ]; then
+        echo "RELEASE_BODY<<EOF" >> $GITHUB_OUTPUT
+        cat docs/release-notes-common.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
         else
-          echo "RELEASE_BODY=Release ${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+        echo "RELEASE_BODY=Release ${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
         fi
-        
+
     - name: Extract changelog for this version
       run: |
         VERSION="${{ steps.version.outputs.VERSION }}"
         if [ -f "CHANGELOG.md" ]; then
-          # Find the version line and extract everything after it until next ## or end of file
-          CHANGELOG_SECTION=$(awk "/^## ${VERSION}/ { found=1; next } found && /^## / { exit } found { print }" CHANGELOG.md)
-          
-          if [ -z "$CHANGELOG_SECTION" ]; then
+        # Find the version line and extract everything after it until next ## or end of file
+        CHANGELOG_SECTION=$(awk "/^## ${VERSION}/ { found=1; next } found && /^## / { exit } found { print }" CHANGELOG.md)
+        
+        if [ -z "$CHANGELOG_SECTION" ]; then
             CHANGELOG_SECTION="No changelog entry found for this version."
-          fi
-          
-          # Replace placeholder (escape newlines for sed)
-          printf '%s\n' "$CHANGELOG_SECTION" > /tmp/changelog.txt
-          sed -e '/\[CHANGELOG_PLACEHOLDER\]/{
-            r /tmp/changelog.txt
-            d
-          }' release.md > release.md.tmp && mv release.md.tmp release.md
-        else
-          sed -i 's/\[CHANGELOG_PLACEHOLDER\]/No CHANGELOG.md found./' release.md
         fi
         
+        # Replace placeholder (escape newlines for sed)
+        printf '%s\n' "$CHANGELOG_SECTION" > /tmp/changelog.txt
+        sed -e '/\[CHANGELOG_PLACEHOLDER\]/{
+            r /tmp/changelog.txt
+            d
+        }' docs/release-notes-common.md > release.md.tmp && mv release.md.tmp release.md
+        else
+        sed -i 's/\[CHANGELOG_PLACEHOLDER\]/No CHANGELOG.md found./' docs/release-notes-common.md
+        cp docs/release-notes-common.md release.md
+        fi
+    
     - name: Create GitHub Release with files
       run: |
         VERSION="${{ steps.version.outputs.VERSION }}"
