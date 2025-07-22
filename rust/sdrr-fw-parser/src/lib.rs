@@ -1,34 +1,55 @@
-//! sdrr-fw-parser
-//!
-//! no_std compatible library to parse SDRR firmware files.  Used by
-//! - `sdrr-info` - PC based tool to analyse SDRR firmware files
-//! - `sdrr-wifi-prog` - WiFi SDRR programmer based on the ESP32
-
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(dead_code)]
-
 // Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
 //
 // MIT License
 
-/// Maximum major SDRR firmware version supported
+//! sdrr-fw-parser
+//!
+//! Parses [Software Defined Retro ROM](https://piers.rocks/u/sdrr) (SDRR)
+//! firmware.
+//! 
+//! This is a `no_std` compatible library, which can be used in both `std` and
+//! `no_std` environments and can read and extract information from SDRR
+//! firmware - either from
+//! - a binary file
+//! - an ELF file
+//! - raw bytes, e.g. from bytes read directly from a device's flash or RAM
+//! 
+//! This is used directly within the SDRR repository, by:
+//! - [`sdrr-info`](https://github.com/piersfinlayson/software-defined-retro-rom/blob/main/rust/sdrr-info/README.md) -
+//!   PC based tool to analyse SDRR firmware source code
+//! 
+//! It can also be used by external tools.
+//! 
+//! Typically used like this:
+//! 
+//! ```rust ignore
+//! use sdrr_fw_parser::{SdrrInfo, SdrrFileType};
+//! let sdrr_info = SdrrInfo::from_firmware_bytes(
+//!     SdrrFileType::Elf,
+//!     &sdrr_info, // Reference to sdrr_info_t from firmware file 
+//!     &full_fw,   // Reference to full firmware data
+//!     file_size   // Size of the full firmware file in bytes
+//! );
+//! ```
+
+#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(dead_code)]
+
+/// Maximum SDRR firmware versions supported by this version of`sdrr-fw-parser`
 pub const MAX_VERSION_MAJOR: u16 = 0;
-
-/// Maximum minor SDRR firmware version supported
 pub const MAX_VERSION_MINOR: u16 = 2;
-
-/// Maximum patch SDRR firmware version supported
 pub const MAX_VERSION_PATCH: u16 = 1;
 
+// Use alloc if no-std.
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
 use core::fmt;
 use deku::prelude::*;
 
+// Use std/no-std String and Vec types
 #[cfg(feature = "std")]
 use std::{string::String, vec::Vec};
-
 #[cfg(not(feature = "std"))]
 use alloc::{
     format,
@@ -37,9 +58,10 @@ use alloc::{
     vec::Vec,
 };
 
+// Used to check various data structure sizes
 use static_assertions::const_assert_eq;
 
-/// SDRR firmware file types
+/// Supports SDRR firmware file types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SdrrFileType {
     /// A .elf file
@@ -65,11 +87,13 @@ const STM32F4_FLASH_BASE: u32 = 0x08000000;
 const ROM_IMAGE_SIZE: usize = 16384;
 const ROM_SET_IMAGE_SIZE: usize = 65536;
 
-/// STM32F4 lines
+/// STM32F4 product line options
+/// 
+/// Relflects `stm_line_t` from `sdrr/include/config_base.h`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite)]
 #[deku(id_type = "u16", ctx = "endian: deku::ctx::Endian")]
 pub enum StmLine {
-    /// F401
+    /// F401D/E - 96KB RAM
     #[deku(id = "0x0000")]
     F401DE,
 
@@ -85,6 +109,7 @@ pub enum StmLine {
     #[deku(id = "0x0003")]
     F446,
 
+    /// F401B/C - 64KB RAM
     #[deku(id = "0x0004")]
     F401BC,
 }
@@ -114,7 +139,9 @@ impl StmLine {
 
 /// STM32F4 package flash storage code
 ///
-/// For example "E" in STM32F401RET6 means 512KB of flash storage
+/// For example "E" in STM32F401RET6 means 512KB of flash storage.
+/// 
+/// Reflects `stm_storage_t` from `sdrr/include/config_base.h`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite)]
 #[deku(id_type = "u16", ctx = "endian: deku::ctx::Endian")]
 pub enum StmStorage {
@@ -176,6 +203,8 @@ impl StmStorage {
 }
 
 /// Type of ROMs supported by SDRR
+/// 
+/// Reflects `sdrr_rom_type_t` from `sdrr/include/config_base.h`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite)]
 #[deku(id_type = "u8")]
 pub enum SdrrRomType {
@@ -242,6 +271,8 @@ impl SdrrRomType {
 }
 
 /// SDRR chip select active options
+/// 
+/// Reflects `sdrr_cs_state_t` from `sdrr/include/config_base.h`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite)]
 #[deku(id_type = "u8")]
 pub enum SdrrCsState {
@@ -269,6 +300,8 @@ impl fmt::Display for SdrrCsState {
 }
 
 /// SDRR serving algorithm options
+/// 
+/// Reflects `sdrr_serve_t` from `sdrr/include/config_base.h`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite)]
 #[deku(id_type = "u8")]
 pub enum SdrrServe {
@@ -299,6 +332,8 @@ impl fmt::Display for SdrrServe {
 }
 
 /// SDRR STM32 port options
+/// 
+/// Reflects `sdrr_stm_port_t` from `sdrr/include/config_base.h`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite)]
 #[deku(id_type = "u8")]
 pub enum SdrrStmPort {
@@ -345,6 +380,8 @@ const SDRR_PINS_SIZE: usize = 64;
 /// Indexes of arrays/Vecs are the address/data lines (Ax/Dx).
 ///
 /// A pin value of 255 is used to indicate that the pin is not used.
+/// 
+/// Reflects `sdrr_pins_t` from `sdrr/include/config_base.h`
 #[derive(Debug, DekuRead, DekuWrite)]
 pub struct SdrrPins {
     pub data_port: SdrrStmPort,
@@ -385,6 +422,13 @@ const_assert_eq!(
     ROM_INFO_BASIC_SIZE
 );
 
+// Contains information about a specific ROM image
+// 
+// This version is used when the BOOT_LOGGING is not defined in the C code
+// 
+// Reflects `sdrr_rom_info_t` from `sdrr/include/config_base.h`
+//
+// Only used internally
 #[derive(Debug, DekuRead, DekuWrite)]
 struct SdrrRomInfoBasic {
     pub rom_type: SdrrRomType,
@@ -398,6 +442,14 @@ const_assert_eq!(
     core::mem::size_of::<SdrrRomInfoWithLogging>(),
     ROM_INFO_WITH_LOGGING_SIZE
 );
+
+// Contains information about a specific ROM image
+// 
+// This version is used when the BOOT_LOGGING is defined in the C code
+// 
+// Reflects `sdrr_rom_info_t` from `sdrr/include/config_base.h`
+//
+// Only used internally
 #[derive(Debug, DekuRead, DekuWrite)]
 struct SdrrRomInfoWithLogging {
     pub rom_type: SdrrRomType,
@@ -409,6 +461,8 @@ struct SdrrRomInfoWithLogging {
 }
 
 /// Information about a single ROM in an SDRR firmware
+/// 
+/// Reflects `sdrr_rom_info_t` from `sdrr/include/config_base.h`
 #[derive(Debug)]
 pub struct SdrrRomInfo {
     /// The type of the ROM
@@ -432,6 +486,11 @@ const_assert_eq!(
     ROM_SET_HEADER_SIZE,
     core::mem::size_of::<SdrrRomSetHeader>()
 );
+// Information about a specific ROM set
+//
+// Reflects `sdrr_rom_set_info_t` from `sdrr/include/config_base.h`
+//
+// Used internally to construct [`SdrrRomSet`]
 #[derive(Debug, DekuRead, DekuWrite)]
 struct SdrrRomSetHeader {
     #[deku(endian = "little")]
@@ -453,17 +512,22 @@ struct SdrrRomSetHeader {
 /// in a single set.
 ///
 /// Current maximum number of ROMs in a set is 3.
+/// 
+/// Reflects `sdrr_rom_set_t` from `sdrr/include/config_base.h`
 #[derive(Debug)]
 pub struct SdrrRomSet {
     /// The ROM image data for this set - this is post-processed, so as stored
     /// in the firmware, and used by the firmware to serve data bytes.
     ///
-    /// To look up bytes in this using a true address, use `mangle_address()`.
+    /// To look up bytes in this using a true address, use
+    /// [`SdrrInfo::mangle_address()`].  Use [`SdrrInfo::demangle_byte()]` to
+    /// convert the byte read from this data into a logical byte
     pub data: Vec<u8>,
 
     /// The size of the ROM image data in bytes.
     ///
-    /// Currently 16KB for single ROM sets, 64KB for multi-ROM sets.
+    /// Currently 16KB for single ROM sets, 64KB for multi-ROM and banked
+    /// switched ROM sets.
     pub size: u32,
 
     /// The ROMs in this set.
@@ -476,7 +540,7 @@ pub struct SdrrRomSet {
     pub serve: SdrrServe,
 
     /// The state of the CS1 line for all ROMs in this set (active low/high/
-    /// unused).  Only used for multi-ROM sets.
+    /// unused).  Only used for multi-ROM and bank switched sets.
     pub multi_rom_cs1_state: SdrrCsState,
 }
 
@@ -485,6 +549,9 @@ pub struct SdrrRomSet {
 const SDRR_INFO_HEADER_SIZE: usize = 56;
 #[derive(Debug, DekuRead, DekuWrite)]
 #[deku(endian = "little", magic = b"SDRR")]
+// Used internally to construct [`SdrrInfo`]
+//
+// Reflects `sdrr_info_t` from `sdrr/include/config_base.h`
 struct SdrrInfoHeader {
     #[deku(endian = "little")]
     pub major_version: u16,
@@ -523,6 +590,8 @@ struct SdrrInfoHeader {
 
 /// Main SDRR firmware information data structure.  Contains all data parsed
 /// from the firmware file.
+/// 
+/// Reflects `sdrr_info_t` from `sdrr/include/config_base.h`
 #[derive(Debug)]
 pub struct SdrrInfo {
     pub file_type: SdrrFileType,
@@ -555,8 +624,7 @@ impl SdrrInfo {
     ///
     /// Arguments:
     /// * `file_type` - The type of the firmware file, ELF or Orc (Binary)
-    /// * `data` - Pointer to the start of the sdrr_info structure in the
-    ///            firmware
+    /// * `data` - Reference to the sdrr_info structure bytes
     /// * `full_firmware` - The full firmware binary data, from its start
     /// * `file_size` - The size of the full firmware file in bytes
     pub fn from_firmware_bytes(
@@ -807,7 +875,9 @@ impl SdrrInfo {
         Ok(result)
     }
 
-    /// Helper function to get a pointer to the appropriate ROM set image data
+    /// Helper function to get a pointer to the appropriate ROM set image data.
+    /// This returns the entire ROM set data - addresses and data are mangled
+    /// in this data.
     pub fn get_rom_set_image(&self, set: u8) -> Option<&[u8]> {
         self.rom_sets
             .get(set as usize)
