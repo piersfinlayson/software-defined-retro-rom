@@ -27,6 +27,8 @@ In other news:
 - Added dynamic [bank switchable](docs/MULTI-ROM-SETS.md#dynamic-bank-switching) ROM image support, using X1/X2 (you can use __either__ multi-ROM __or__ bank switching in a particular set).
 - Added fun banked character ROM configs.
 - Added VIC-20 NTSC config.
+- Added retry in [ci/build.sh](ci/build.sh) to allow for intermittent network issues when downloading dependencies.
+- Added [demo programs](demo/README.md) for C64 and VIC-20 to list SDRR features and other information/
 
 ### Fixes
 
