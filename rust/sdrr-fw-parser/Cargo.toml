@@ -7,7 +7,7 @@ description = "Software Defined Retro ROM (SDRR) firmware parser"
 repository = "https://github.com/piersfinlayson/software-defined-retro-rom"
 readme = "README.md"
 license = "MIT"
-keywords = ["commodore", "embedded", "sdrr", "rom", "eeprom", "eprom", "flash"]
+keywords = ["commodore", "sdrr", "rom", "eprom", "flash"]
 categories = ["parsing", "embedded", "hardware-support", "no-std", "development-tools"]
 
 [features]
