@@ -2,6 +2,10 @@
 
 Provides a highly configurable and low-cost ROM replacement solution for vintage computers using STM32F4 microcontrollers.
 
+## Changes In This Release
+
+[CHANGELOG_PLACEHOLDER]
+
 ## Quick Start
 
 **Most users:** Depending on your flashing method, either download the **bin-*.zip** files or the **elf-*.zip** files.
@@ -25,7 +29,7 @@ Each zip firmware with a selection of ROM images for multiple system configurati
 - IEEE disk drives
 - And more...
 
-Firmware for ROM image configurations that require explicit licence acceptance (for example ['c64'](/config/c64.mk)) are not included in the release.  You can build them yourself, by following instructions in the [README](/README.md) and [INSTALL](/INSTALL.md).
+Firmware for ROM image configurations that require explicit licence acceptance (for example ['c64'](/config/c64.mk)) are not included in the release, and neither are multi-ROM and bank switched sets.  You can build them yourself, by following instructions in the [README](/README.md) and [INSTALL](/INSTALL.md).
 
 ## Installation
 
@@ -33,10 +37,6 @@ Firmware for ROM image configurations that require explicit licence acceptance (
 2. Extract the zip file  
 3. Flash the desired configuration file (e.g., **vic20-pal-f411re.bin**) to your STM32
 4. Connect according to your hardware setup
-
-## Changes In This Release
-
-[CHANGELOG_PLACEHOLDER]
 
 ## Support
 

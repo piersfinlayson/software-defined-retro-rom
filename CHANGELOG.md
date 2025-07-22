@@ -2,7 +2,14 @@
 
 All notables changes between versions are documented in this file.
 
-## v0.2.1 - ???
+## v0.2.1 - 2025-07-22
+
+The main new feature in this version of SDRR is the addition of dynamic [bank switching](docs/MULTI-ROM-SETS.md#dynamic-bank-switching) of ROM images.  This allows SDRR to hold up to 4 different ROM images in RAM, and to switch between them **while the host is running** by using the X1/X2 pins (hardware revision F and later) to switch between them.  Some fun [C64](config/bank-c64-char-fun.mk) and [VIC-20](config/bank-vic20-char-fun.mk) character ROM configurations that support bank switching are included.
+
+In other news:
+- The default ROM serving algorithm has been improved, leading to better performance, and hence the ability to support more systems with lower powered STM32F4 devices than before.  Check out [STM32 Selection](docs/STM32-SELECTION.md). The current price/performance sweet spot is the F411.
+- [Hardware revision E](sdrr-pcb/verified/stm32f4-24-pin-rev-e/README.md) is now fully verified, so manufacture these with confidence.
+- If you'd rather use [revision F](sdrr-pcb/unverified/stm32f4-24-pin-rev-f/README.md) (required for multi-ROM and bank switching support), at least once user has reported getting these manufactured and working with his NTSC VIC-20 - although they did not testing either multi-ROM or bank switching support.
 
 ### Changes
 
@@ -10,21 +17,21 @@ All notables changes between versions are documented in this file.
 - Improved serving algorithm `B` in the CS active low case.
 - Moved to algorithm `B` by default.
 - Measured performance of both algorithm on all targets.
-- Refactor `rom_impl.c`, breaking out assembly code to `rom_asm.h` to make the main_loop easier to read, and commonalising some code.
-- Added detection of hardware reported STM32F4 device and flash size at runtime, and comparison to firmware values.
-- Verified [hw revision e](/sdrr-pcb/verified/stm32f4-24-pin-rev-e/) - supports STM32F4x5 variants in addition to F401/F411, all passives are now 0603, a status LED and a 4th image select jumper.
+- Refactor `rom_impl.c`, breaking out assembly code to `rom_asm.h` to make the main_loop easier to read, and commonalising a bunch of the code for greater maintainability.
+- Added detection of hardware reported STM32F4 device and flash size at runtime, and comparison to firmware values - warning logs are produced in event of a mismatch.
+- Verified [hw revision e](/sdrr-pcb/verified/stm32f4-24-pin-rev-e/) - supports STM32F4x5 variants in addition to F401/F411, all passives are now 0603, contains a status LED and a 4th image select jumper.
 - Added [documentation](/docs/STM32-CLONES.md) on STM32 clones.
-- Moved firmware parsing to [`rust/sdrr-fw-parser`](/rust/sdrr-fw-parser/README.md) crate, which can be used to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  Done in preparation for using from a separate WiFi Programmer.
-- Moved Rust code to [`rust/`](/rust/) directory.
-- Added [build containers](/ci/docker/README.md) to assist with building SDRR, and doing so with the recommended build environment.
-- Added dynamic [bank switchable](docs/MULTI-ROM-SETS.md#dynamic-bank-switching) ROM image support, using X1/X2 (when not using multiple simultaneous ROMs).
-- Added "fun" banked character ROM configs.
+- Moved firmware parsing to [`rust/sdrr-fw-parser`](/rust/sdrr-fw-parser/README.md) crate, which can be used to parse the firmware and extract information about the configuration, ROM images, and to extract ROM images from the firmware.  Done in preparation for using the same code from a separate MCU.
+- Moved Rust code to [`rust/`](/rust/) directory to declutter the repo a bit.
+- Added experimenta; [build containers](/ci/docker/README.md) to assist with building SDRR, and doing so with the recommended build environment.
+- Added dynamic [bank switchable](docs/MULTI-ROM-SETS.md#dynamic-bank-switching) ROM image support, using X1/X2 (you can use __either__ multi-ROM __or__ bank switching in a particular set).
+- Added fun banked character ROM configs.
 - Added VIC-20 NTSC config.
 
 ### Fixes
 
 - Fixed status LED behaviour, by placing outside of MAIN_LOOP_ONE_SHOT, and using the configured pin.
-- Got `sdrr` firmware working on STM32F401RB/RC variants.  These have 64KB RAM, so cannot support banked or multi-set ROMs.  However, they can serve single ROM images, with the quantity limited by the flash.
+- Got `sdrr` firmware working on STM32F401RB/RC variants.  These have 64KB RAM, so can only support individual ROM images (quantity limited by flash) and do not support banked or multi-set ROMs.
 
 ## v0.2.0 - 2025-07-13
 

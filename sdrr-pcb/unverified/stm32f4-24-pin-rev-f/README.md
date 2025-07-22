@@ -1,6 +1,8 @@
 # STM32F4 24 Pin Rev F
 
-**Unverified** - this revision has not yet been tested or confirmed to work.  Order PCBs at your own risk.
+**Unverified** - this revision has not yet been formally tested or confirmed to work.  Order PCBs at your own risk.
+
+One user has confirmed that this board worked with an STM32F401RB, as a replacement VIC-20 NTSC kernal ROM.
 
 23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
 

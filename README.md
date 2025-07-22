@@ -6,7 +6,7 @@ Emulates 2364, 2332 and 2316 ROMs using the STM32F4 family of microcontrollers. 
 
 ## Key Features
 
-- 💰 Based on **sub $2 microcontroller**.
+- 💰 Based on **$2 microcontroller**.
 - ⚡ **Fast** enough for PETs, VIC-20s, C64s, 1541s, IEEE drives, etc. Support faster systems with STM32F405R.
 - 📐 **Same footprint** as original ROMs - doesn't overhang the socket like other solutions.
 - 🚀 **Quick programming** - just connect 4 wires and `make run`. No programming jigs necessary.
@@ -83,7 +83,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 - [Available Configurations](config/README.md#available-configurations) - Various pre-collated ROM collection configurations.
 - [STM32 Selection](docs/STM32-SELECTION.md) - How to select the appropriate STM32 variant for your application.
 - [Image Selection](docs/IMAGE-SELECTION.md) - How to tell SDRR which of the installed ROM images to serve.
-- [Multi-ROM Sets](docs/MULTI-ROM-SETS.md) - How to use a single SDRR to support multiple ROMs simultaneously or to dynamically switch between images.
+- [Image Sets](docs/MULTI-ROM-SETS.md) - How to use a single SDRR to support multiple ROMs simultaneously or to dynamically switch between images.
 - [Configuration](docs/CONFIGURATION.md) - SDRR configuration options.
 - [Logging](docs/LOGGING.md) - How to enable and use logging in SDRR.
 - [Technical Summary](docs/TECHNICAL-SUMMARY.md) - Overview of the SDRR architecture, operation and design decisions.
@@ -92,6 +92,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 - [Build System](docs/BUILD-SYSTEM.md) - How the SDRR build system works.
 - [Voltage Levels](docs/VOLTAGE-LEVELS.md) - How the SDRR supports the required logic voltage levels.
 - [Pi Pico Programmer](docs/PI-PICO-PROGRAMMER.md) - How to use a $5 Raspberry Pi Pico as a programmer for SDRR.
+- [STM32 Clones](docs/STM32-CLONES.md) - Information using STM32 clones with SDRR.
 - [Future Enhancements](docs/FUTURE-ENHANCEMENTS.md) - Possible future enhancements under consideration.
 - [License](LICENSE.md) - SDRR software and hardware licenses.
 
