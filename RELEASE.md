@@ -1,6 +1,6 @@
-# Version
+# Releasing New Version of SDRR
 
-## Updating Version Number
+## Update Version Number
 
 To update the version:
 
@@ -13,7 +13,7 @@ To update the version:
 
 ## Release Process
 
-Ensure all changes are committed, including the [version number updates](#updating-version-number).
+Ensure all changes are committed, including the [version number updates](#update-version-number).
 
 ```bash
 git pull
@@ -26,6 +26,14 @@ Locally run the following tests:
 ci/build.sh test
 ci/build.sh ci
 ci/build.sh release v<x.y.z>
+```
+
+Publish the new version of `sdrr-fw-parser` to crates.io:
+
+```bash
+cd rust
+cargo publish --dry-run -p sdrr-fw-parser
+cargo publish -p sdrr-fw-parser
 ```
 
 Tag the version in git:
