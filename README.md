@@ -85,6 +85,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 - [Image Selection](docs/IMAGE-SELECTION.md) - How to tell SDRR which of the installed ROM images to serve.
 - [Image Sets](docs/MULTI-ROM-SETS.md) - How to use a single SDRR to support multiple ROMs simultaneously or to dynamically switch between images.
 - [Configuration](docs/CONFIGURATION.md) - SDRR configuration options.
+- [Compatibility](docs/COMPATIBILITY.md) - Compatibility with various retro systems.
 - [Logging](docs/LOGGING.md) - How to enable and use logging in SDRR.
 - [Technical Summary](docs/TECHNICAL-SUMMARY.md) - Overview of the SDRR architecture, operation and design decisions.
 - [Technical Details](docs/TECHNICAL-DETAILS.md) - Technical details of the SDRR firmware and hardware.
