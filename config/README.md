@@ -22,6 +22,7 @@ Each of the configurations below contains a set of single ROM images, which can 
 |---------------|-------------|
 | [`c64.mk`](c64.mk) | C64 stock and diags ROMs |
 | [`vic20-pal.mk`](vic20-pal.mk) | VIC-20 PAL version stock and diag ROMs |
+| [`vic20-ntsc.mk`](vic20-ntsc.mk) | VIC-20 NTSC version stock and diag ROMs |
 | [`pet-4-40-50.mk`](pet-4-40-50.mk) | PET BASIC 4, 40 column, 50Hz stock and diag ROMs |
 | [`1541.mk`](1541.mk) | 1540 and 1541 disk drive stock ROMs |
 | [`2040.mk`](2040.mk) | 2040/3040 DOS1 disk drive stock ROMs |
@@ -45,5 +46,18 @@ This allows you to use the image select jumper to select set 0, and if that does
 
 | Configuration | Description |
 |---------------|-------------|
+| [`set-1541.mk`](set-1541.mk) | 1541 disk drive kernal ROM sets |
 | [`set-c64.mk`](set-c64.mk) | C64 kernal/basic/char ROM set, and diag/char ROM set |
 | [`set-vic20-pal.mk`](set-vic20-pal.mk) | VIC-20 PAL kernal/basic ROM set, and diagnostics ROM image |
+
+### Bank switchable ROM sets
+
+These configurations contain multiple ROM images, which can be selected using SDRR's X1/X2 pins.  When using these configurations, images within a set can be switched dynamicallt while the host is running.
+
+| Configuration | Description |
+|---------------|-------------|
+| `bank-1541.mk` | 1541 disk drive kernal and basic ROMs, plus diagnostics ROM |
+| `bank-c64-char.mk` | C64 stock character ROMs |
+| `bank-vic20-char.mk` | VIC-20 stock character ROMs |
+| `bank-c64-char-fun.mk` | C64 fun character ROMs |
+| `bank-vic20-char-fun.mk` | VIC-20 fun character fun ROMs |
