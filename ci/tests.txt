@@ -31,6 +31,10 @@ test-pet-4-40-50-f411re:STM=f411re,CONFIG=config/pet-4-40-50.mk
 test-vic20-pal-f411re:STM=f411re,CONFIG=config/vic20-pal.mk
 test-vic20-ntsc-f411re:STM=f411re,CONFIG=config/vic20-ntsc.mk
 
+# Test third party configs
+test-3p-ti994a-f411re:STM=f411re,CONFIG=config/third-party/ti994a.mk
+test-3p-coco2-f411re:STM=f411re,CONFIG=config/third-party/coco2.mk
+
 # Test old config set letters
 test-hw-rev-D:HW_REV=d,STM=f411re,CONFIG=config/test-sdrr-0.mk
 test-hw-rev-E:HW_REV=e,STM=f411re,CONFIG=config/test-sdrr-0.mk
