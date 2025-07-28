@@ -285,7 +285,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
                 if parts.len() != 2 {
                     return Err("Invalid 'type' parameter format - must include type".to_string());
                 }
-                rom_type = RomType::from_str(parts[1])
+                rom_type = RomType::try_from_str(parts[1])
                     .map(Some)
                     .ok_or_else(|| format!("Invalid ROM type: {}", parts[1]))?
             }
@@ -298,7 +298,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
                 if cs1.is_some() {
                     return Err("cs1 specified multiple times".to_string());
                 }
-                cs1 = CsLogic::from_str(parts[1]).map(Some).ok_or_else(|| {
+                cs1 = CsLogic::try_from_str(parts[1]).map(Some).ok_or_else(|| {
                     format!("Invalid cs1 value: {} (use 0, 1, or ignore)", parts[1])
                 })?
             }
@@ -311,7 +311,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
                 if cs2.is_some() {
                     return Err("cs2 specified multiple times".to_string());
                 }
-                cs2 = CsLogic::from_str(parts[1]).map(Some).ok_or_else(|| {
+                cs2 = CsLogic::try_from_str(parts[1]).map(Some).ok_or_else(|| {
                     format!("Invalid cs2 value: {} (use 0, 1, or ignore)", parts[1])
                 })?
             }
@@ -324,7 +324,7 @@ fn parse_rom_config(s: &str) -> Result<(config::RomConfig, Vec<TempPath>), Strin
                 if cs3.is_some() {
                     return Err("cs3 specified multiple times".to_string());
                 }
-                cs3 = CsLogic::from_str(parts[1]).map(Some).ok_or_else(|| {
+                cs3 = CsLogic::try_from_str(parts[1]).map(Some).ok_or_else(|| {
                     format!("Invalid cs3 value: {} (use 0, 1, or ignore)", parts[1])
                 })?
             }
@@ -401,7 +401,7 @@ fn confirm_licences(config: &Config) -> Result<()> {
 
     for rom in &licensed_roms {
         let source = rom.extract.as_ref().unwrap_or(&rom.original_source);
-        let filename = source.split('/').last().unwrap_or(source);
+        let filename = source.split('/').next_back().unwrap_or(source);
 
         println!("ROM: {}", filename);
         println!("Licence: {}", rom.licence.as_ref().unwrap());
@@ -516,7 +516,7 @@ fn main() -> Result<()> {
 
     // Load ROM files
     let mut rom_images = Vec::new();
-    for (_, rom_config) in config.roms.iter().enumerate() {
+    for rom_config in config.roms.iter() {
         let rom_image = RomImage::load_from_file(
             &rom_config.file,
             &rom_config.rom_type,

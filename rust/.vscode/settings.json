@@ -1,0 +1,9 @@
+{
+  "rust-analyzer.cargo.allTargets": false,
+  "rust-analyzer.checkOnSave": true,
+  "rust-analyzer.check.command": "clippy", 
+  "rust-analyzer.check.extraArgs": ["--", "-W", "clippy::all", "-D", "warnings"],
+  "rust-analyzer.server.extraEnv": {
+    "RUST_BACKTRACE": "1",
+  },
+}

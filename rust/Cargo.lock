@@ -1395,7 +1395,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-common"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -1404,7 +1404,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-fw-parser"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "deku",
  "static_assertions",
@@ -1412,7 +1412,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-gen"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1426,7 +1426,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-info"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "chrono",

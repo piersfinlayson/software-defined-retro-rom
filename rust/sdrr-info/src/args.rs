@@ -1,3 +1,7 @@
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -145,8 +149,8 @@ enum Commands {
 fn parse_hex(s: &str) -> Result<u32, String> {
     let cleaned = if s.starts_with("0x") || s.starts_with("0X") {
         &s[2..]
-    } else if s.starts_with('$') {
-        &s[1..]
+    } else if let Some(stripped) = s.strip_prefix('$') {
+        stripped
     } else {
         s
     };
@@ -255,9 +259,7 @@ pub fn parse_args() -> Result<Args, String> {
                 return Err("Must specify either --addr or --range".to_string());
             }
             if range.is_none() && output_binary {
-                if output_binary {
-                    return Err("--output-binary only valid when using --range".to_string());
-                }
+                return Err("--output-binary only valid when using --range".to_string());
             }
             if output_binary {
                 if range.is_none() {
@@ -285,7 +287,7 @@ pub fn parse_args() -> Result<Args, String> {
             )
         }
 
-        None => {
+        _none => {
             if let Some(firmware) = cli.firmware {
                 (
                     Command::Info,

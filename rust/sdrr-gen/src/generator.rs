@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use sdrr_common::sdrr_types::{CsLogic, RomType};
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::Path;
 
 // Generate all output files
 pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
@@ -50,7 +50,7 @@ enum FileType {
     Linker,
 }
 
-fn create_file(output_dir: &PathBuf, filename: &str, filetype: FileType) -> Result<fs::File> {
+fn create_file(output_dir: &Path, filename: &str, filetype: FileType) -> Result<fs::File> {
     let file_path = output_dir.join(filename);
     let mut file = fs::File::create(&file_path)
         .with_context(|| format!("Failed to create file: {}", file_path.display()))?;
@@ -149,7 +149,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
             .unwrap_or(&rom_config.original_source);
         let filename = source
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or_else(|| panic!("Failed to extract valid filename from source: {}", source));
         writeln!(
             file,
@@ -281,7 +281,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                     "All ROMs in a multi-ROM set must have the same CS1 configuration"
                 ));
             }
-            
+
             if !rom_set.is_banked {
                 // Check that every ROM in this set has CS2 and CS3 ignored.
                 if rom_set.roms.iter().any(|rom| {
@@ -374,7 +374,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                 write!(file, "    ")?;
             }
 
-            let byte = rom_set.get_byte(address, &hw);
+            let byte = rom_set.get_byte(address, hw);
             write!(file, "0x{:02x}, ", byte)?;
         }
 

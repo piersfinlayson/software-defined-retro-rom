@@ -108,13 +108,11 @@ impl CsConfig {
             }
         } {
             Ok(()) => Ok(()),
-            Err(()) => {
-                return Err(format!(
-                    "ROM type {} requires {} CS line(s)",
-                    rom_type.name(),
-                    rom_type.cs_lines_count()
-                ));
-            }
+            Err(()) => Err(format!(
+                "ROM type {} requires {} CS line(s)",
+                rom_type.name(),
+                rom_type.cs_lines_count()
+            )),
         }
     }
 }
@@ -156,6 +154,7 @@ impl Config {
         }
 
         // Validate and set frequency
+        #[allow(clippy::match_single_binding)]
         match self.stm_variant.processor() {
             _ => {
                 if !self
@@ -219,13 +218,14 @@ impl Config {
                         return Err(
                             "Bank switched sets of ROMs are only supported on hardware revision F onwards".to_string(),
                         );
-                    }            
+                    }
 
                     // Check STM variant supports banked sets
                     if !self.stm_variant.supports_banked_roms() {
                         return Err(format!(
                             "Set {}: banked ROMs are not supported on STM32 variant {} due to lack of RAM and/or flash",
-                            set_id, self.stm_variant.makefile_var()
+                            set_id,
+                            self.stm_variant.makefile_var()
                         ));
                     }
 
@@ -295,18 +295,20 @@ impl Config {
                         return Err(
                             "Multi-ROM sets of ROMs are only supported on hardware revision F onwards".to_string(),
                         );
-                    }            
+                    }
 
                     // Check this STM variant supports multi-ROM sets
                     if roms_in_set.len() > 1 {
+                        #[allow(clippy::collapsible_if)]
                         if !self.stm_variant.supports_multi_rom_sets() {
                             return Err(format!(
                                 "Set {}: multi-set ROMs are not supported on STM32 variant {} due to lack of RAM and/or flash",
-                                set_id, self.stm_variant.makefile_var()
+                                set_id,
+                                self.stm_variant.makefile_var()
                             ));
                         }
                     }
-                    
+
                     // Ensure no ROMs have bank specified
                     for rom in &roms_in_set {
                         if rom.bank.is_some() {
@@ -325,7 +327,6 @@ impl Config {
                             roms_in_set.len()
                         ));
                     }
-
                 }
             }
         }

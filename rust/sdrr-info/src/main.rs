@@ -1,27 +1,27 @@
-/// sdrr-info
-///
-/// This tool extracts the core properties, configuration options and ROM
-/// image information from an SDRR firmware binary or ELF file.
-///
-/// It supports firmware version from v0.2.0 onwards.  v0.1.0 firmware did not
-/// contain the relevant magic bytes or properties in a format that could be
-/// easily extracted.
-///
-/// It works by:
-/// - Loading the provided file
-/// - Detecting whether it's an ELF file (otherwise it assumes a binary file)
-/// - If an ELF file, looks for the .sddr_info and .ro_data sections and builds
-///   a quick and dirty binary file from them.
-/// - If it's not an ELF file, checks for the magic bytes at the known
-///   location (start of the sdrr_info structure, expects to be located at
-///   0x200 from the start of the binary).
-/// - Then performs common processing on the binary file or "fake" ELF binary,
-///   starting with the sdrr_info struct (which contains the core options) and
-///   then following and enumerating the ROM sets and images.
-
 // Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
 //
 // MIT License
+
+//! sdrr-info
+//!
+//! This tool extracts the core properties, configuration options and ROM
+//! image information from an SDRR firmware binary or ELF file.
+//!
+//! It supports firmware version from v0.2.0 onwards.  v0.1.0 firmware did not
+//! contain the relevant magic bytes or properties in a format that could be
+//! easily extracted.
+//!
+//! It works by:
+//! - Loading the provided file
+//! - Detecting whether it's an ELF file (otherwise it assumes a binary file)
+//! - If an ELF file, looks for the .sddr_info and .ro_data sections and builds
+//!   a quick and dirty binary file from them.
+//! - If it's not an ELF file, checks for the magic bytes at the known
+//!   location (start of the sdrr_info structure, expects to be located at
+//!   0x200 from the start of the binary).
+//! - Then performs common processing on the binary file or "fake" ELF binary,
+//!   starting with the sdrr_info struct (which contains the core options) and
+//!   following and enumerating the ROM sets and images.
 
 // Max version supported by sdrr-info
 pub const SDRR_VERSION_MAJOR: u16 = 0;
@@ -36,13 +36,15 @@ mod utils;
 // External crates
 use anyhow::Result;
 use chrono::{DateTime, Local};
+use core::fmt;
 use std::fs::metadata;
 use std::io::Write;
 use std::path::Path;
 
 use args::{Args, Command, parse_args};
 use load::load_sdrr_firmware;
-use sdrr_fw_parser::{SdrrInfo, SdrrStmPort, SdrrServe, StmLine};
+use sdrr_fw_parser::{Parser, readers::MemoryReader};
+use sdrr_fw_parser::{SdrrAddress, SdrrCsSet, SdrrInfo, SdrrServe, SdrrStmPort, StmLine};
 use utils::add_commas;
 
 // SDRR info structure offset in firmware binary
@@ -50,6 +52,32 @@ pub const SDRR_INFO_OFFSET: usize = 0x200;
 
 // STM32F4 flash base address
 pub const STM32F4_FLASH_BASE: u32 = 0x08000000;
+
+// Supported file types
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FileType {
+    // A .elf file
+    Elf,
+
+    // A .bin file
+    Orc,
+}
+
+impl fmt::Display for FileType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FileType::Elf => write!(f, "ELF (.elf)"),
+            FileType::Orc => write!(f, "Binary (.bin)"),
+        }
+    }
+}
+
+struct FirmwareData {
+    file_type: FileType,
+    file_size: usize,
+    parser: Parser<MemoryReader>,
+    info: SdrrInfo,
+}
 
 pub fn print_header() {
     println!("Software Defined Retro ROM - Firmware Information");
@@ -68,7 +96,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let firmware_path = &args.firmware;
-    let info = match load_sdrr_firmware(firmware_path) {
+    let mut fw_data = match load_sdrr_firmware(firmware_path) {
         Ok(info) => info,
         Err(e) => {
             print_header();
@@ -90,15 +118,17 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match args.command {
-        Command::Info => print_sdrr_info(&info, &args),
-        Command::LookupRaw => lookup_raw(&info, &args),
-        Command::Lookup => lookup(&info, &args),
+        Command::Info => print_sdrr_info(&fw_data, &args),
+        Command::LookupRaw => lookup_raw(&mut fw_data, &args),
+        Command::Lookup => lookup(&mut fw_data, &args),
     }
 
     Ok(())
 }
 
-fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
+fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
+    let info = &fw_data.info;
+
     print_header();
     println!();
 
@@ -119,23 +149,33 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
         })
         .unwrap_or_else(|_| "error".to_string());
     println!("File modified: {}", modified_str);
-    println!("File type:     {}", info.file_type);
+    println!("File type:     {}", fw_data.file_type);
     println!(
         "File size:     {} bytes ({}KB)",
-        add_commas(info.file_size as u64),
-        (info.file_size + 1023) / 1024
+        add_commas(fw_data.file_size as u64),
+        fw_data.file_size.div_ceil(1024)
     );
     println!(
         "Version:       {}.{}.{} (build {})",
         info.major_version, info.minor_version, info.patch_version, info.build_number
     );
-    println!("Build Date:    {}", info.build_date);
+
+    println!(
+        "Build Date:    {}",
+        info.build_date.as_deref().unwrap_or("unknown")
+    );
+
     println!(
         "Git commit:    {}",
         std::str::from_utf8(&info.commit).unwrap_or("<error>")
     );
-    println!("Hardware:      {}", info.hw_rev);
-    if (info.stm_line == StmLine::F401BC) || (info.stm_line == StmLine::F401BC) {
+
+    println!(
+        "Hardware:      {}",
+        info.hw_rev.as_deref().unwrap_or("unknown")
+    );
+
+    if (info.stm_line == StmLine::F401BC) || (info.stm_line == StmLine::F401DE) {
         println!(
             "STM32:         F401R{} ({}KB flash, {}KB RAM)",
             info.stm_storage.package_code(),
@@ -158,7 +198,13 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
     println!();
     println!("Configurable Options");
     println!("--------------------");
-    println!("ROM emulation:    {} pin ROM", info.pins.rom_pins);
+
+    let rom_pins = if let Some(pins) = info.pins.as_ref() {
+        format!("{} pin ROM", pins.rom_pins)
+    } else {
+        "unknown".to_string()
+    };
+    println!("ROM emulation:    {}", rom_pins);
     let preload = if info.preload_image_to_ram {
         "RAM"
     } else {
@@ -187,94 +233,95 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
     println!();
 
     if args.detail {
-        let pins = &info.pins;
         println!("Pin Configuration");
         println!("-----------------");
 
-        println!();
-        println!("Data pin mapping:");
-        for (ii, &pin) in pins.data.iter().enumerate() {
-            if pin != 0xFF {
-                println!(
-                    "  D{}: {}P{}{}",
-                    ii,
-                    if ii < 10 { " " } else { "" },
-                    pins.data_port,
-                    pin
-                );
+        let pins = &info.pins;
+        if let Some(pins) = pins {
+            println!();
+            println!("Data pin mapping:");
+            for (ii, &pin) in pins.data.iter().enumerate() {
+                if pin != 0xFF {
+                    println!(
+                        "  D{}: {}P{}{}",
+                        ii,
+                        if ii < 10 { " " } else { "" },
+                        pins.data_port,
+                        pin
+                    );
+                }
             }
-        }
-
-        println!();
-        println!("Address pin mapping:");
-        for (ii, &pin) in pins.addr.iter().enumerate() {
-            if pin != 0xFF {
-                println!(
-                    "  A{}: {}P{}{}",
-                    ii,
-                    if ii < 10 { " " } else { "" },
-                    pins.addr_port,
-                    pin
-                );
+            println!();
+            println!("Address pin mapping:");
+            for (ii, &pin) in pins.addr.iter().enumerate() {
+                if pin != 0xFF {
+                    println!(
+                        "  A{}: {}P{}{}",
+                        ii,
+                        if ii < 10 { " " } else { "" },
+                        pins.addr_port,
+                        pin
+                    );
+                }
             }
-        }
-
-        println!();
-        println!("Chip select pins:");
-        if pins.cs1_2364 != 0xFF {
-            println!("  2364 CS1: P{}{}", pins.cs_port, pins.cs1_2364);
-        }
-        if pins.cs1_2332 != 0xFF {
-            println!("  2332 CS1: P{}{}", pins.cs_port, pins.cs1_2332);
-        }
-        if pins.cs2_2332 != 0xFF {
-            println!("  2332 CS2: P{}{}", pins.cs_port, pins.cs2_2332);
-        }
-        if pins.cs1_2316 != 0xFF {
-            println!("  2316 CS1: P{}{}", pins.cs_port, pins.cs1_2316);
-        }
-        if pins.cs2_2316 != 0xFF {
-            println!("  2316 CS2: P{}{}", pins.cs_port, pins.cs2_2316);
-        }
-        if pins.cs3_2316 != 0xFF {
-            println!("  2316 CS3: P{}{}", pins.cs_port, pins.cs3_2316);
-        }
-        if pins.ce_23128 != 0xFF {
-            println!("  23128 CE: P{}{}", pins.cs_port, pins.ce_23128);
-        }
-        if pins.oe_23128 != 0xFF {
-            println!("  23128 OE: P{}{}", pins.cs_port, pins.oe_23128);
-        }
-        if pins.x1 != 0xFF {
-            println!("  Multi X1: P{}{}", pins.cs_port, pins.x1);
-        }
-        if pins.x2 != 0xFF {
-            println!("  Multi X2: P{}{}", pins.cs_port, pins.x2);
-        }
-
-        println!();
-        println!("Image select pins:");
-        if pins.sel0 != 0xFF {
-            println!("  SEL0: P{}{}", pins.sel_port, pins.sel0);
-        }
-        if pins.sel1 != 0xFF {
-            println!("  SEL1: P{}{}", pins.sel_port, pins.sel1);
-        }
-        if pins.sel2 != 0xFF {
-            println!("  SEL2: P{}{}", pins.sel_port, pins.sel2);
-        }
-        if pins.sel3 != 0xFF {
-            println!("  SEL3: P{}{}", pins.sel_port, pins.sel3);
-        }
-
-        println!();
-        println!("Status LED pin:");
-        if pins.status_port == SdrrStmPort::None {
-            println!("  Pin: None");
+            println!();
+            println!("Chip select pins:");
+            if pins.cs1_2364 != 0xFF {
+                println!("  2364 CS1: P{}{}", pins.cs_port, pins.cs1_2364);
+            }
+            if pins.cs1_2332 != 0xFF {
+                println!("  2332 CS1: P{}{}", pins.cs_port, pins.cs1_2332);
+            }
+            if pins.cs2_2332 != 0xFF {
+                println!("  2332 CS2: P{}{}", pins.cs_port, pins.cs2_2332);
+            }
+            if pins.cs1_2316 != 0xFF {
+                println!("  2316 CS1: P{}{}", pins.cs_port, pins.cs1_2316);
+            }
+            if pins.cs2_2316 != 0xFF {
+                println!("  2316 CS2: P{}{}", pins.cs_port, pins.cs2_2316);
+            }
+            if pins.cs3_2316 != 0xFF {
+                println!("  2316 CS3: P{}{}", pins.cs_port, pins.cs3_2316);
+            }
+            if pins.ce_23128 != 0xFF {
+                println!("  23128 CE: P{}{}", pins.cs_port, pins.ce_23128);
+            }
+            if pins.oe_23128 != 0xFF {
+                println!("  23128 OE: P{}{}", pins.cs_port, pins.oe_23128);
+            }
+            if pins.x1 != 0xFF {
+                println!("  Multi X1: P{}{}", pins.cs_port, pins.x1);
+            }
+            if pins.x2 != 0xFF {
+                println!("  Multi X2: P{}{}", pins.cs_port, pins.x2);
+            }
+            println!();
+            println!("Image select pins:");
+            if pins.sel0 != 0xFF {
+                println!("  SEL0: P{}{}", pins.sel_port, pins.sel0);
+            }
+            if pins.sel1 != 0xFF {
+                println!("  SEL1: P{}{}", pins.sel_port, pins.sel1);
+            }
+            if pins.sel2 != 0xFF {
+                println!("  SEL2: P{}{}", pins.sel_port, pins.sel2);
+            }
+            if pins.sel3 != 0xFF {
+                println!("  SEL3: P{}{}", pins.sel_port, pins.sel3);
+            }
+            println!();
+            println!("Status LED pin:");
+            if pins.status_port == SdrrStmPort::None {
+                println!("  Pin: None");
+            } else {
+                println!("  Pin: P{}{}", pins.status_port, pins.status);
+            }
+            println!();
         } else {
-            println!("  Pin: P{}{}", pins.status_port, pins.status);
+            println!("No pin configuration available");
+            return;
         }
-        println!();
     }
 
     println!("ROMs Summary:");
@@ -324,21 +371,21 @@ fn print_sdrr_info(info: &SdrrInfo, args: &Args) {
 }
 
 fn lookup_byte_at_address(
-    info: &SdrrInfo,
+    fw_data: &mut FirmwareData,
     detail: bool,
     set: u8,
-    lookup_addr: u32,
-    original_addr: u32,
-    output_mangled: bool,
-    addr_description: &str,
+    addr: SdrrAddress,
+    output_mangled_byte: bool,
 ) -> Result<(), String> {
-    // Get the image
-    let image = info
-        .get_rom_set_image(set)
-        .ok_or_else(|| format!("No ROM set found for set number {}", set))?;
+    let info = &mut fw_data.info;
+    let parser = &mut fw_data.parser;
 
-    // Lookup the address in the image
-    let byte = image[lookup_addr as usize];
+    // Get the size of this rom set
+    let byte = if output_mangled_byte {
+        info.read_rom_byte_raw(parser, set, addr)
+    } else {
+        info.read_rom_byte_demangled(parser, set, addr)
+    }?;
 
     // Get ROM names
     let roms: Vec<String> = info.rom_sets[set as usize]
@@ -354,69 +401,58 @@ fn lookup_byte_at_address(
 
     if detail {
         println!("Byte lookup ROM set {} ({})", set, rom_name);
-        if lookup_addr != original_addr {
-            println!("Mangled address 0x{:04X}", lookup_addr);
+        if let SdrrAddress::Logical(addr) = addr {
+            // We can unwrap the mangled address, because read_rom_byte() above
+            // has successfully mangled it
+            println!("Mangled address 0x{:04X}", addr.mangle(info).unwrap());
         }
     }
 
-    if output_mangled {
-        println!(
-            "{} 0x{:04X}: 0x{:02X} (mangled byte)",
-            addr_description, original_addr, byte
-        );
+    if output_mangled_byte {
+        println!("{addr:#}: 0x{byte:02X} (mangled byte)")
     } else {
-        let demangled_byte = info.demangle_byte(byte);
-        println!(
-            "{} 0x{:04X}: 0x{:02X} (demangled byte)",
-            addr_description, original_addr, demangled_byte
-        );
+        println!("{addr:#}: 0x{byte:02X} (demangled byte)")
     }
 
     Ok(())
 }
 
-fn lookup_raw(info: &SdrrInfo, args: &Args) {
+fn lookup_raw(fw_data: &mut FirmwareData, args: &Args) {
     println!("Lookup Byte Using Raw (mangled) Address");
     println!("---------------------------------------");
 
     // Ensure we have the arguments
     let set = args.set.expect("Internal error: set number is required");
     let addr = args.addr.expect("Internal error: address is required");
-    let output_mangled = args
+    let output_mangled_byte = args
         .output_mangled
         .expect("Internal error: output_mangled is required");
 
     if let Err(e) = lookup_byte_at_address(
-        info,
+        fw_data,
         args.detail,
         set,
-        addr,
-        addr,
-        output_mangled,
-        "Mangled address",
+        SdrrAddress::from_raw(addr),
+        output_mangled_byte,
     ) {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn lookup_range(
-    info: &SdrrInfo,
+    fw_data: &mut FirmwareData,
     detail: bool,
     set: u8,
     start_addr: u32,
     end_addr: u32,
+    cs_set: &SdrrCsSet,
     output_mangled: bool,
     output_binary: bool,
-    cs1: bool,
-    cs2: Option<bool>,
-    cs3: Option<bool>,
-    x1: Option<bool>,
-    x2: Option<bool>,
 ) -> Result<(), String> {
-    let image = info
-        .get_rom_set_image(set)
-        .ok_or_else(|| format!("No ROM set found for set number {}", set))?;
+    let info = &mut fw_data.info;
+    let parser = &mut fw_data.parser;
 
     let roms: Vec<String> = info.rom_sets[set as usize]
         .roms
@@ -438,13 +474,15 @@ fn lookup_range(
             start_addr, end_addr, rom_type
         ));
     }
-    if cs2.is_some() && !rom_type.supports_cs2() {
+    if cs_set.cs2().is_some() && !rom_type.supports_cs2() {
         return Err(format!("ROM type {} does not support CS2 line", rom_type));
     }
-    if cs3.is_some() && !rom_type.supports_cs3() {
+    if cs_set.cs3().is_some() && !rom_type.supports_cs3() {
         return Err(format!("ROM type {} does not support CS3 line", rom_type));
     }
-    if (x1.is_some() || x2.is_some()) && info.rom_sets[set as usize].roms.len() < 2 {
+    if (cs_set.x1().is_some() || cs_set.x2().is_some())
+        && info.rom_sets[set as usize].roms.len() < 2
+    {
         return Err("Multi-ROM X1/X2 lines can only be used with multi-ROM sets".to_string());
     }
 
@@ -453,13 +491,13 @@ fn lookup_range(
         let mut binary_data = Vec::new();
 
         for addr in start_addr..=end_addr {
-            let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2)?;
-            let byte = image[lookup_addr as usize];
+            let log_addr = SdrrAddress::from_logical(addr, cs_set);
+            let byte = info.read_rom_byte_raw(parser, set, log_addr)?;
 
             let output_byte = if output_mangled {
                 byte
             } else {
-                info.demangle_byte(byte)
+                info.demangle_byte(byte)?
             };
 
             binary_data.push(output_byte);
@@ -477,13 +515,13 @@ fn lookup_range(
         }
 
         for addr in start_addr..=end_addr {
-            let lookup_addr = info.mangle_address(addr, cs1, cs2, cs3, x1, x2)?;
-            let byte = image[lookup_addr as usize];
+            let log_addr = SdrrAddress::from_logical(addr, cs_set);
+            let byte = info.read_rom_byte_raw(parser, set, log_addr)?;
 
             let output_byte = if output_mangled {
                 byte
             } else {
-                info.demangle_byte(byte)
+                info.demangle_byte(byte)?
             };
 
             let byte_pos = (addr - start_addr) as usize;
@@ -519,7 +557,7 @@ fn lookup_range(
     Ok(())
 }
 
-fn lookup(info: &SdrrInfo, args: &Args) {
+fn lookup(fw_data: &mut FirmwareData, args: &Args) {
     let binary = args.output_binary.unwrap_or(false);
     if !binary {
         println!("Lookup Byte Using Real (non-mangled) Address");
@@ -539,23 +577,20 @@ fn lookup(info: &SdrrInfo, args: &Args) {
     let cs3 = args.cs3;
     let x1 = args.x1;
     let x2 = args.x2;
+    let cs_set = SdrrCsSet::new(cs1, cs2, cs3, x1, x2);
 
     if let Some((start_addr, end_addr)) = args.range {
         // Range lookup
         let output_binary = args.output_binary.unwrap_or(false);
         if let Err(e) = lookup_range(
-            info,
+            fw_data,
             args.detail,
             set,
             start_addr,
             end_addr,
+            &cs_set,
             output_mangled,
             output_binary,
-            cs1,
-            cs2,
-            cs3,
-            x1,
-            x2,
         ) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
@@ -563,23 +598,9 @@ fn lookup(info: &SdrrInfo, args: &Args) {
     } else {
         // Single address lookup
         let addr = args.addr.expect("Internal error: address is required");
-        let lookup_addr = match info.mangle_address(addr, cs1, cs2, cs3, x1, x2) {
-            Ok(lookup_addr) => lookup_addr,
-            Err(e) => {
-                eprintln!("Error: {}", e);
-                std::process::exit(1);
-            }
-        };
+        let addr = SdrrAddress::from_logical(addr, &cs_set);
 
-        if let Err(e) = lookup_byte_at_address(
-            info,
-            args.detail,
-            set,
-            lookup_addr,
-            addr,
-            output_mangled,
-            "Actual address",
-        ) {
+        if let Err(e) = lookup_byte_at_address(fw_data, args.detail, set, addr, output_mangled) {
             eprintln!("Error: {}", e);
             std::process::exit(1);
         }

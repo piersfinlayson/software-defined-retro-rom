@@ -120,7 +120,7 @@ where
     D: serde::Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    StmFamily::from_str(&s)
+    StmFamily::try_from_str(&s)
         .ok_or_else(|| serde::de::Error::custom(format!("Invalid STM family: {}", s)))
 }
 
@@ -132,7 +132,7 @@ where
     let mut rom_map = HashMap::new();
 
     for (key, value) in string_map {
-        match RomType::from_str(&key) {
+        match RomType::try_from_str(&key) {
             Some(rom_type) => {
                 rom_map.insert(rom_type, value);
             }
@@ -244,15 +244,15 @@ impl HwConfig {
     }
 
     pub fn pin_cs1(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.cs1.get(&rom_type).copied().unwrap_or(255)
+        self.stm.pins.cs1.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_cs2(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.cs2.get(&rom_type).copied().unwrap_or(255)
+        self.stm.pins.cs2.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_cs3(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.cs3.get(&rom_type).copied().unwrap_or(255)
+        self.stm.pins.cs3.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_x1(&self) -> u8 {
@@ -264,11 +264,11 @@ impl HwConfig {
     }
 
     pub fn pin_ce(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.ce.get(&rom_type).copied().unwrap_or(255)
+        self.stm.pins.ce.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_oe(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.oe.get(&rom_type).copied().unwrap_or(255)
+        self.stm.pins.oe.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_sel(&self, sel: usize) -> u8 {
@@ -364,8 +364,7 @@ fn validate_pin_values(
     min_valid: usize,
     valid_value: u8,
 ) -> Result<()> {
-    let mut ii = 0;
-    for &pin in pins {
+    for (ii, &pin) in pins.iter().enumerate() {
         if ii >= min_valid {
             break;
         }
@@ -378,7 +377,6 @@ fn validate_pin_values(
                 valid_value
             );
         }
-        ii += 1
     }
     Ok(())
 }
@@ -601,7 +599,7 @@ fn get_config_dirs() -> Result<Vec<PathBuf>> {
     // Find first existing root directory
     let root = HW_CONFIG_DIRS
         .iter()
-        .map(|dir| Path::new(dir))
+        .map(Path::new)
         .find(|path| path.exists())
         .ok_or_else(|| {
             anyhow!(
