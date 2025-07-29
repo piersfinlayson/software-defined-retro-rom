@@ -375,13 +375,15 @@ void log_init(void) {
         LOG("Bootloader: %s", disabled);
     }
 
-    // Port assignments
-    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
-
+#if defined(C_MAIN_LOOP)
+    LOG("C main loop: enabled");
+#endif // C_MAIN_LOOP
 
     LOG("%s", log_divider);
     LOG("Pin Configuration ...");
     
+    // Port assignments
+    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
     
     LOG("ROM emulation: %d pin ROM", sdrr_info.pins->rom_pins);
     

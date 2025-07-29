@@ -319,6 +319,15 @@ GEN_OUTPUT_DIR ?= output
 # Needs to be blank for debug, because cargo.
 CARGO_PROFILE ?= release
 
+# Extra C Flags
+#
+# Use to pass extra flags into SDRR's compile stage.
+#
+# For example this enables the C main loop test function/
+# EXTRA_C_FLAGS ?= -DC_MAIN_LOOP
+
+EXTRA_C_FLAGS ?=
+
 #
 # End of settings
 #
@@ -334,6 +343,7 @@ ifneq ($(SUPPRESS_OUTPUT),1)
   $(info SDRR Makefile env settings:)
 endif
 
+# STM
 ifneq ($(STM),)
 ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - STM=$(STM))
@@ -345,6 +355,14 @@ ifneq ($(SUPPRESS_OUTPUT),1)
   $(info - CONFIG=$(CONFIG))
 endif
 endif
+
+# Extra C flags
+ifneq ($(EXTRA_C_FLAGS),)
+ifneq ($(SUPPRESS_OUTPUT),1)
+  $(info - EXTRA_C_FLAGS=$(EXTRA_C_FLAGS))
+endif
+endif
+
 
 # Set hardware revision flag
 ifneq ($(HW_REV),)
@@ -630,7 +648,7 @@ firmware: gen
 	@echo "- MCU variant: STM32$(shell echo $(STM) | tr '[:lower:]' '[:upper:]')"
 	@echo "- HW revision: $(HW_REV)"
 	@echo "-----"
-	@GEN_OUTPUT_DIR=$(GEN_OUTPUT_DIR) make --no-print-directory -C sdrr
+	@GEN_OUTPUT_DIR=$(GEN_OUTPUT_DIR) EXTRA_C_FLAGS="$(EXTRA_C_FLAGS)" make --no-print-directory -C sdrr
 
 # Call make run-actual - this causes a new instance of make to be invoked and generated.mk exists, so it can load PROBE_RS_CHIP_ID
 run: firmware info

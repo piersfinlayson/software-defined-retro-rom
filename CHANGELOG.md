@@ -7,6 +7,7 @@ All notables changes between versions are documented in this file.
 ### Changes
 
 - TI-99/4A and CoCo2 configurations have been added to the [third-party configs](config/third-party/README.md) directory.  Thanks to [@keronian](https://github.com/keronian) for contributing these.
+- Added a C main loop implementation for which GCC produces the assembly/machine code.  This requires a roughly 25% faster clock speed.  Use `EXTRA_C_FLAGS=-DC_MAIN_LOOP` when running `make` to use this version.
 - Stored off image files used to create the firmware in `output/images/`.  This allows post build inspection of the images used.  It also enables additional tests - `sdrr-info` can be used as an additional check (along with `test`), to ensure the images in the firmware are correct, and validate the behaviour of `sdrr-info` and `test` to be compared.
 - Substantial refactoring of `sdrr-gen`, to make it more maintainable.
 - Substantial refactoring of `sdrr-fw-parser` in order to make it suitable for airfrog integration.
