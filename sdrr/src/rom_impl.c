@@ -422,8 +422,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                     }  // ALG2_MIXED
                     GPIOA_MODER = data_input_mask_val;  // ALG2_MIXED
                 }
-            }
 #endif // DUMB_C_MAIN_LOOP_2_CS
+            }
             break;
 
         case SERVE_ADDR_ON_ANY_CS:
