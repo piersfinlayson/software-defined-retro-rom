@@ -15,8 +15,8 @@
 #
 
 VERSION_MAJOR := 0
-VERSION_MINOR := 2
-VERSION_PATCH := 1
+VERSION_MINOR := 3
+VERSION_PATCH := 0
 BUILD_NUMBER := 1
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 export VERSION_MAJOR VERSION_MINOR VERSION_PATCH BUILD_NUMBER GIT_COMMIT
@@ -594,7 +594,7 @@ gen: $(CARGO_TARGET_DIR)/sdrr-gen
 	@echo "- process ROM data into SDRR firmware files"
 	@echo "-----"
 	@mkdir -p $(GEN_OUTPUT_DIR)
-	@$(CARGO_TARGET_DIR)/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output $(GEN_OUTPUT_DIR)
+	@$(CARGO_TARGET_DIR)/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output-dir $(GEN_OUTPUT_DIR)
 
 sdrr-info:
 	@echo "=========================================="

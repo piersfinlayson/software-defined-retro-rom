@@ -10,11 +10,12 @@ license = "MIT"
 keywords = ["commodore", "embedded", "sdrr", "rom", "eeprom", "eprom", "flash"]
 
 [dependencies]
-clap = { version = ">=4.5.37", features = ["derive"] }
 anyhow = ">=1.0.98"
-thiserror = ">=2.0.12"
+bytes = ">=1.10.1"
+clap = { version = "4.5.41", features = ["derive"] }
 reqwest = { version = "0.12", features = ["blocking", "rustls-tls"], default-features = false }
-tempfile = "3.20"
-zip = "4.2"
+strum = { version = "0.27.2", features = ["derive"] }
+thiserror = "2.0.12"
 urlencoding = "2.1"
+zip = "4.3.0"
 sdrr-common = { path = "../sdrr-common" }

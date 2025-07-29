@@ -148,6 +148,8 @@ where
     Ok(rom_map)
 }
 
+/// Represents the hardware configuration for a particular SDRR hardware
+/// config - see /sdrr-hw-config/README.md for details.
 #[derive(Debug, Clone, Deserialize)]
 pub struct HwConfig {
     #[serde(skip)]

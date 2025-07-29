@@ -2,10 +2,15 @@
 //
 // MIT License
 
+//! sdrr-gen - Preprocessor for the SDRR generator.
+//!
+//! Handles mangling ROM images by address lines and data lines to match the
+//! hardware's pin mapping.
+
 use crate::config::{RomInSet, SizeHandling};
 use anyhow::{Context, Result};
 use sdrr_common::hardware::HwConfig;
-use sdrr_common::sdrr_types::{CsLogic, RomType};
+use sdrr_common::{CsLogic, RomType};
 use std::fs;
 use std::path::Path;
 
