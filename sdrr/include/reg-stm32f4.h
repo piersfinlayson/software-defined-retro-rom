@@ -23,6 +23,8 @@
 #define PWR_CR          (*(volatile uint32_t *)(PWR_BASE + 0x00))
 #define PWR_VOS_MASK    (0b11 << 14)
 #define PWR_VOS_SCALE_1 (0b11 << 14)  // Scale 1 mode (100MHz max clock speed)
+#define PWR_VOS_MASK_F405 (0b1 << 14) // Scale 1 mode for F405
+#define PWR_VOS_SCALE_1_F405 (0b1 << 14) // Scale 1 mode for F405
 #define PWR_CR_ODEN_MASK (1 << 16) // Overdrive enable mask
 #define PWR_CR_ODEN     (1 << 16)  // Overdrive enable bit
 #define PWR_CR_ODSWEN_MASK (1 << 17) // Overdrive switch enable
