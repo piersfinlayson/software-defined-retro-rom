@@ -384,6 +384,32 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                     GPIOA_MODER = data_input_mask_val;  // ALG2_ALL_LOW
                 }
             } else {
+#if defined(DUMB_C_MAIN_LOOP_2_CS)
+// Don't use this - it was a demonstration to see what a naive C
+// implementation would assemble to.  It makes assumptions - in particular
+// that there are 2 CS lines.
+                while (1) {
+                    addr_cs_lines = GPIOC_IDR;  // ALG2_DUMB
+                    while
+                        ((((rom->cs1_state == CS_ACTIVE_LOW) &&
+                           !(addr_cs_lines & (1 << sdrr_info.pins->cs1_2332)))
+                          ||
+                          ((rom->cs1_state == CS_ACTIVE_HIGH) &&
+                           (addr_cs_lines & (1 << sdrr_info.pins->cs1_2332))))
+                         &&
+                         (((rom->cs2_state == CS_ACTIVE_LOW) &&
+                           !(addr_cs_lines & (1 << sdrr_info.pins->cs2_2332)))
+                          ||
+                          ((rom->cs2_state == CS_ACTIVE_HIGH) &&
+                           (addr_cs_lines & (1 << sdrr_info.pins->cs2_2332))))) {
+                        data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
+                        GPIOA_ODR = data_byte;
+                        GPIOA_MODER = data_output_mask_val;                    
+                        addr_cs_lines = GPIOC_IDR;
+                    }
+                    GPIOA_MODER = data_input_mask_val;
+                }
+#else // !DUMB_C_MAIN_LOOP_2_CS
                 while (1) {
                     addr_cs_lines = GPIOC_IDR;  // ALG2_MIXED
                     cs_check = addr_cs_lines ^ cs_invert_mask;  // ALG2_MIXED
@@ -397,6 +423,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                     GPIOA_MODER = data_input_mask_val;  // ALG2_MIXED
                 }
             }
+#endif // DUMB_C_MAIN_LOOP_2_CS
             break;
 
         case SERVE_ADDR_ON_ANY_CS:
