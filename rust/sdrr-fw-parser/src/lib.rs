@@ -129,7 +129,11 @@ pub trait Reader {
     /// typically reads headers and metadata in small chunks. For embedded implementations
     /// reading via debug interfaces, consider implementing bulk reads and internal
     /// buffering to reduce round-trip overhead.
-    fn read(&mut self, addr: u32, buf: &mut [u8]) -> Result<(), Self::Error>;
+    fn read(
+        &mut self,
+        addr: u32,
+        buf: &mut [u8],
+    ) -> impl core::future::Future<Output = Result<(), Self::Error>> + Send;
 }
 
 /// Parser for Software Defined Retro ROM (SDRR) firmware images.
@@ -232,6 +236,34 @@ impl<R: Reader> Parser<R> {
         }
     }
 
+    // Retrieve the SDRR info header from the firmware.
+    async fn retrieve_header(&mut self) -> Result<SdrrInfoHeader, String> {
+        // Try to find SDRR info at standard location
+        let sdrr_info_addr = self.base_address + SDRR_INFO_FW_OFFSET;
+
+        // Read the header
+        let mut header_buf = [0u8; SdrrInfoHeader::size()];
+        self.reader
+            .read(sdrr_info_addr, &mut header_buf)
+            .await
+            .map_err(|_| "Failed to read SDRR header")?;
+
+        // Parse and validate header using the helper
+        parse_and_validate_header(&header_buf)
+    }
+
+    /// Function to do a brief check whether this is an SDRR device.
+    ///
+    /// Returns:
+    /// - `true` if the SDRR header was found and is valid
+    /// - `false` if the header was not found (or an error occured)
+    pub async fn detect(&mut self) -> bool {
+        match self.retrieve_header().await {
+            Ok(_header) => true,
+            Err(_) => false,
+        }
+    }
+
     /// Parse SDRR metadata from the firmware.
     ///
     /// This method reads and parses all structural information from the firmware,
@@ -285,23 +317,14 @@ impl<R: Reader> Parser<R> {
     /// }
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn parse(&mut self) -> Result<SdrrInfo, String> {
-        // Try to find SDRR info at standard location
-        let sdrr_info_addr = self.base_address + SDRR_INFO_FW_OFFSET;
-
-        // Read the header
-        let mut header_buf = [0u8; SdrrInfoHeader::size()];
-        self.reader
-            .read(sdrr_info_addr, &mut header_buf)
-            .map_err(|_| "Failed to read SDRR header")?;
-
+    pub async fn parse(&mut self) -> Result<SdrrInfo, String> {
         // Parse and validate header using the helper
-        let header = parse_and_validate_header(&header_buf)?;
+        let header = self.retrieve_header().await?;
 
         let mut parse_errors = Vec::new();
 
         // Parse strings with error collection
-        let build_date = match self.read_string_at_ptr(header.build_date_ptr) {
+        let build_date = match self.read_string_at_ptr(header.build_date_ptr).await {
             Ok(s) => Some(s),
             Err(e) => {
                 parse_errors.push(ParseError::new("Build Date", e));
@@ -309,7 +332,7 @@ impl<R: Reader> Parser<R> {
             }
         };
 
-        let hw_rev = match self.read_string_at_ptr(header.hw_rev_ptr) {
+        let hw_rev = match self.read_string_at_ptr(header.hw_rev_ptr).await {
             Ok(s) => Some(s),
             Err(e) => {
                 parse_errors.push(ParseError::new("Hardware Revision", e));
@@ -324,7 +347,9 @@ impl<R: Reader> Parser<R> {
             header.rom_set_count,
             self.base_address,
             header.boot_logging_enabled != 0,
-        ) {
+        )
+        .await
+        {
             Ok(sets) => sets,
             Err(e) => {
                 parse_errors.push(ParseError::new("ROM Sets", e));
@@ -333,13 +358,14 @@ impl<R: Reader> Parser<R> {
         };
 
         // Parse pins
-        let pins = match parsing::read_pins(&mut self.reader, header.pins_ptr, self.base_address) {
-            Ok(p) => Some(p),
-            Err(e) => {
-                parse_errors.push(ParseError::new("Pins", e));
-                None
-            }
-        };
+        let pins =
+            match parsing::read_pins(&mut self.reader, header.pins_ptr, self.base_address).await {
+                Ok(p) => Some(p),
+                Err(e) => {
+                    parse_errors.push(ParseError::new("Pins", e));
+                    None
+                }
+            };
 
         Ok(SdrrInfo {
             major_version: header.major_version,
@@ -367,7 +393,7 @@ impl<R: Reader> Parser<R> {
         })
     }
 
-    fn read_string_at_ptr(&mut self, ptr: u32) -> Result<String, String> {
+    async fn read_string_at_ptr(&mut self, ptr: u32) -> Result<String, String> {
         if ptr < self.base_address {
             return Err(format!("Invalid pointer: 0x{:08X}", ptr));
         }
@@ -381,6 +407,7 @@ impl<R: Reader> Parser<R> {
             let chunk_size = buf.len().min(1024 - result.len()); // Limit total size
             self.reader
                 .read(addr, &mut buf[..chunk_size])
+                .await
                 .map_err(|_| format!("Failed to read string at 0x{:08X}", ptr))?;
 
             if let Some(null_pos) = buf[..chunk_size].iter().position(|&b| b == 0) {

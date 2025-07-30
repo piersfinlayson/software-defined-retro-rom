@@ -212,7 +212,7 @@ impl SdrrInfo {
     }
 
     /// Read a range of bytes from a ROM set.
-    pub fn read_rom_set_data(
+    pub async fn read_rom_set_data(
         &mut self,
         parser: &mut Parser<impl Reader>,
         set: u8,
@@ -232,6 +232,7 @@ impl SdrrInfo {
         parser
             .reader
             .read(addr, buf)
+            .await
             .map_err(|_| "Failed to read ROM data".into())
     }
 
@@ -246,18 +247,18 @@ impl SdrrInfo {
     }
 
     /// Read a single byte from a ROM image at the specified logical address.
-    pub fn read_rom_byte_demangled(
+    pub async fn read_rom_byte_demangled(
         &mut self,
         parser: &mut Parser<impl Reader>,
         set: u8,
         addr: SdrrAddress,
     ) -> Result<u8, String> {
-        let byte = self.read_rom_byte_raw(parser, set, addr)?;
+        let byte = self.read_rom_byte_raw(parser, set, addr).await?;
 
         self.demangle_byte(byte)
     }
 
-    pub fn read_rom_byte_raw(
+    pub async fn read_rom_byte_raw(
         &mut self,
         parser: &mut Parser<impl Reader>,
         set: u8,
@@ -273,7 +274,8 @@ impl SdrrInfo {
 
         // Read the byte
         let mut buf = [0u8; 1];
-        self.read_rom_set_data(parser, set, physical_addr, &mut buf)?;
+        self.read_rom_set_data(parser, set, physical_addr, &mut buf)
+            .await?;
 
         Ok(buf[0])
     }

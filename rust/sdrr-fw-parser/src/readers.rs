@@ -59,7 +59,7 @@ impl MemoryReader {
 impl Reader for MemoryReader {
     type Error = String;
 
-    fn read(&mut self, addr: u32, buf: &mut [u8]) -> Result<(), Self::Error> {
+    async fn read(&mut self, addr: u32, buf: &mut [u8]) -> Result<(), Self::Error> {
         if addr < self.base_address {
             return Err(format!(
                 "Address 0x{:08X} is below base address 0x{:08X}",

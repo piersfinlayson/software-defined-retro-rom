@@ -264,9 +264,7 @@ fn download_and_extract_zip(dest_file: &Path, url: &str, extract_file: &str) -> 
 
     // Couldn't find it
     if !target_exists {
-        println!(
-            "Failed to find '{decoded_extract_file}' in zip. Archive contents:",
-        );
+        println!("Failed to find '{decoded_extract_file}' in zip. Archive contents:",);
         for name in &file_names {
             println!("  '{}'", name);
         }

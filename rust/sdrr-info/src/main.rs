@@ -84,8 +84,11 @@ pub fn print_header() {
     println!("-------------------------------------------------");
 }
 
-// Example usage function
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    smol::block_on(async_main())
+}
+
+async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let args = match parse_args() {
         Ok(args) => args,
         Err(e) => {
@@ -96,7 +99,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let firmware_path = &args.firmware;
-    let mut fw_data = match load_sdrr_firmware(firmware_path) {
+    let mut fw_data = match load_sdrr_firmware(firmware_path).await {
         Ok(info) => info,
         Err(e) => {
             print_header();
@@ -119,8 +122,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.command {
         Command::Info => print_sdrr_info(&fw_data, &args),
-        Command::LookupRaw => lookup_raw(&mut fw_data, &args),
-        Command::Lookup => lookup(&mut fw_data, &args),
+        Command::LookupRaw => lookup_raw(&mut fw_data, &args).await,
+        Command::Lookup => lookup(&mut fw_data, &args).await,
     }
 
     Ok(())
@@ -370,7 +373,7 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
     }
 }
 
-fn lookup_byte_at_address(
+async fn lookup_byte_at_address(
     fw_data: &mut FirmwareData,
     detail: bool,
     set: u8,
@@ -382,9 +385,9 @@ fn lookup_byte_at_address(
 
     // Get the size of this rom set
     let byte = if output_mangled_byte {
-        info.read_rom_byte_raw(parser, set, addr)
+        info.read_rom_byte_raw(parser, set, addr).await
     } else {
-        info.read_rom_byte_demangled(parser, set, addr)
+        info.read_rom_byte_demangled(parser, set, addr).await
     }?;
 
     // Get ROM names
@@ -417,7 +420,7 @@ fn lookup_byte_at_address(
     Ok(())
 }
 
-fn lookup_raw(fw_data: &mut FirmwareData, args: &Args) {
+async fn lookup_raw(fw_data: &mut FirmwareData, args: &Args) {
     println!("Lookup Byte Using Raw (mangled) Address");
     println!("---------------------------------------");
 
@@ -434,14 +437,16 @@ fn lookup_raw(fw_data: &mut FirmwareData, args: &Args) {
         set,
         SdrrAddress::from_raw(addr),
         output_mangled_byte,
-    ) {
+    )
+    .await
+    {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-fn lookup_range(
+async fn lookup_range(
     fw_data: &mut FirmwareData,
     detail: bool,
     set: u8,
@@ -492,7 +497,7 @@ fn lookup_range(
 
         for addr in start_addr..=end_addr {
             let log_addr = SdrrAddress::from_logical(addr, cs_set);
-            let byte = info.read_rom_byte_raw(parser, set, log_addr)?;
+            let byte = info.read_rom_byte_raw(parser, set, log_addr).await?;
 
             let output_byte = if output_mangled {
                 byte
@@ -516,7 +521,7 @@ fn lookup_range(
 
         for addr in start_addr..=end_addr {
             let log_addr = SdrrAddress::from_logical(addr, cs_set);
-            let byte = info.read_rom_byte_raw(parser, set, log_addr)?;
+            let byte = info.read_rom_byte_raw(parser, set, log_addr).await?;
 
             let output_byte = if output_mangled {
                 byte
@@ -557,7 +562,7 @@ fn lookup_range(
     Ok(())
 }
 
-fn lookup(fw_data: &mut FirmwareData, args: &Args) {
+async fn lookup(fw_data: &mut FirmwareData, args: &Args) {
     let binary = args.output_binary.unwrap_or(false);
     if !binary {
         println!("Lookup Byte Using Real (non-mangled) Address");
@@ -591,7 +596,9 @@ fn lookup(fw_data: &mut FirmwareData, args: &Args) {
             &cs_set,
             output_mangled,
             output_binary,
-        ) {
+        )
+        .await
+        {
             eprintln!("Error: {}", e);
             std::process::exit(1);
         }
@@ -600,7 +607,9 @@ fn lookup(fw_data: &mut FirmwareData, args: &Args) {
         let addr = args.addr.expect("Internal error: address is required");
         let addr = SdrrAddress::from_logical(addr, &cs_set);
 
-        if let Err(e) = lookup_byte_at_address(fw_data, args.detail, set, addr, output_mangled) {
+        if let Err(e) =
+            lookup_byte_at_address(fw_data, args.detail, set, addr, output_mangled).await
+        {
             eprintln!("Error: {}", e);
             std::process::exit(1);
         }

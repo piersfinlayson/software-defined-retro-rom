@@ -11,17 +11,17 @@ use crate::{FileType, FirmwareData};
 use crate::{SDRR_INFO_OFFSET, STM32F4_FLASH_BASE};
 use sdrr_fw_parser::{Parser, readers::MemoryReader};
 
-pub fn load_sdrr_firmware<P: AsRef<Path>>(path: P) -> Result<FirmwareData> {
+pub async fn load_sdrr_firmware<P: AsRef<Path>>(path: P) -> Result<FirmwareData> {
     let firmware_data = fs::read(path)?;
 
     if firmware_data.len() >= 4 && &firmware_data[0..4] == b"\x7fELF" {
-        load_from_elf(firmware_data)
+        load_from_elf(firmware_data).await
     } else {
-        load_from_binary(firmware_data)
+        load_from_binary(firmware_data).await
     }
 }
 
-fn load_from_binary(firmware_data: Vec<u8>) -> Result<FirmwareData> {
+async fn load_from_binary(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     let file_size = firmware_data.len();
     if file_size < SDRR_INFO_OFFSET + 48 {
         return Err(anyhow::anyhow!("Firmware file too small"));
@@ -32,7 +32,7 @@ fn load_from_binary(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     let mut parser = Parser::new(reader);
 
     // Parse the firmware
-    let info = parser.parse().map_err(|e| anyhow::anyhow!(e))?;
+    let info = parser.parse().await.map_err(|e| anyhow::anyhow!(e))?;
 
     Ok(FirmwareData {
         file_type: FileType::Orc,
@@ -42,7 +42,7 @@ fn load_from_binary(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     })
 }
 
-fn load_from_elf(firmware_data: Vec<u8>) -> Result<FirmwareData> {
+async fn load_from_elf(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     let elf = Elf::parse(&firmware_data)?;
 
     // Find the sdrr_info symbol
@@ -91,7 +91,7 @@ fn load_from_elf(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     let mut parser = Parser::new(reader);
 
     // Parse the firmware
-    let info = parser.parse().map_err(|e| anyhow::anyhow!(e))?;
+    let info = parser.parse().await.map_err(|e| anyhow::anyhow!(e))?;
 
     // TODO: Consider if we should track that this was an ELF file somehow
 

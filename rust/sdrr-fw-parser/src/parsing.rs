@@ -188,7 +188,7 @@ pub(crate) fn parse_and_validate_header(data: &[u8]) -> Result<SdrrInfoHeader, S
 }
 
 /// Read a null-terminated string from the given pointer
-pub(crate) fn read_string_at_ptr<R: Reader>(
+pub(crate) async fn read_string_at_ptr<R: Reader>(
     reader: &mut R,
     ptr: u32,
     base_addr: u32,
@@ -205,6 +205,7 @@ pub(crate) fn read_string_at_ptr<R: Reader>(
         let chunk_size = buf.len().min(MAX_STRING_LEN - result.len());
         reader
             .read(addr, &mut buf[..chunk_size])
+            .await
             .map_err(|_| format!("Failed to read string at 0x{:08X}", ptr))?;
 
         if let Some(null_pos) = buf[..chunk_size].iter().position(|&b| b == 0) {
@@ -224,7 +225,7 @@ pub(crate) fn read_string_at_ptr<R: Reader>(
 }
 
 /// Read ROM sets from firmware
-pub(crate) fn read_rom_sets<R: Reader>(
+pub(crate) async fn read_rom_sets<R: Reader>(
     reader: &mut R,
     ptr: u32,
     count: u8,
@@ -244,6 +245,7 @@ pub(crate) fn read_rom_sets<R: Reader>(
         let mut header_buf = [0u8; SdrrRomSetHeader::size()];
         reader
             .read(header_addr, &mut header_buf)
+            .await
             .map_err(|_| format!("Failed to read ROM set header {}", i))?;
 
         let (_, header) = SdrrRomSetHeader::from_bytes((&header_buf, 0))
@@ -256,7 +258,8 @@ pub(crate) fn read_rom_sets<R: Reader>(
             header.rom_count,
             base_addr,
             boot_logging_enabled,
-        )?;
+        )
+        .await?;
 
         // Note: We don't read the ROM data itself - just store where it is
         rom_sets.push(SdrrRomSet {
@@ -273,7 +276,7 @@ pub(crate) fn read_rom_sets<R: Reader>(
 }
 
 // Read ROM info structures
-fn read_rom_infos<R: Reader>(
+async fn read_rom_infos<R: Reader>(
     reader: &mut R,
     ptr: u32,
     count: u8,
@@ -292,6 +295,7 @@ fn read_rom_infos<R: Reader>(
         let mut ptr_buf = [0u8; core::mem::size_of::<u32>()];
         reader
             .read(ptr_addr, &mut ptr_buf)
+            .await
             .map_err(|_| format!("Failed to read ROM info pointer {}", i))?;
 
         let rom_info_ptr = u32::from_le_bytes(ptr_buf);
@@ -305,6 +309,7 @@ fn read_rom_infos<R: Reader>(
         let mut info_buf = vec![0u8; info_size];
         reader
             .read(rom_info_ptr, &mut info_buf)
+            .await
             .map_err(|_| format!("Failed to read ROM info {}", i))?;
 
         let rom_info = if boot_logging_enabled {
@@ -312,7 +317,9 @@ fn read_rom_infos<R: Reader>(
                 .map_err(|e| format!("Failed to parse ROM info with logging {}: {}", i, e))?;
 
             let filename = if info.filename_ptr >= base_addr {
-                read_string_at_ptr(reader, info.filename_ptr, base_addr).ok()
+                read_string_at_ptr(reader, info.filename_ptr, base_addr)
+                    .await
+                    .ok()
             } else {
                 None
             };
@@ -344,7 +351,7 @@ fn read_rom_infos<R: Reader>(
 }
 
 /// Read pin configuration
-pub(crate) fn read_pins<R: Reader>(
+pub(crate) async fn read_pins<R: Reader>(
     reader: &mut R,
     ptr: u32,
     base_addr: u32,
@@ -356,6 +363,7 @@ pub(crate) fn read_pins<R: Reader>(
     let mut pins_buf = [0u8; SdrrPins::size()];
     reader
         .read(ptr, &mut pins_buf)
+        .await
         .map_err(|_| "Failed to read pins data")?;
 
     SdrrPins::from_bytes((&pins_buf, 0))
