@@ -1631,6 +1631,7 @@ name = "sdrr-fw-parser"
 version = "0.3.0"
 dependencies = [
  "deku",
+ "serde",
  "static_assertions",
 ]
 

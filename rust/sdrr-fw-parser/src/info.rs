@@ -21,7 +21,7 @@ use alloc::{format, string::String, vec, vec::Vec};
 /// from the firmware file.
 ///
 /// Reflects `sdrr_info_t` from `sdrr/include/config_base.h`
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SdrrInfo {
     // Core fields that are always present
     pub major_version: u16,
@@ -290,7 +290,7 @@ impl SdrrInfo {
 /// Current maximum number of ROMs in a set is 3.
 ///
 /// Reflects `sdrr_rom_set_t` from `sdrr/include/config_base.h`
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SdrrRomSet {
     /// Pointer to the ROM image data in the firmware.
     pub(crate) data_ptr: u32,
@@ -318,7 +318,7 @@ pub struct SdrrRomSet {
 /// Information about a single ROM in an SDRR firmware
 ///
 /// Reflects `sdrr_rom_info_t` from `sdrr/include/config_base.h`
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SdrrRomInfo {
     /// The type of the ROM
     pub rom_type: SdrrRomType,
@@ -344,7 +344,7 @@ pub struct SdrrRomInfo {
 /// A pin value of 255 is used to indicate that the pin is not used.
 ///
 /// Reflects `sdrr_pins_t` from `sdrr/include/config_base.h`
-#[derive(Debug, DekuRead, DekuWrite)]
+#[derive(Debug, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
 pub struct SdrrPins {
     pub data_port: SdrrStmPort,
     pub addr_port: SdrrStmPort,

@@ -443,7 +443,7 @@ impl<R: Reader> Parser<R> {
 ///     reason: "Invalid pointer: 0xFFFFFFFF".to_string(),
 /// };
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ParseError {
     /// The field or structure that failed to parse.
     ///

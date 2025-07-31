@@ -17,3 +17,4 @@ std = ["deku/std"]
 [dependencies]
 deku = { version = "0.19", default-features = false, features = ["alloc"] }
 static_assertions = "1.1"
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }

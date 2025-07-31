@@ -170,8 +170,10 @@ pub(crate) fn parse_and_validate_header(data: &[u8]) -> Result<SdrrInfoHeader, S
 
     // Validate version
     if header.major_version > MAX_VERSION_MAJOR
-        || header.minor_version > MAX_VERSION_MINOR
-        || header.patch_version > MAX_VERSION_PATCH
+        || (header.major_version == MAX_VERSION_MAJOR && header.minor_version > MAX_VERSION_MINOR)
+        || (header.major_version == MAX_VERSION_MAJOR 
+            && header.minor_version == MAX_VERSION_MINOR 
+            && header.patch_version > MAX_VERSION_PATCH)
     {
         return Err(format!(
             "SDRR firmware version v{}.{}.{} unsupported - max version v{}.{}.{}",
