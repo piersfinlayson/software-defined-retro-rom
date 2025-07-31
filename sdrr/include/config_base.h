@@ -280,4 +280,49 @@ typedef struct sdrr_rom_set_t {
     const sdrr_cs_state_t multi_rom_cs1_state;  // CS1 state
 } sdrr_rom_set_t;
 
+// SDRR Runtime Information Structure
+//
+// Contains information about the SDRR runtime environment.
+typedef struct sdrr_runtime_info_t {
+    // Magic bytes to identify the firmware and structure
+    // Offset: 0
+    // 4 bytes
+    char magic[4];  // Magic bytes = "SDRR"
+
+    // Size of this structure in bytes
+    // Offset: 4
+    // 1 byte
+    uint8_t runtime_info_size;
+
+    // Image select jumper state at boot.
+    // Initialized to 0xFF.
+    // Offset: 5
+    // 1 byte
+    uint8_t  image_sel;
+
+    // Index of the currently selected ROM set.  This is chosen at boot via
+    // the image select jumpers.
+    // Initialized to 0xFF.
+    // Offset: 6
+    // 1 byte
+    uint8_t rom_set_index;
+    
+    // Reserved for future use.
+    // Initialized to 0xFF.
+    // Offset: 7
+    // 2 bytes
+    uint8_t reserved1[1];
+
+    // Counter for the number times the CS lines have transitioned from
+    // inactive to active.  This is only updated if COUNT_ROM_ACCESS is
+    // defined in the configuration.  This field is unused (but present) if
+    // COUNT_ROM_ACCESS is not defined.
+    // Initialized to 0xFFFFFFFF.  Only set to 0x00000000 if COUNT_ROM_ACCESS
+    // is defined, when the ROM starts serving.
+    // Offset: 8
+    // 4 bytes
+    uint32_t access_count;
+
+} sdrr_runtime_info_t;
+
 #endif // CONFIG_BASE_H

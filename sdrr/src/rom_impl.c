@@ -284,6 +284,13 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         rom_table_val = (uint32_t)&(set->data[0]);
     }
 
+#if defined(COUNT_ROM_ACCESS)
+    // If we are counting ROM accesses, set the access count to 0
+    sdrr_runtime_info.access_count = 0;
+    uint32_t access_count_addr = (uint32_t)&sdrr_runtime_info.access_count;
+    uint32_t access_count = 0;
+#endif
+
     // Now log current state, and items we're going to load to registers.
     ROM_IMPL_DEBUG("%s", log_divider);
     ROM_IMPL_DEBUG("Register locations and values:");
@@ -300,7 +307,12 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     ROM_IMPL_DEBUG("Data output mask: 0x%08X", data_output_mask_val);
     ROM_IMPL_DEBUG("Data input mask: 0x%08X", data_input_mask_val);
     ROM_IMPL_DEBUG("ROM table: 0x%08X", rom_table_val);
+#if defined(COUNT_ROM_ACCESS)
+    ROM_IMPL_DEBUG("Access count addr: 0x%08X", access_count_addr);
+    ROM_IMPL_DEBUG("Access count: 0x%08X", access_count);
+#endif
     ROM_IMPL_DEBUG("%s", log_divider);
+
 
 #if defined(MAIN_LOOP_ONE_SHOT)
     uint32_t byte;
@@ -341,12 +353,21 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         // may work better!  See `rom_asm.h` for more details.
         default:
         case SERVE_ADDR_ON_CS:
+#if !defined(COUNT_ROM_ACCESS)
             if (cs_invert_mask == 0) {
                 // CS active low
                 ALG2_ASM(TEST_CS_ACT_LOW, BEQ);
             } else {
                 ALG2_ASM(TEST_CS, BEQ);
             }
+#else // COUNT_ROM_ACCESS
+            if (cs_invert_mask == 0) {
+                // CS active low
+                ALG2_COUNT_ASM(TEST_CS_ACT_LOW, BEQ, BNE);
+            } else {
+                ALG2_COUNT_ASM(TEST_CS, BEQ, BNE);
+            }
+#endif // !COUNT_ROM_ACCESS
             break;
 
         // Used for multi-ROM sets
@@ -354,12 +375,21 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             // This case uses the same algorithm as SERVE_ADDR_ON_CS, but
             // the BEQ becomes a BNE as the TEST in this case is the opposite
             // way around.
+#if !defined(COUNT_ROM_ACCESS)
             if (cs_invert_mask == 0) {
                 // CS active low
                 ALG2_ASM(TEST_CS_ANY_ACT_LOW, BNE);
             } else {
                 ALG2_ASM(TEST_CS_ANY, BNE);
             }
+#else // COUNT_ROM_ACCESS
+            if (cs_invert_mask == 0) {
+                // CS active low
+                ALG2_COUNT_ASM(TEST_CS_ANY_ACT_LOW, BNE, BEQ);
+            } else {
+                ALG2_COUNT_ASM(TEST_CS_ANY, BNE, BEQ);
+            }
+#endif // !COUNT_ROM_ACCESS
             break;
     }
 #else // C_MAIN_LOOP

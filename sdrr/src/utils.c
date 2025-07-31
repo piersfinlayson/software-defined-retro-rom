@@ -52,6 +52,11 @@ uint32_t check_sel_pins(uint32_t *sel_mask) {
 
     // Return sel_mask as well as the value of the pins
     *sel_mask = sel_1bit_mask;
+
+    // Store the value of the pins in sdrr_runtime_info
+    sdrr_runtime_info.image_sel = pins & sel_1bit_mask;
+
+    // Return the value of the pins
     return (pins & sel_1bit_mask);
 }
 
