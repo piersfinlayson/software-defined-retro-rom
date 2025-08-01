@@ -283,12 +283,14 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     } else {
         rom_table_val = (uint32_t)&(set->data[0]);
     }
+    sdrr_runtime_info.rom_table = (void *)rom_table_val;
 
 #if defined(COUNT_ROM_ACCESS)
-    // If we are counting ROM accesses, set the access count to 0
-    sdrr_runtime_info.access_count = 0;
+    // If we are counting ROM accesses, set it up
+    sdrr_runtime_info.access_count = 0;  // Update from 0xFFFFFFFF to 0.
+    sdrr_runtime_info.count_rom_access = 1;  // Flag as enabled
     uint32_t access_count_addr = (uint32_t)&sdrr_runtime_info.access_count;
-    uint32_t access_count = 0;
+    uint32_t access_count = 0;  // Used to initialise the count register itself
 #endif
 
     // Now log current state, and items we're going to load to registers.

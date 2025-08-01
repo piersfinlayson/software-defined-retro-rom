@@ -40,6 +40,7 @@ pub struct SdrrInfo {
     pub boot_logging_enabled: bool,
     pub mco_enabled: bool,
     pub rom_set_count: u8,
+    pub count_rom_access: bool,
     pub boot_config: [u8; 4],
 
     // Fields that might fail to parse

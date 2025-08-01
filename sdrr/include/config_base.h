@@ -156,11 +156,18 @@ typedef struct {
     const uint8_t boot_logging_enabled;
     const uint8_t mco_enabled;
 
-    // Number of ROM sets - length of the `rom_sets` array 
+    // Number of ROM sets - number of entries in the `rom_sets` array 
     // Offset: 41
-    // 3 bytes
+    // 1 byte
     const uint8_t rom_set_count;
-    const uint8_t pad2[2];
+
+    // Whether access count is enabled
+    // Offset: 42
+    // 1 byte
+    const uint8_t count_rom_access;
+
+    // Reserved for future use
+    const uint8_t pad2[1];
     
     // Pointer to array of ROM sets
     // Offset: 44
@@ -306,12 +313,12 @@ typedef struct sdrr_runtime_info_t {
     // Offset: 6
     // 1 byte
     uint8_t rom_set_index;
-    
-    // Reserved for future use.
-    // Initialized to 0xFF.
+
+    // Whether the ROM access counting feature is enabled.
+    // Initialized to 0x00.
     // Offset: 7
-    // 2 bytes
-    uint8_t reserved1[1];
+    // 1 byte
+    uint8_t count_rom_access;
 
     // Counter for the number times the CS lines have transitioned from
     // inactive to active.  This is only updated if COUNT_ROM_ACCESS is
@@ -322,6 +329,12 @@ typedef struct sdrr_runtime_info_t {
     // Offset: 8
     // 4 bytes
     uint32_t access_count;
+
+    // Pointer to the TOM table SDRR uses to serve the ROM data this run
+    // Initialized to null.
+    // Offset: 12
+    // 4 bytes
+    void *rom_table;
 
 } sdrr_runtime_info_t;
 

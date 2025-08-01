@@ -386,6 +386,7 @@ impl<R: Reader> Parser<R> {
             boot_logging_enabled: header.boot_logging_enabled != 0,
             mco_enabled: header.mco_enabled != 0,
             rom_set_count: header.rom_set_count,
+            count_rom_access: header.count_rom_access != 0,
             rom_sets,
             pins,
             boot_config: header.boot_config,

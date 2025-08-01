@@ -477,6 +477,18 @@ fn generate_sdrr_config_header(filename: &Path, config: &Config) -> Result<()> {
         writeln!(file, "// PLL configuration not applicable for this variant")?;
     }
 
+    // Count ROM access
+    writeln!(file)?;
+    writeln!(file, "// Count ROM access")?;
+    if config.count_rom_access {
+        writeln!(file, "#define COUNT_ROM_ACCESS 1")?;
+    } else {
+        writeln!(
+            file,
+            "// #define COUNT_ROM_ACCESS 0  // ROM access counting disabled"
+        )?;
+    }
+
     writeln!(file)?;
     writeln!(file, "//")?;
     writeln!(file, "// Debug and development configuration")?;
@@ -730,7 +742,12 @@ fn generate_sdrr_config_implementation(
 
     // ROM set info
     writeln!(file, "    .rom_set_count = {},", rom_sets.len())?;
-    writeln!(file, "    .pad2 = {{0, 0}},")?;
+    writeln!(
+        file,
+        "    .count_rom_access = {},",
+        if config.count_rom_access { 1 } else { 0 }
+    )?;
+    writeln!(file, "    .pad2 = {{0}},")?;
     writeln!(file, "    .rom_sets = rom_set,")?;
     writeln!(file, "    .pins = &sdrr_pins,")?;
 

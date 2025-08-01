@@ -14,6 +14,7 @@ pub struct Config {
     pub stm_variant: StmVariant,
     pub output_dir: PathBuf,
     pub swd: bool,
+    pub count_rom_access: bool,
     pub mco: bool,
     pub mco2: bool,
     pub boot_logging: bool,

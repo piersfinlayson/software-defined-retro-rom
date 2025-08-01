@@ -222,6 +222,7 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
     println!("SWD enabled:      {}", info.swd_enabled);
     println!("Boot logging:     {}", info.boot_logging_enabled);
     println!("Status LED:       {}", info.status_led_enabled);
+    println!("Count ROM access: {}", info.count_rom_access);
     println!("STM bootloader:   {}", bootloader);
     let mco = if info.mco_enabled {
         "true (exposed via test pad)"

@@ -116,6 +116,10 @@ pub struct Args {
     /// List available hardware revisions
     #[clap(long, default_value = "false")]
     list_hw_revs: bool,
+
+    /// Use to enable SDRR's ROM access count functionality.
+    #[clap(long, default_value = "false")]
+    count_rom_access: bool,
 }
 
 impl Args {
@@ -261,6 +265,7 @@ impl Args {
             stm_variant,
             output_dir: self.output_dir.clone(),
             swd: self.swd(),
+            count_rom_access: self.count_rom_access,
             mco: self.mco(),
             mco2: self.mco2(),
             boot_logging: self.boot_logging(),

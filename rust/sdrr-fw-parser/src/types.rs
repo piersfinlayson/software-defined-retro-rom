@@ -17,7 +17,9 @@ use crate::SdrrInfo;
 /// STM32F4 product line options
 ///
 /// Relflects `stm_line_t` from `sdrr/include/config_base.h`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
+)]
 #[deku(id_type = "u16", ctx = "endian: deku::ctx::Endian")]
 pub enum StmLine {
     /// F401D/E - 96KB RAM
@@ -69,7 +71,9 @@ impl StmLine {
 /// For example "E" in STM32F401RET6 means 512KB of flash storage.
 ///
 /// Reflects `stm_storage_t` from `sdrr/include/config_base.h`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
+)]
 #[deku(id_type = "u16", ctx = "endian: deku::ctx::Endian")]
 pub enum StmStorage {
     /// 8 = 64KB
@@ -132,7 +136,9 @@ impl StmStorage {
 /// Type of ROMs supported by SDRR
 ///
 /// Reflects `sdrr_rom_type_t` from `sdrr/include/config_base.h`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
+)]
 #[deku(id_type = "u8")]
 pub enum SdrrRomType {
     /// 2316 ROM, 11-bit address, 3 CS lines, 2KB size
@@ -200,7 +206,9 @@ impl SdrrRomType {
 /// SDRR chip select active options
 ///
 /// Reflects `sdrr_cs_state_t` from `sdrr/include/config_base.h`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
+)]
 #[deku(id_type = "u8")]
 pub enum SdrrCsState {
     /// Chip select line is active low
@@ -229,7 +237,9 @@ impl fmt::Display for SdrrCsState {
 /// SDRR serving algorithm options
 ///
 /// Reflects `sdrr_serve_t` from `sdrr/include/config_base.h`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
+)]
 #[deku(id_type = "u8")]
 pub enum SdrrServe {
     /// Original algorithm - two CS checks for every address check, checks
@@ -261,7 +271,9 @@ impl fmt::Display for SdrrServe {
 /// SDRR STM32 port options
 ///
 /// Reflects `sdrr_stm_port_t` from `sdrr/include/config_base.h`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
+)]
 #[deku(id_type = "u8")]
 pub enum SdrrStmPort {
     /// No port (pin set is not exposed/used)

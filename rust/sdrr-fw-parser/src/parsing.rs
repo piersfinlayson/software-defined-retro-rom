@@ -53,7 +53,8 @@ pub(crate) struct SdrrInfoHeader {
     pub boot_logging_enabled: u8,
     pub mco_enabled: u8,
     pub rom_set_count: u8,
-    #[deku(pad_bytes_before = "2")]
+    pub count_rom_access: u8,
+    #[deku(pad_bytes_before = "1")]
     #[deku(endian = "little")]
     pub rom_sets_ptr: u32,
     #[deku(endian = "little")]
@@ -171,8 +172,8 @@ pub(crate) fn parse_and_validate_header(data: &[u8]) -> Result<SdrrInfoHeader, S
     // Validate version
     if header.major_version > MAX_VERSION_MAJOR
         || (header.major_version == MAX_VERSION_MAJOR && header.minor_version > MAX_VERSION_MINOR)
-        || (header.major_version == MAX_VERSION_MAJOR 
-            && header.minor_version == MAX_VERSION_MINOR 
+        || (header.major_version == MAX_VERSION_MAJOR
+            && header.minor_version == MAX_VERSION_MINOR
             && header.patch_version > MAX_VERSION_PATCH)
     {
         return Err(format!(
