@@ -183,6 +183,12 @@ Or create your own [config file](/config/).
 
 ## Performance and Technical
 
+**Q: Can you add feature X to SDRR?**
+
+A: Perhaps - raise an issue on the [GitHub issues page](https://github.com/piersfinlayson/software-defined-retro-rom/issues).
+
+SDRR is very busy serving ROM images, so has few spare cycles for additional features.  However, it can be augmented by a co-processor such as [Airfrog](https://piers.rocks/u/airfrog) to provide additional functionality, such as remote access and control, or telemetry.
+
 **Q: Why does SDRR store all ROM images as 16KB in flash?**
 
 A: This optimization allows the main loop to use chip select states as direct address offsets, eliminating runtime calculations and achieving the required access speeds.
@@ -216,10 +222,10 @@ The [`sdrr-gen`](/rust/sdrr-gen/README.md) tool, which generates the ROM images 
 **Q: What does the build pipeline look like.**
 
 ```ascii
-User Input → Top-level Make → sdrr-gen → sdrr Make → probe-rs → STM32
-    ↓              ↓            ↓          ↓            ↓         ↓
-Config Files  ROM Download    Code Gen    Compile     Flash     Running
-ROM Images    & Validation    & Mangle    & Link                Firmware
+User Input → Top-level Make → sdrr-gen → sdrr Make → sdrr-info → test (optional) → probe-rs → STM32
+    ↓              ↓            ↓          ↓             ↓              ↓              ↓        ↓
+Config Files  ROM Download    Code Gen    Compile      Query      Compile tests      Flash    Running
+ROM Images    & Validation    & Mangle    & Link      Firmware        & Run         Firmware
 ```
 
 See [Build System](/docs/BUILD-SYSTEM.md) for more details on how the build system works.
@@ -258,7 +264,7 @@ A: Order the latest revision from [OSH Park](https://oshpark.com) using the prov
 
 **Q: Is SDRR open source?**
 
-A: Yes! Software/firmware uses MIT license, hardware uses CC BY-NC-SA 4.0. You can modify, improve, and share the designs within the license terms.
+A: Yes! Software/firmware uses MIT license, hardware uses CC BY-SA 4.0. You can modify, improve, and share the designs within the license terms.
 
 **Q: Is there a warranty?**
 
