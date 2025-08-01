@@ -16,6 +16,7 @@ sdrr_runtime_info_t sdrr_runtime_info __attribute__((section(".sdrr_runtime_info
     .count_rom_access = 0x00,
     .access_count = 0xFFFFFFFF,
     .rom_table = NULL,
+    .rom_table_size = 0,
 };
 
 // Sets up the system registers, clock and logging as required

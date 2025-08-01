@@ -330,12 +330,17 @@ typedef struct sdrr_runtime_info_t {
     // 4 bytes
     uint32_t access_count;
 
-    // Pointer to the TOM table SDRR uses to serve the ROM data this run
+    // Pointer to the ROM table SDRR uses to serve the ROM data this run
     // Initialized to null.
     // Offset: 12
     // 4 bytes
     void *rom_table;
 
+    // Length of the ROM table SDRR is servig in bytes.
+    // Initialized to 0.
+    // Offset: 16
+    // 4 bytes
+    uint32_t rom_table_size;
 } sdrr_runtime_info_t;
 
 #endif // CONFIG_BASE_H

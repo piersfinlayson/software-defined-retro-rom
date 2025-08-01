@@ -277,6 +277,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         data_input_mask_val |= 0x28000000;
     }
 
+    // Set up the ROM table variables (the ROM is already in RAM by this point,
+    // if RAM preloading is enabled).
     uint32_t rom_table_val;
     if (sdrr_info.preload_image_to_ram) {
         rom_table_val = (uint32_t)&_ram_rom_image_start;
@@ -284,6 +286,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         rom_table_val = (uint32_t)&(set->data[0]);
     }
     sdrr_runtime_info.rom_table = (void *)rom_table_val;
+    sdrr_runtime_info.rom_table_size = set->size;
 
 #if defined(COUNT_ROM_ACCESS)
     // If we are counting ROM accesses, set it up
