@@ -111,6 +111,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 | [Build System](docs/BUILD-SYSTEM.md) | How the SDRR build system works. |
 | [Voltage Levels](docs/VOLTAGE-LEVELS.md) | How the SDRR supports the required logic voltage levels. |
 | [Pi Pico Programmer](docs/PI-PICO-PROGRAMMER.md) | How to use a $5 Raspberry Pi Pico as a programmer for SDRR. |
+| [Manufacturing Test](docs/MANUFACTURING-TEST.md) | Information on testing SDRR during manufacturing. |
 | [STM32 Clones](docs/STM32-CLONES.md) | Information using STM32 clones with SDRR. |
 | [Future Enhancements](docs/FUTURE-ENHANCEMENTS.md) | Possible future enhancements under consideration. |
 | [License](LICENSE.md) | SDRR software and hardware licenses. |

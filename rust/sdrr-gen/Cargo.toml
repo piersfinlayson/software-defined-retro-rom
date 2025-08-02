@@ -7,7 +7,7 @@ description = "Software Defined Retro ROM (SDRR) firmware generator"
 repository = "https://github.com/piersfinlayson/software-defined-retro-rom"
 readme = "README.md"
 license = "MIT"
-keywords = ["commodore", "embedded", "sdrr", "rom", "eeprom", "eprom", "flash"]
+keywords = ["embedded", "rom", "eeprom", "eprom", "flash"]
 
 [dependencies]
 anyhow = ">=1.0.98"
