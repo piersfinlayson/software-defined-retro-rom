@@ -72,7 +72,7 @@ STM ?= f411re
 # You can add your own hardware revisions by creating the appropriate file in
 # sdrr-hw-config/user, or, if you plan to submit a pull request for it and your
 # hardware files, sdrr-hw-config/third-party. 
-HW_REV ?= 24-d
+HW_REV ?= 24-f
 
 # ROM configurations - each ROM can have its own type and CS settings
 #
@@ -95,6 +95,19 @@ HW_REV ?= 24-d
 ROM_CONFIGS ?= \
 	file=images/test/0_63_4096.rom,type=2332,cs1=0,cs2=1
 
+# Status LED
+#
+# The status LED is used to indicate the status of the SDRR device.
+# Only supported from HW revision e onwards.
+#
+# You can disable it in order to reduce the power consumption of the device.
+# With a 1K resistor, this is likely to save around 5-10mW of power.
+#
+# 1 is enabled, 0 disabled.
+
+#STATUS_LED ?= 0
+STATUS_LED ?= 1
+
 # Count ROM access - increment a RAM word every time CS goes from inactive to
 # active.
 #
@@ -112,8 +125,8 @@ ROM_CONFIGS ?= \
 #
 # While initial testing (C64 character ROM) suggest that this addition work
 # does not affect performance, it may under certain circumstances.
-COUNT_ROM_ACCESS ?= 0
-# COUNT_ROM_ACCESS ?= 1
+#COUNT_ROM_ACCESS ?= 0
+COUNT_ROM_ACCESS ?= 1
 
 #
 # Development and debug settings
@@ -269,19 +282,6 @@ OSC ?= HSI
 OVERCLOCK ?= 0
 # OVERCLOCK ?= 1
 
-# Status LED
-#
-# The status LED is used to indicate the status of the SDRR device.
-# Only supported from HW revision e onwards.
-#
-# You can disable it in order to reduce the power consumption of the device.
-# With a 1K resistor, this is likely to save around 5-10mW of power.
-#
-# 1 is enabled, 0 disabled.
-
-STATUS_LED ?= 0
-# STATUS_LED ?= 1
-
 # Bootloader
 #
 # When enabled, the STM32 device will enter its built in bootloader on boot
@@ -395,6 +395,16 @@ else
   exit 1
 endif
 
+# Set STATUS_LED_FLAG based on STATUS_LED variable
+ifeq ($(STATUS_LED), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
+  $(info - STATUS_LED=$(STATUS_LED))
+endif
+  STATUS_LED_FLAG = --status-led
+else
+  STATUS_LED_FLAG = 
+endif
+
 # Set count_rom_access flag based on COUNT_ROM_ACCESS variable
 ifeq ($(COUNT_ROM_ACCESS), 1)
 ifneq ($(SUPPRESS_OUTPUT),1)
@@ -493,16 +503,6 @@ endif
   OVERCLOCK_FLAG = --overclock
 else
   OVERCLOCK_FLAG =
-endif
-
-# Set STATUS_LED_FLAG based on STATUS_LED variable
-ifeq ($(STATUS_LED), 1)
-ifneq ($(SUPPRESS_OUTPUT),1)
-  $(info - STATUS_LED=$(STATUS_LED))
-endif
-  STATUS_LED_FLAG = --status-led
-else
-  STATUS_LED_FLAG = 
 endif
 
 # Set BOOTLOADER_FLAG based on BOOTLOADER variable

@@ -20,6 +20,7 @@ The Rust tooling has been substantially refactored to easier to integrate SDRR s
 - Substantial refactoring of `sdrr-gen`, to make it more maintainable.
 - Substantial refactoring of `sdrr-fw-parser` in order to make it suitable for airfrog integration.
 - Added ROM access counting behind COUNT_ROM_ACCESS feature flag.  When enabled, the firmware updates a u32 counter at RAM address 0x20000008 every time the chip select line(s) go active - i.e. the ROM is selected.  This can be read by an SWD probe, such as [Airfrog](https://piers.rocks/u/sdrr). 
+- Changed default Makefile configuration to HW_REV=24-f COUNT_ROM_ACCESS=1 STATUS_LED=1.
 
 ### Fixes
 

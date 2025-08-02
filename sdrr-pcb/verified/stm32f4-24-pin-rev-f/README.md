@@ -1,17 +1,15 @@
 # STM32F4 24 Pin Rev F
 
-**Unverified** - this revision has not yet been formally tested or confirmed to work.  Order PCBs at your own risk.
-
-One user has confirmed that this board worked with an STM32F401RB, as a replacement VIC-20 NTSC kernal ROM.
-
 23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
+
+This revision has been verified with the STM32F401 and STM32F411.
 
 This revision has the following key improvements over rev E:
 
 - 2 x additional pins are broken out (labelled 'X1' and 'X2' on the underside), to allow a single SDRR to replace up to 3 2364 ROMs simultaneously, by wiring the chip select lines from the additional ROMs directly to these new pins.  
 
 <div style="text-align: center;">
-  <a href="/sdrr-pcb/unverified/stm32f4-24-pin-rev-f/sdrr-24-pin-rev-f-side.png">
+  <a href="/sdrr-pcb/verified/stm32f4-24-pin-rev-f/sdrr-24-pin-rev-f-side.png">
     <img src="sdrr-24-pin-rev-f-side.png" alt="SDRR STM32F4 24 pin rev F" width="400">
   </a>
 </div>
@@ -20,7 +18,7 @@ This revision has the following key improvements over rev E:
 
 - [Schematic](sdrr-24-pin-rev-f-schematic.pdf)
 - [Fab Notes](sdrr-24-pin-rev-f-fab-notes.pdf)
-- [Gerbers](gerbers/) - unverified
+- [Gerbers](gerbers/)
 - [Ordering Bare PCBs](#ordering-bare-pcbs)
 - [Errata](#errata)
 - [Notes](#notes)
