@@ -122,7 +122,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.command {
         Command::Info => print_sdrr_info(&fw_data, &args),
-        Command::LookupRaw => lookup_raw(&mut fw_data, &args).await,
+        Command::LookupRaw => match args.range {
+            None => lookup_raw(&mut fw_data, &args).await,
+            Some(_) => lookup_raw_range(&mut fw_data, &args).await,
+        },
         Command::Lookup => lookup(&mut fw_data, &args).await,
     }
 
@@ -443,6 +446,119 @@ async fn lookup_raw(fw_data: &mut FirmwareData, args: &Args) {
     {
         eprintln!("Error: {}", e);
         std::process::exit(1);
+    }
+}
+
+async fn lookup_raw_range(fw_data: &mut FirmwareData, args: &Args) {
+    let info = &mut fw_data.info;
+    let parser = &mut fw_data.parser;
+
+    // Ensure we have the arguments
+    let detail = args.detail;
+    let set = args.set.expect("Internal error: set number is required");
+    let output_mangled = args
+        .output_mangled
+        .expect("Internal error: output_mangled is required");
+    let output_binary = args
+        .output_binary
+        .expect("Internal error: output_binary is required");
+    let (start_addr, end_addr) = args
+        .range
+        .expect("Internal error: address range is required");
+
+    // Validate address range
+    let rom_size = info.rom_sets[set as usize].size;
+    eprintln!("ROM size: 0x{:04X}", rom_size);
+    if start_addr > end_addr || start_addr >= rom_size || end_addr >= rom_size {
+        eprintln!(
+            "Error: Invalid address range: 0x{:04X} to 0x{:04X} for ROM set size 0x{:04X}",
+            start_addr, end_addr, rom_size
+        );
+        std::process::exit(1);
+    }
+    let roms: Vec<String> = info.rom_sets[set as usize]
+        .roms
+        .iter()
+        .map(|rom| {
+            rom.filename
+                .clone()
+                .unwrap_or_else(|| "<unknown>".to_string())
+        })
+        .collect();
+    let rom_name = roms.join(", ");
+
+    if output_binary {
+        let mut binary_data = Vec::new();
+        for addr in start_addr..=end_addr {
+            let byte = info
+                .read_rom_byte_raw(parser, set, SdrrAddress::from_raw(addr))
+                .await
+                .expect("Failed to read byte");
+
+            let output_byte = if output_mangled {
+                byte
+            } else {
+                info.demangle_byte(byte)
+                    .expect("Pin configuration not available")
+            };
+
+            binary_data.push(output_byte);
+        }
+        std::io::stdout()
+            .write_all(&binary_data)
+            .expect("Failed to write binary data to stdout");
+    } else {
+        // Hex dump output
+        if detail {
+            println!("Byte lookup ROM set {} ({})", set, rom_name);
+            println!(
+                "Raw address range 0x{:04X} to 0x{:04X}:",
+                start_addr, end_addr
+            );
+        }
+
+        for addr in start_addr..=end_addr {
+            let log_addr = SdrrAddress::from_raw(addr);
+            let byte = info
+                .read_rom_byte_raw(parser, set, log_addr)
+                .await
+                .expect("Failed to read byte");
+
+            let output_byte = if output_mangled {
+                byte
+            } else {
+                info.demangle_byte(byte)
+                    .expect("Pin configuration not available")
+            };
+
+            let byte_pos = (addr - start_addr) as usize;
+
+            // Print address at start of each line
+            if byte_pos % 16 == 0 {
+                print!("{:04X}: ", addr);
+            }
+
+            // Print the byte
+            print!("{:02X}", output_byte);
+
+            // Add spacing
+            if (byte_pos + 1) % 16 == 0 {
+                // Newline every 16 bytes
+                println!();
+            } else if (byte_pos + 1) % 4 == 0 {
+                // Bigger space every 4 bytes
+                print!("  ");
+            } else {
+                // Regular space between bytes
+                print!(" ");
+            }
+        }
+
+        // Ensure we end with a newline if we didn't just print one
+        let total_bytes = (end_addr - start_addr + 1) as usize;
+        if total_bytes % 16 != 0 {
+            println!();
+        }
     }
 }
 

@@ -62,6 +62,15 @@ enum Commands {
     /// input from the appropriate port (port C on stock SDRR 24-pin
     /// hardware revisions).
     ///
+    /// This option allows a single byte or range of bytes to be
+    /// looked up.  The output can be output as text (2 byte hex
+    /// values) or optionally output as binary data.
+    ///
+    /// Outputting a range as binary data can be useful if you want
+    /// to compare an entire stored ROM image stored in the firmware
+    /// with that stored in another firmware - or want to extract the
+    /// image in order to overwrite a running SDRR's RAM.
+    ///
     /// The output byte can be demangled (i.e. the correct value),
     /// which is the default, or mangled (i.e. the raw value as it
     /// will be written to the STM32F4 data port, port A on stock
@@ -78,11 +87,19 @@ enum Commands {
         set: u8,
         /// Address to look up (in hex, e.g., 0x1000 or $1000)
         #[arg(short, long, value_parser = parse_hex)]
-        addr: u32,
+        addr: Option<u32>,
+        /// Address range to look up (in hex, e.g., 0x1000-1FFF)
+        #[arg(short, long, value_parser = parse_range)]
+        range: Option<(u32, u32)>,
         /// Output mangled data byte(s)
         /// (not specifying this outputs a demangled byte)
         #[arg(long, default_value = "false", verbatim_doc_comment)]
         output_mangled: bool,
+        /// Output binary data instead of text.  Only valid when
+        /// --range is used
+        /// (default: false = text output)
+        #[arg(long, default_value = "false", verbatim_doc_comment)]
+        output_binary: bool,
     },
     /// Lookup a byte associated with an actual address lookup on the
     /// address bus, using a non-mangled address.  Use this to detect
@@ -221,21 +238,23 @@ pub fn parse_args() -> Result<Args, String> {
             detail,
             set,
             addr,
+            range,
             output_mangled,
+            output_binary,
         }) => (
             Command::LookupRaw,
             firmware,
             detail,
             Some(set),
-            Some(addr),
-            None,
+            addr,
+            range,
             None,
             None,
             None,
             None,
             None,
             Some(output_mangled),
-            None,
+            Some(output_binary),
         ),
 
         Some(Commands::Lookup {
@@ -338,7 +357,10 @@ pub fn parse_args() -> Result<Args, String> {
     }
     if let Some(range) = range {
         if range.0 > 0xFFFF || range.1 > 0xFFFF {
-            return Err("Range must be in the range 0x0000 to 0xFFFF".to_string());
+            return Err(format!(
+                "Range must be in the range 0x0000 to 0xFFFF ({:#X}-{:#X})",
+                range.0, range.1
+            ));
         }
     }
 
