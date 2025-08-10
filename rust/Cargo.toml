@@ -7,4 +7,10 @@ members = [
     "sdrr-fw-parser",
     "sdrr-check"
 ]
+default-members = [
+    "sdrr-gen",
+    "sdrr-info", 
+    "sdrr-common",
+    "sdrr-fw-parser"
+]
 resolver = "2"

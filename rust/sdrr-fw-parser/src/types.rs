@@ -133,6 +133,12 @@ impl StmStorage {
     }
 }
 
+impl fmt::Display for StmStorage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.package_code())
+    }
+}
+
 /// Type of ROMs supported by SDRR
 ///
 /// Reflects `sdrr_rom_type_t` from `sdrr/include/config_base.h`

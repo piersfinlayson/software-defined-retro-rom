@@ -32,7 +32,7 @@ async fn load_from_binary(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     let mut parser = Parser::new(reader);
 
     // Parse the firmware
-    let info = parser.parse().await.map_err(|e| anyhow::anyhow!(e))?;
+    let info = parser.parse_flash().await.map_err(|e| anyhow::anyhow!(e))?;
 
     Ok(FirmwareData {
         file_type: FileType::Orc,
@@ -91,7 +91,7 @@ async fn load_from_elf(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     let mut parser = Parser::new(reader);
 
     // Parse the firmware
-    let info = parser.parse().await.map_err(|e| anyhow::anyhow!(e))?;
+    let info = parser.parse_flash().await.map_err(|e| anyhow::anyhow!(e))?;
 
     // TODO: Consider if we should track that this was an ELF file somehow
 

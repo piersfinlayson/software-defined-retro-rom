@@ -30,6 +30,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// Get logging working when building on ESP32
+#[cfg(feature = "esp32")]
+use esp_println as _;
+
 /// Maximum SDRR firmware versions supported by this version of`sdrr-fw-parser`
 pub const MAX_VERSION_MAJOR: u16 = 0;
 pub const MAX_VERSION_MINOR: u16 = 3;
@@ -46,19 +50,26 @@ pub mod types;
 extern crate alloc;
 
 use core::fmt;
+#[allow(unused_imports)]
+use log::{debug, error, info, trace, warn};
 
-pub use info::{SdrrInfo, SdrrPins, SdrrRomInfo, SdrrRomSet};
+pub use info::{Sdrr, SdrrInfo, SdrrPins, SdrrRomInfo, SdrrRomSet, SdrrRuntimeInfo};
 pub use types::{
     SdrrAddress, SdrrCsSet, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrStmPort,
     StmLine, StmStorage,
 };
 
-use crate::parsing::{SdrrInfoHeader, parse_and_validate_header};
+use crate::parsing::{parse_and_validate_header, parse_and_validate_runtime_info, SdrrInfoHeader, SdrrRuntimeInfoHeader};
 
 /// Offset from start of the firmware where the SDRR info header is located.
 ///
-/// The first 4 "magic" bytes are "SDRR".
+/// The first 4 "magic" bytes are b"SDRR" (upper case).
 pub const SDRR_INFO_FW_OFFSET: u32 = 0x200;
+
+/// Offset from the start of RAM where the SDRR runtime info header is located.
+/// 
+/// The first 4 "magic" bytes are b"sdrr" (lower case).
+pub const SDRR_RUNTIME_INFO_FW_OFFSET: u32 = 0x0;
 
 // Use std/no-std String and Vec types
 #[cfg(not(feature = "std"))]
@@ -66,6 +77,9 @@ use alloc::{format, string::String, vec::Vec};
 
 // STM32F4 flash base address.  Required to find offset from pointers
 pub(crate) const STM32F4_FLASH_BASE: u32 = 0x08000000;
+
+// STM32F4 RAM base address.  Required to find offset from pointers
+pub(crate) const STM32F4_RAM_BASE: u32 = 0x20000000;
 
 /// Trait for reading firmware data from a source.
 ///
@@ -191,7 +205,8 @@ pub trait Reader {
 /// addresses/data and their physical representation in the firmware.
 pub struct Parser<R: Reader> {
     reader: R,
-    base_address: u32,
+    base_flash_address: u32,
+    base_ram_address: u32,
 }
 
 impl<R: Reader> Parser<R> {
@@ -216,7 +231,8 @@ impl<R: Reader> Parser<R> {
     pub fn new(reader: R) -> Self {
         Self {
             reader,
-            base_address: STM32F4_FLASH_BASE,
+            base_flash_address: STM32F4_FLASH_BASE,
+            base_ram_address: STM32F4_RAM_BASE,
         }
     }
 
@@ -228,18 +244,20 @@ impl<R: Reader> Parser<R> {
     /// # Arguments
     ///
     /// * `reader` - Implementation of [`Reader`] trait that provides access to firmware bytes
-    /// * `base_address` - Base address where flash memory begins (e.g., 0x08000000 for STM32F4)
-    pub fn with_base_address(reader: R, base_address: u32) -> Self {
+    /// * `base_flash_address` - Base address where flash memory begins (e.g., 0x08000000 for STM32F4)
+    /// * `base_ram_address` - Base address where RAM begins (e.g., 0x20000000 for STM32F4)
+    pub fn with_base_flash_address(reader: R, base_flash_address: u32, base_ram_address: u32) -> Self {
         Self {
             reader,
-            base_address,
+            base_flash_address,
+            base_ram_address,
         }
     }
 
     // Retrieve the SDRR info header from the firmware.
     async fn retrieve_header(&mut self) -> Result<SdrrInfoHeader, String> {
         // Try to find SDRR info at standard location
-        let sdrr_info_addr = self.base_address + SDRR_INFO_FW_OFFSET;
+        let sdrr_info_addr = self.base_flash_address + SDRR_INFO_FW_OFFSET;
 
         // Read the header
         let mut header_buf = [0u8; SdrrInfoHeader::size()];
@@ -252,6 +270,20 @@ impl<R: Reader> Parser<R> {
         parse_and_validate_header(&header_buf)
     }
 
+    async fn retrieve_runtime_header(&mut self) -> Result<SdrrRuntimeInfoHeader, String> {
+        // Try to find SDRR runtime info at standard location
+        let sdrr_runtime_info_addr = self.base_ram_address + SDRR_RUNTIME_INFO_FW_OFFSET;
+
+        // Read the runtime info header
+        let mut runtime_buf = [0u8; SdrrRuntimeInfoHeader::size()];
+        self.reader
+            .read(sdrr_runtime_info_addr, &mut runtime_buf)
+            .await
+            .map_err(|_| "Failed to read SDRR runtime info")?;
+        // Parse and validate runtime info using the helper
+        parse_and_validate_runtime_info(&runtime_buf)
+    }
+
     /// Function to do a brief check whether this is an SDRR device.
     ///
     /// Returns:
@@ -261,6 +293,29 @@ impl<R: Reader> Parser<R> {
         match self.retrieve_header().await {
             Ok(_header) => true,
             Err(_) => false,
+        }
+    }
+
+    /// Parses both flash and RAM
+    pub async fn parse(&mut self) -> Sdrr {
+        let flash = match self.parse_flash().await {
+            Ok(f) => Some(f),
+            Err(e) => {
+                warn!("Failed to parse flash: {}", e);
+                None
+            }
+        };
+        let ram = match self.parse_ram().await {
+            Ok(r) => Some(r),
+            Err(e) => {
+                warn!("Failed to parse RAM: {}", e);
+                None
+            }
+        };
+
+        Sdrr {
+            flash,
+            ram,
         }
     }
 
@@ -303,7 +358,7 @@ impl<R: Reader> Parser<R> {
     /// # }
     /// # let reader = MyReader::new();
     /// let mut parser = Parser::new(reader);
-    /// match parser.parse() {
+    /// match parser.parse_flash() {
     ///     Ok(info) => {
     ///         println!("Parsed SDRR v{}.{}.{}",
     ///                  info.major_version,
@@ -317,7 +372,7 @@ impl<R: Reader> Parser<R> {
     /// }
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub async fn parse(&mut self) -> Result<SdrrInfo, String> {
+    pub async fn parse_flash(&mut self) -> Result<SdrrInfo, String> {
         // Parse and validate header using the helper
         let header = self.retrieve_header().await?;
 
@@ -345,7 +400,7 @@ impl<R: Reader> Parser<R> {
             &mut self.reader,
             header.rom_sets_ptr,
             header.rom_set_count,
-            self.base_address,
+            self.base_flash_address,
             header.boot_logging_enabled != 0,
         )
         .await
@@ -359,7 +414,7 @@ impl<R: Reader> Parser<R> {
 
         // Parse pins
         let pins =
-            match parsing::read_pins(&mut self.reader, header.pins_ptr, self.base_address).await {
+            match parsing::read_pins(&mut self.reader, header.pins_ptr, self.base_flash_address).await {
                 Ok(p) => Some(p),
                 Err(e) => {
                     parse_errors.push(ParseError::new("Pins", e));
@@ -394,8 +449,23 @@ impl<R: Reader> Parser<R> {
         })
     }
 
+    pub async fn parse_ram(&mut self) -> Result<SdrrRuntimeInfo, String> {
+        // Parse and validate runtime info using the helper
+        let runtime_info = self.retrieve_runtime_header().await?;
+
+        Ok(SdrrRuntimeInfo {
+            image_sel: runtime_info.image_sel,
+            rom_set_index: runtime_info.rom_set_index,
+            count_rom_access: runtime_info.count_rom_access,
+            last_parsed_access_count: runtime_info.access_count,
+            account_count_address: STM32F4_RAM_BASE + SdrrRuntimeInfoHeader::access_count_offset() as u32,
+            rom_table_address: runtime_info.rom_table_ptr,
+            rom_table_size: runtime_info.rom_table_size,
+        })
+    }
+
     async fn read_string_at_ptr(&mut self, ptr: u32) -> Result<String, String> {
-        if ptr < self.base_address {
+        if ptr < self.base_flash_address {
             return Err(format!("Invalid pointer: 0x{:08X}", ptr));
         }
 

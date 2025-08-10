@@ -9,7 +9,7 @@
 const char sdrr_build_date[] = __DATE__ " " __TIME__;
 
 sdrr_runtime_info_t sdrr_runtime_info __attribute__((section(".sdrr_runtime_info"))) = {
-    .magic = {'S', 'D', 'R', 'Q'},  // Different magic to sdrr_info_t
+    .magic = {'s', 'd', 'r', 'r'},  // Lower case to distinguish from firmware magic
     .runtime_info_size = sizeof(sdrr_runtime_info_t),
     .image_sel = 0xFF,
     .rom_set_index = 0xFF,

@@ -21,6 +21,14 @@ Only specific hardware revisions are currently supported by this tool:
 rustup target add thumbv7em-none-eabi
 ```
 
+## Building
+
+**From within the sdrr-check directory**
+
+```bash
+cargo build
+```
+
 ## Usage
 
 To use `sdrr-check`, flash it to the SDRR device and connect to the logging interface. Then:

@@ -17,6 +17,28 @@ use crate::{
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::String, vec, vec::Vec};
 
+/// Container for both the parsed firmware information and runtime information
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct Sdrr {
+    pub flash: Option<SdrrInfo>,
+    pub ram: Option<SdrrRuntimeInfo>,
+}
+
+/// Main SDRR runtime information data structure.  Contains all data parsed
+/// from RAM.
+/// 
+/// Reflects `sdrr_runtime_info_t` from `sdrr/include/config_base.h`
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct SdrrRuntimeInfo {
+    pub image_sel: u8,
+    pub rom_set_index: u8,
+    pub count_rom_access: u8,
+    pub last_parsed_access_count: u32,
+    pub account_count_address: u32,
+    pub rom_table_address: u32,
+    pub rom_table_size: u32,
+}
+
 /// Main SDRR firmware information data structure.  Contains all data parsed
 /// from the firmware file.
 ///

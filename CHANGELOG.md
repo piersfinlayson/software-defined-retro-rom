@@ -2,7 +2,7 @@
 
 All notables changes between versions are documented in this file.
 
-## v0.3.0 - ????-??-??
+## v0.3.0 - 2025-08-??
 
 The main user facing change in this release is the addition of support for remote analysis and co-processing alongside the SDRR device via plug-ins, such as [Airfrog](https://piers.rocks/u/airfrog) - **a tiny $3 probe for ARM devices**.  This allows you to inspect the firmware and runtime state of the SDRR device, and change its configuration and ROM data - **while it is serving ROMs**.
 
@@ -16,15 +16,20 @@ The Rust tooling has been substantially refactored to easier to integrate SDRR s
 
 - TI-99/4A and CoCo2 configurations have been added to the [third-party configs](config/third-party/README.md) directory.  Thanks to [@keronian](https://github.com/keronian) for contributing these.
 - Added a C main loop implementation for which GCC produces the assembly/machine code.  This requires a roughly 25% faster clock speed.  Use `EXTRA_C_FLAGS=-DC_MAIN_LOOP` when running `make` to use this version.
-- Stored off image files used to create the firmware in `output/images/`.  This allows post build inspection of the images used.  It also enables additional tests - `sdrr-info` can be used as an additional check (along with `test`), to ensure the images in the firmware are correct, and validate the behaviour of `sdrr-info` and `test` to be compared.
+- Stored off image files used to create the firmware in `output/images/`.  This allows post build inspection of the images used.  It also enables additional tests - `sdrr-info` can be now be used as an additional automated check (along with `test`), to ensure the images in the firmware are correct, and validate the behaviour of `sdrr-info` and `test` to be compared.
 - Substantial refactoring of `sdrr-gen`, to make it more maintainable.
 - Substantial refactoring of `sdrr-fw-parser` in order to make it suitable for airfrog integration.
 - Added ROM access counting behind COUNT_ROM_ACCESS feature flag.  When enabled, the firmware updates a u32 counter at RAM address 0x20000008 every time the chip select line(s) go active - i.e. the ROM is selected.  This can be read by an SWD probe, such as [Airfrog](https://piers.rocks/u/sdrr). 
 - Changed default Makefile configuration to HW_REV=24-f COUNT_ROM_ACCESS=1 STATUS_LED=1.
 - Added a manufacturing test tool [`sdrr-check`](rust/sdrr-check/README.md).
+- Changed default build config:
+  - HW_REV=24-f
+  - STATUS_LED=1
+  - COUNT_ROM_ACCESS=1
 
 ### Fixes
 
+- Probably a few here and there.
 
 ## v0.2.1 - 2025-07-22
 

@@ -22,6 +22,44 @@ const MAX_STRING_LEN: usize = 1024;
 const STRING_READ_CHUNK_SIZE: usize = 64;
 
 #[derive(Debug, DekuRead, DekuWrite)]
+#[deku(endian = "little", magic = b"sdrr")]
+// Used internally to construct [`SdrrRuntimeInfo`]
+pub(crate) struct SdrrRuntimeInfoHeader {
+    pub runtime_info_size: u8,
+    pub image_sel: u8,
+    pub rom_set_index: u8,
+    pub count_rom_access: u8,
+    #[deku(endian = "little")]
+    pub access_count: u32,
+    #[deku(endian = "little")]
+    pub rom_table_ptr: u32,
+    #[deku(endian = "little")]
+    pub rom_table_size: u32,
+}
+
+impl SdrrRuntimeInfoHeader {
+    // Cannot assert this against SdrrInfoHeader size, as contains Vecs, which
+    // increase its size.
+    const SDRR_RUNTIME_INFO_HEADER_SIZE: usize = 20;
+
+    // Offset of the access count field in the runtime info header
+    const ACCESS_COUNT_OFFSET: usize = 8;
+
+    pub(crate) const fn size() -> usize {
+        // Rrust struct size ignored the magic bytes
+        const_assert_eq!(
+            core::mem::size_of::<SdrrRuntimeInfoHeader>(),
+            SdrrRuntimeInfoHeader::SDRR_RUNTIME_INFO_HEADER_SIZE-4
+        );
+        Self::SDRR_RUNTIME_INFO_HEADER_SIZE
+    }
+
+    pub(crate) const fn access_count_offset() -> usize {
+        Self::ACCESS_COUNT_OFFSET
+    }
+}
+
+#[derive(Debug, DekuRead, DekuWrite)]
 #[deku(endian = "little", magic = b"SDRR")]
 // Used internally to construct [`SdrrInfo`]
 //
@@ -158,6 +196,26 @@ impl SdrrRomInfoWithLogging {
         );
         Self::ROM_INFO_WITH_LOGGING_SIZE
     }
+}
+
+/// Parse and validate runtime information from buffer
+pub(crate) fn parse_and_validate_runtime_info(data: &[u8]) -> Result<SdrrRuntimeInfoHeader, String> {
+    if data.len() < SdrrRuntimeInfoHeader::size() {
+        return Err("Runtime info data too small".into());
+    }
+
+    let (_, header) = SdrrRuntimeInfoHeader::from_bytes((data, 0))
+        .map_err(|e| format!("Failed to parse runtime info header: {}", e))?;
+
+    if header.runtime_info_size < SdrrRuntimeInfoHeader::size() as u8 {
+        return Err(format!(
+            "Invalid runtime info size: {} < {}",
+            header.runtime_info_size,
+            SdrrRuntimeInfoHeader::size()
+        ));
+    }
+
+    Ok(header)
 }
 
 /// Parse and validate SDRR header from buffer
