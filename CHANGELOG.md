@@ -27,6 +27,7 @@ The Rust tooling has been substantially refactored to easier to integrate SDRR s
   - STATUS_LED=1
   - COUNT_ROM_ACCESS=1
 - Added retrieval of mangled ROM images from firmware.  This can be used to compare the embedded images between different firmwares and to collect a pre-mangled ROM images in order to overwrite a running SDRR's RAM image with it.
+- Added new "One ROM To Rule Them All" BASIC program for upcoming video. 
 
 ### Fixes
 
