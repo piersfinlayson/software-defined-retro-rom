@@ -468,7 +468,6 @@ async fn lookup_raw_range(fw_data: &mut FirmwareData, args: &Args) {
 
     // Validate address range
     let rom_size = info.rom_sets[set as usize].size;
-    eprintln!("ROM size: 0x{:04X}", rom_size);
     if start_addr > end_addr || start_addr >= rom_size || end_addr >= rom_size {
         eprintln!(
             "Error: Invalid address range: 0x{:04X} to 0x{:04X} for ROM set size 0x{:04X}",
