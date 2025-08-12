@@ -2,7 +2,7 @@
 
 All notables changes between versions are documented in this file.
 
-## v0.3.0 - 2025-08-??
+## v0.3.0 - 2025-08-12
 
 The main user facing change in this release is the addition of support for remote analysis and co-processing alongside the SDRR device via plug-ins, such as [Airfrog](https://piers.rocks/u/airfrog) - **a tiny $3 probe for ARM devices**.  This allows you to inspect the firmware and runtime state of the SDRR device, and change its configuration and ROM data - **while it is serving ROMs**.
 
