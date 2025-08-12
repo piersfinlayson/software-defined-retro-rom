@@ -5,7 +5,7 @@ ENTRY(Reset_Handler)
 _Min_Stack_Size = 0x400;    /* 1KB */
 
 /* Space for storing functions in RAM */
-_Ram_Func_Size = 0x800; /* 2KB */
+_Ram_Func_Size = 0x1000; /* 4KB */
 
 /* Space for sdrr_raminfo_t in RAM */
 _Sdrr_Runtime_Info_Size = 0x100; /* 256 bytes */
