@@ -7,37 +7,42 @@ use goblin::elf::Elf;
 use std::fs;
 use std::path::Path;
 
+use crate::{FileType, FirmwareData};
 use crate::{SDRR_INFO_OFFSET, STM32F4_FLASH_BASE};
-use sdrr_fw_parser::{SdrrFileType, SdrrInfo};
+use sdrr_fw_parser::{Parser, readers::MemoryReader};
 
-pub fn load_sdrr_firmware<P: AsRef<Path>>(path: P) -> Result<SdrrInfo> {
+pub async fn load_sdrr_firmware<P: AsRef<Path>>(path: P) -> Result<FirmwareData> {
     let firmware_data = fs::read(path)?;
 
     if firmware_data.len() >= 4 && &firmware_data[0..4] == b"\x7fELF" {
-        load_from_elf(firmware_data)
+        load_from_elf(firmware_data).await
     } else {
-        load_from_binary(firmware_data)
+        load_from_binary(firmware_data).await
     }
 }
 
-fn load_from_binary(firmware_data: Vec<u8>) -> Result<SdrrInfo> {
-    if firmware_data.len() < SDRR_INFO_OFFSET + 48 {
+async fn load_from_binary(firmware_data: Vec<u8>) -> Result<FirmwareData> {
+    let file_size = firmware_data.len();
+    if file_size < SDRR_INFO_OFFSET + 48 {
         return Err(anyhow::anyhow!("Firmware file too small"));
     }
 
-    // Extract SDRR info from the specified offset
-    let sdrr_data = &firmware_data[SDRR_INFO_OFFSET..];
+    // Create reader with the firmware data
+    let reader = MemoryReader::new(firmware_data, STM32F4_FLASH_BASE);
+    let mut parser = Parser::new(reader);
 
-    SdrrInfo::from_firmware_bytes(
-        SdrrFileType::Orc,
-        sdrr_data,
-        &firmware_data,
-        firmware_data.len(),
-    )
-    .map_err(|e| anyhow::anyhow!(e))
+    // Parse the firmware
+    let info = parser.parse_flash().await.map_err(|e| anyhow::anyhow!(e))?;
+
+    Ok(FirmwareData {
+        file_type: FileType::Orc,
+        file_size,
+        parser,
+        info,
+    })
 }
 
-fn load_from_elf(firmware_data: Vec<u8>) -> Result<SdrrInfo> {
+async fn load_from_elf(firmware_data: Vec<u8>) -> Result<FirmwareData> {
     let elf = Elf::parse(&firmware_data)?;
 
     // Find the sdrr_info symbol
@@ -81,15 +86,21 @@ fn load_from_elf(firmware_data: Vec<u8>) -> Result<SdrrInfo> {
     let synthetic_binary =
         create_synthetic_binary_from_symbol(&firmware_data, sdrr_data, rodata_section)?;
 
-    // Parse using existing logic
-    let sdrr_data = &synthetic_binary[SDRR_INFO_OFFSET..];
-    SdrrInfo::from_firmware_bytes(
-        SdrrFileType::Elf,
-        sdrr_data,
-        &synthetic_binary,
-        firmware_data.len(),
-    )
-    .map_err(|e| anyhow::anyhow!(e))
+    // Create reader with synthetic binary
+    let reader = MemoryReader::new(synthetic_binary, STM32F4_FLASH_BASE);
+    let mut parser = Parser::new(reader);
+
+    // Parse the firmware
+    let info = parser.parse_flash().await.map_err(|e| anyhow::anyhow!(e))?;
+
+    // TODO: Consider if we should track that this was an ELF file somehow
+
+    Ok(FirmwareData {
+        file_type: FileType::Elf,
+        file_size: firmware_data.len(),
+        parser,
+        info,
+    })
 }
 
 fn create_synthetic_binary_from_symbol(

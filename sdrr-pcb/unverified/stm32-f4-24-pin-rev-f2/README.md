@@ -1,18 +1,27 @@
 # STM32F4 24 Pin Rev F
 
-**Unverified** - this revision has not yet been formally tested or confirmed to work.  Order PCBs at your own risk.
-
-One user has confirmed that this board worked with an STM32F401RB, as a replacement VIC-20 NTSC kernal ROM.
-
 23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
+
+**Unverified** - The BOM/CPL files have been unverified.  Use as your own risk.
+
+This is slightly tweaked version of [rev f](../../verified/stm32f4-24-pin-rev-f/README.md), and includes:
+- Modified gerbers (just changed silkscreen layer)
+- Component pick and place (CPL/POS) files
+- BOM files
+
+There is a single set of gerbers, and two different CPL and BOM files:
+- One uses the STM32F411RET6
+- The other uses the STM32F405RGT6
+
+The F411-based board is around $0.50 cheaper assembled than the F405.
 
 This revision has the following key improvements over rev E:
 
 - 2 x additional pins are broken out (labelled 'X1' and 'X2' on the underside), to allow a single SDRR to replace up to 3 2364 ROMs simultaneously, by wiring the chip select lines from the additional ROMs directly to these new pins.  
 
 <div style="text-align: center;">
-  <a href="/sdrr-pcb/unverified/stm32f4-24-pin-rev-f/sdrr-24-pin-rev-f-side.png">
-    <img src="sdrr-24-pin-rev-f-side.png" alt="SDRR STM32F4 24 pin rev F" width="400">
+  <a href="/sdrr-pcb/unverified/stm32f4-24-pin-rev-f2/sdrr-24-pin-rev-f-side.png">
+    <img src="sdrr-24-pin-rev-f-side.png" alt="SDRR STM32F4 24 pin rev F2" width="400">
   </a>
 </div>
 
@@ -20,16 +29,11 @@ This revision has the following key improvements over rev E:
 
 - [Schematic](sdrr-24-pin-rev-f-schematic.pdf)
 - [Fab Notes](sdrr-24-pin-rev-f-fab-notes.pdf)
-- [Gerbers](gerbers/) - unverified
-- [Ordering Bare PCBs](#ordering-bare-pcbs)
+- [Fab Files](fab/) - unverified
 - [Errata](#errata)
 - [Notes](#notes)
 - [Changelog](#changelog)
 - [BOM](#bom)
-
-## Ordering Bare PCBs
-
-[![Order from OSH Park](https://oshpark.com/assets/badge-5b7ec47045b78aef6eb9d83b3bac6b1920de805e9a0c227658eac6e19a045b9c.png)](https://oshpark.com/shared_projects/FXTBxRfK)
 
 ## Errata
 

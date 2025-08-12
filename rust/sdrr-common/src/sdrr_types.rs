@@ -13,7 +13,7 @@ pub enum RomType {
 }
 
 impl RomType {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn try_from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "2316" => Some(RomType::Rom2316),
             "2332" => Some(RomType::Rom2332),
@@ -75,7 +75,7 @@ pub enum StmFamily {
 }
 
 impl StmFamily {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn try_from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "f4" => Some(StmFamily::F4),
             _ => None,
@@ -151,7 +151,7 @@ impl StmProcessor {
                 let plln = vco_mhz / VCO_IN_MHZ;
 
                 // Check PLLN is in valid range (50-432)
-                if plln >= 50 && plln <= 432 {
+                if (50..=432).contains(&plln) {
                     // Calculate PLLQ for USB (48 MHz target)
                     let pllq_raw = (vco_mhz as f32 / 48.0).round() as u8;
                     let pllq = pllq_raw.clamp(2, 15);
@@ -194,6 +194,7 @@ impl StmProcessor {
 
     /// Check if target frequency is achievable with HSI PLL configuration
     pub fn is_frequency_valid(&self, target_freq_mhz: u32, overclock: bool) -> bool {
+        #[allow(clippy::match_single_binding)]
         match self {
             _ => {
                 // F4 family uses HSI PLL, check if target frequency is achievable
@@ -216,7 +217,7 @@ pub enum StmVariant {
 }
 
 impl StmVariant {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn try_from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "f446rc" => Some(StmVariant::F446RC),
             "f446re" => Some(StmVariant::F446RE),
@@ -427,7 +428,7 @@ pub enum ServeAlg {
 }
 
 impl ServeAlg {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn try_from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "default" => Some(ServeAlg::Default),
             "a" | "two_cs_one_addr" => Some(ServeAlg::TwoCsOneAddr),
@@ -460,7 +461,7 @@ pub enum CsLogic {
 }
 
 impl CsLogic {
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn try_from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "0" => Some(CsLogic::ActiveLow),
             "1" => Some(CsLogic::ActiveHigh),

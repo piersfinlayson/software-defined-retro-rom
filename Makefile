@@ -15,8 +15,8 @@
 #
 
 VERSION_MAJOR := 0
-VERSION_MINOR := 2
-VERSION_PATCH := 1
+VERSION_MINOR := 3
+VERSION_PATCH := 0
 BUILD_NUMBER := 1
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 export VERSION_MAJOR VERSION_MINOR VERSION_PATCH BUILD_NUMBER GIT_COMMIT
@@ -72,7 +72,7 @@ STM ?= f411re
 # You can add your own hardware revisions by creating the appropriate file in
 # sdrr-hw-config/user, or, if you plan to submit a pull request for it and your
 # hardware files, sdrr-hw-config/third-party. 
-HW_REV ?= 24-d
+HW_REV ?= 24-f
 
 # ROM configurations - each ROM can have its own type and CS settings
 #
@@ -94,6 +94,39 @@ HW_REV ?= 24-d
 
 ROM_CONFIGS ?= \
 	file=images/test/0_63_4096.rom,type=2332,cs1=0,cs2=1
+
+# Status LED
+#
+# The status LED is used to indicate the status of the SDRR device.
+# Only supported from HW revision e onwards.
+#
+# You can disable it in order to reduce the power consumption of the device.
+# With a 1K resistor, this is likely to save around 5-10mW of power.
+#
+# 1 is enabled, 0 disabled.
+
+#STATUS_LED ?= 0
+STATUS_LED ?= 1
+
+# Count ROM access - increment a RAM word every time CS goes from inactive to
+# active.
+#
+# The RAM word is located at 0x20000008 as of v0.3.0 and encoded in little
+# endian format.
+#
+# On boot this word is initialized to 0xFFFFFFFF.
+#
+# On starting the main serving loop, if this feature is active, the RAM word
+# is set to 0 and then increment any time all of the CS lines for the ROM type
+# go from inactive to active - i.e. once per ROM access.
+#
+# Use [airfrog](https://piers.rocks/u/airfrog) or an SWD debugger to read the
+# RAM value.
+#
+# While initial testing (C64 character ROM) suggest that this addition work
+# does not affect performance, it may under certain circumstances.
+#COUNT_ROM_ACCESS ?= 0
+COUNT_ROM_ACCESS ?= 1
 
 #
 # Development and debug settings
@@ -249,19 +282,6 @@ OSC ?= HSI
 OVERCLOCK ?= 0
 # OVERCLOCK ?= 1
 
-# Status LED
-#
-# The status LED is used to indicate the status of the SDRR device.
-# Only supported from HW revision e onwards.
-#
-# You can disable it in order to reduce the power consumption of the device.
-# With a 1K resistor, this is likely to save around 5-10mW of power.
-#
-# 1 is enabled, 0 disabled.
-
-STATUS_LED ?= 0
-# STATUS_LED ?= 1
-
 # Bootloader
 #
 # When enabled, the STM32 device will enter its built in bootloader on boot
@@ -375,6 +395,26 @@ else
   exit 1
 endif
 
+# Set STATUS_LED_FLAG based on STATUS_LED variable
+ifeq ($(STATUS_LED), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
+  $(info - STATUS_LED=$(STATUS_LED))
+endif
+  STATUS_LED_FLAG = --status-led
+else
+  STATUS_LED_FLAG = 
+endif
+
+# Set count_rom_access flag based on COUNT_ROM_ACCESS variable
+ifeq ($(COUNT_ROM_ACCESS), 1)
+ifneq ($(SUPPRESS_OUTPUT),1)
+  $(info - COUNT_ROM_ACCESS=$(COUNT_ROM_ACCESS))
+endif
+  COUNT_ROM_ACCESS_FLAG = --count-rom-access
+else
+  COUNT_ROM_ACCESS_FLAG =
+endif
+
 # Set swd flag based on SWD variable
 ifeq ($(SWD), 1)
 ifneq ($(SUPPRESS_OUTPUT),1)
@@ -463,16 +503,6 @@ endif
   OVERCLOCK_FLAG = --overclock
 else
   OVERCLOCK_FLAG =
-endif
-
-# Set STATUS_LED_FLAG based on STATUS_LED variable
-ifeq ($(STATUS_LED), 1)
-ifneq ($(SUPPRESS_OUTPUT),1)
-  $(info - STATUS_LED=$(STATUS_LED))
-endif
-  STATUS_LED_FLAG = --status-led
-else
-  STATUS_LED_FLAG = 
 endif
 
 # Set BOOTLOADER_FLAG based on BOOTLOADER variable
@@ -612,7 +642,7 @@ gen: $(CARGO_TARGET_DIR)/sdrr-gen
 	@echo "- process ROM data into SDRR firmware files"
 	@echo "-----"
 	@mkdir -p $(GEN_OUTPUT_DIR)
-	@$(CARGO_TARGET_DIR)/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output $(GEN_OUTPUT_DIR)
+	@$(CARGO_TARGET_DIR)/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(COUNT_ROM_ACCESS_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output-dir $(GEN_OUTPUT_DIR)
 
 sdrr-info:
 	@echo "=========================================="

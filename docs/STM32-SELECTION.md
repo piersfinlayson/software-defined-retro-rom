@@ -2,6 +2,8 @@
 
 All performance figures in this document are based on testing genuine STM32 parts.  For a discussion of clones, see [STM32-Clones](/docs/STM32-CLONES.md).
 
+If you'd like an unsupported STM32 variant supported, please raise an issue via GitHub or [add it yourself](docs/STM32-SELECTION.md#supporting-other-variants) and submit a PR.
+
 ## Supported STM32 Microcontrollers
 
 The following table provides details about the supported STM32 microcontrollers:
@@ -18,6 +20,15 @@ The following table provides details about the supported STM32 microcontrollers:
 | STM32F446RETx | 512KB | 128KB | 180MHz | 16 | 7 | f446re |
 
 Neither STM32F401RBT6 and STM32F401RCT6 have sufficient RAM to serve multi-ROM or banked sets of images, but they can serve single ROM images.
+
+The vast majority of ROMs can be emulated by the cheapest variant, the F401.  The best bang for buck are likely to be either:
+
+- STM32F401RET6 - [currently $1.93 on LCSC](https://lcsc.com/product-detail/Microcontrollers-MCU-MPU-SOC_ST-STM32F401RET6_C116978.html)
+- STM32F411RET6 - [currently $2.69 on LCSC](https://lcsc.com/product-detail/Microcontrollers-MCU-MPU-SOC_ST-STM32F411RET6_C94355.html)
+
+The F401 may require a small overclock for some systems, such as running the C64 multi-ROM set (~90MHz vs 84MHz rated maximum).
+
+There are also cheap [clones available](docs/STM32-CLONES.md), with a clone F405 coming in at around the same price as a genuine F411 (from LCSC).
 
 ## Clock Speed Requirements
 

@@ -32,7 +32,6 @@ Cargo.lock  # Uncomment this line if developing a library
 
 # IDE files
 .idea/
-.vscode/
 *.iml
 .rust-project.json
 

@@ -1,0 +1,10 @@
+Reference,Value,Datasheet,Footprint,Qty,DNP,LCSC,Comment
+"C1,C2",1uF,~,Capacitor_SMD:C_0603_1608Metric,2,,C15849,
+"C3,C9",4.7uF,~,Capacitor_SMD:C_0603_1608Metric,1,,C19666,
+"C4,C5,C6,C7,C8",0.1uF,~,Capacitor_SMD:C_0603_1608Metric,5,,C14663,
+D1,LED_Small,~,LED_SMD:LED_0603_1608Metric,1,,C2286,
+"R1,R2",4K7,~,Resistor_SMD:R_0603_1608Metric,2,,C23162,
+R3,1K,~,Resistor_SMD:R_0603_1608Metric,1,,C21190,
+"RC4,RC5",0R or 2.2uF,~,Capacitor_SMD:C_0603_1608Metric,2,,C21189,
+U1,STM32F411RET6,https://www.st.com/resource/en/datasheet/stm32f411rc.pdf,Package_QFP:LQFP-64_10x10mm_P0.5mm,1,,C94355,
+U3,AP2112K-3.3,,Package_TO_SOT_SMD:SOT-23-5,1,,C51118,

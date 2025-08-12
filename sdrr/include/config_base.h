@@ -156,11 +156,18 @@ typedef struct {
     const uint8_t boot_logging_enabled;
     const uint8_t mco_enabled;
 
-    // Number of ROM sets - length of the `rom_sets` array 
+    // Number of ROM sets - number of entries in the `rom_sets` array 
     // Offset: 41
-    // 3 bytes
+    // 1 byte
     const uint8_t rom_set_count;
-    const uint8_t pad2[2];
+
+    // Whether access count is enabled
+    // Offset: 42
+    // 1 byte
+    const uint8_t count_rom_access;
+
+    // Reserved for future use
+    const uint8_t pad2[1];
     
     // Pointer to array of ROM sets
     // Offset: 44
@@ -279,5 +286,61 @@ typedef struct sdrr_rom_set_t {
     // CS1 state (active high/low) when using multiple ROM images in this set
     const sdrr_cs_state_t multi_rom_cs1_state;  // CS1 state
 } sdrr_rom_set_t;
+
+// SDRR Runtime Information Structure
+//
+// Contains information about the SDRR runtime environment.
+typedef struct sdrr_runtime_info_t {
+    // Magic bytes to identify the firmware and structure
+    // Offset: 0
+    // 4 bytes
+    char magic[4];  // Magic bytes = "SDRR"
+
+    // Size of this structure in bytes
+    // Offset: 4
+    // 1 byte
+    uint8_t runtime_info_size;
+
+    // Image select jumper state at boot.
+    // Initialized to 0xFF.
+    // Offset: 5
+    // 1 byte
+    uint8_t  image_sel;
+
+    // Index of the currently selected ROM set.  This is chosen at boot via
+    // the image select jumpers.
+    // Initialized to 0xFF.
+    // Offset: 6
+    // 1 byte
+    uint8_t rom_set_index;
+
+    // Whether the ROM access counting feature is enabled.
+    // Initialized to 0x00.
+    // Offset: 7
+    // 1 byte
+    uint8_t count_rom_access;
+
+    // Counter for the number times the CS lines have transitioned from
+    // inactive to active.  This is only updated if COUNT_ROM_ACCESS is
+    // defined in the configuration.  This field is unused (but present) if
+    // COUNT_ROM_ACCESS is not defined.
+    // Initialized to 0xFFFFFFFF.  Only set to 0x00000000 if COUNT_ROM_ACCESS
+    // is defined, when the ROM starts serving.
+    // Offset: 8
+    // 4 bytes
+    uint32_t access_count;
+
+    // Pointer to the ROM table SDRR uses to serve the ROM data this run
+    // Initialized to null.
+    // Offset: 12
+    // 4 bytes
+    void *rom_table;
+
+    // Length of the ROM table SDRR is servig in bytes.
+    // Initialized to 0.
+    // Offset: 16
+    // 4 bytes
+    uint32_t rom_table_size;
+} sdrr_runtime_info_t;
 
 #endif // CONFIG_BASE_H
