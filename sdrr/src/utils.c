@@ -380,6 +380,12 @@ void log_init(void) {
         LOG("Bootloader: %s", disabled);
     }
 
+    if (sdrr_info.status_led_enabled) {
+        LOG("Status LED: enabled - PB%d", sdrr_info.pins->status);
+    } else {
+        LOG("Status LED: disabled");
+    }
+
 #if defined(C_MAIN_LOOP)
     LOG("C main loop: enabled");
 #endif // C_MAIN_LOOP
@@ -494,7 +500,7 @@ void execute_ram_func(uint32_t ram_addr) {
 
 #endif // EXECUTE_FROM_RAM
 
-// Common setup for stauts LED output using PB15 (inverted logic: 0=on, 1=off)
+// Common setup for status LED output using PB15 (inverted logic: 0=on, 1=off)
 void setup_status_led(void) {
     if (sdrr_info.pins->status_port != PORT_B) {
         LOG("!!! Status port not B - not using");

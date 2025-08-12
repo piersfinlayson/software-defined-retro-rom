@@ -243,19 +243,74 @@ int main(void) {
     // - ~3ms    F411 100MHz BOOT_LOGGING=1
     // - ~1.5ms  F411 100MHz BOOT_LOGGING=0
 
+    // Setup status LED up now, so we don't need to call the function from the
+    // main loop - which might be running from RAM.
+    if (sdrr_info.status_led_enabled) {
+        setup_status_led();
+    }
+
     // Execute the main_loop
 #if !defined(MAIN_LOOP_LOGGING)
     LOG("Start main loop - logging ends");
 #endif // !MAIN_LOOP_LOGGING
 
 #if !defined(EXECUTE_FROM_RAM)
-    main_loop(set);
+    main_loop(&sdrr_info, set);
 #else // EXECUTE_FROM_RAM
+#ifndef PRELOAD_TO_RAM
+#error "PRELOAD_TO_RAM must be defined when EXECUTE_FROM_RAM is enabled"
+#endif // !PRELOAD_TO_RAM
+
+    // We need to set up a copy of some of sdrr_info and linked to data, in
+    // order for main_loop() to be able to access it.  If we don't do this,
+    // main_loop() will try to access the original sdrr_info, which is in
+    // flash, and it will use relative addressing, which won't work.
+
+    // Set up addresses to copy sdrr_info and related data to
+
+    // These come from the linker
+    extern uint8_t _sdrr_info_ram_start[];
+    extern uint8_t _sdrr_info_ram_end[];
+
+    // The _addresses_ of the linker variables are the locations we're
+    // interested in
+    uint8_t *sdrr_info_ram_start = &_sdrr_info_ram_start[0];
+    uint8_t *sdrr_info_ram_end = &_sdrr_info_ram_end[0];
+    uint32_t ram_size = sdrr_info_ram_end - sdrr_info_ram_start;
+    uint32_t required_size = sizeof(sdrr_info_t) + sizeof(sdrr_pins_t) + sizeof(sdrr_rom_set_t);
+    DEBUG("RAM start: 0x%08X, end: 0x%08X", (unsigned int)sdrr_info_ram_start, (unsigned int)sdrr_info_ram_end);
+    DEBUG("RAM size: 0x%08X bytes, required size: 0x%08X bytes", ram_size, required_size);
+    if (required_size > ram_size) {
+        LOG("!!! Not enough RAM for sdrr_info and related data");
+    }
+    // Continue away :-|
+
+    // Copy sdrr_info to RAM
+    uint8_t *ptr = sdrr_info_ram_start;
+    sdrr_info_t *info = (sdrr_info_t *)ptr;
+    memcpy(info, &sdrr_info, sizeof(sdrr_info_t));
+    DEBUG("Copied sdrr_info to RAM at 0x%08X", (uint32_t)info);
+    ptr += sizeof(sdrr_info_t);
+
+    // Copy the pins and update sdrr_info which points to pins
+    sdrr_pins_t *pins = (sdrr_pins_t *)ptr;
+    memcpy(pins, sdrr_info.pins, sizeof(sdrr_pins_t));
+    DEBUG("Copied sdrr_pins to RAM at 0x%08X", (uint32_t)pins);
+    info->pins = pins;
+    ptr += sizeof(sdrr_pins_t);
+
+    // Copy the rom_set to RAM
+    sdrr_rom_set_t *rom_set = (sdrr_rom_set_t *)ptr;
+    memcpy(rom_set, set, sizeof(sdrr_rom_set_t));
+    DEBUG("Copied sdrr_rom_set to RAM at 0x%08X", (uint32_t)rom_set);
+    ptr += sizeof(sdrr_rom_set_t);
+
     // The main loop function was copied to RAM in the ResetHandler
-    extern uint32_t _ram_func_start;    // Start of .ram_func section in RAM
-    void (*ram_func)(uint8_t) = (void(*)(void))(_ram_func_start | 1);
-    ram_func(rom);
-#endif
+    extern uint32_t _ram_func_start;
+    void (*ram_func)(const sdrr_info_t *, const sdrr_rom_set_t *set) = (void(*)(const sdrr_info_t *, const sdrr_rom_set_t *set))((uint32_t)&_ram_func_start | 1);
+    DEBUG("Executing main_loop from RAM at 0x%08X", (uint32_t)ram_func);
+    ram_func(info, rom_set);
+#endif // !EXECUTE_FROM_RAM
 
     return 0;
 }
