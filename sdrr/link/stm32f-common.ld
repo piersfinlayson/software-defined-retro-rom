@@ -5,7 +5,10 @@ ENTRY(Reset_Handler)
 _Min_Stack_Size = 0x400;    /* 1KB */
 
 /* Space for storing functions in RAM */
-_Ram_Func_Size = 0x800; /* 1KB */
+_Ram_Func_Size = 0x1000; /* 4KB */
+
+/* Space for sdrr_raminfo_t in RAM */
+_Sdrr_Runtime_Info_Size = 0x100; /* 256 bytes */
 
 SECTIONS
 {
@@ -62,6 +65,20 @@ SECTIONS
         _flash_end = .;
     } >FLASH
 
+    /* MUST COME FIRST IN RAM */
+    /* Reserve space for the sdrr_runtime_info structure at start of RAM */
+    _sdrr_runtime_info_ram = LOADADDR(.sdrr_runtime_info);
+    .sdrr_runtime_info :
+    {
+        . = ALIGN(4);
+        _sdrr_runtime_info_start = .;
+        *(.sdrr_runtime_info)
+        *(.sdrr_runtime_info*)
+        . = _sdrr_runtime_info_start + _Sdrr_Runtime_Info_Size;
+        . = ALIGN(4);
+        _sdrr_runtime_info_end = .;
+    } >RAM AT> FLASH
+
     /* Reserve space at start of RAM for ROM image */
     .ram_rom_image :
     {
@@ -84,7 +101,6 @@ SECTIONS
 
     /* Data to be copied from flash to RAM */
     _sidata = LOADADDR(.data);
-
     .data :
     {
         . = ALIGN(4);
@@ -131,3 +147,7 @@ _estack = ORIGIN(RAM) + LENGTH(RAM);
 /* Check enough space for any RAM function */
 ASSERT((_main_loop_end - _main_loop_start) <= _Ram_Func_Size, 
     "Error: main_loop section too large for RAM buffer")
+
+/* Check enough space for sdrr_runtime_info structure */
+ASSERT(SIZEOF(.sdrr_runtime_info) <= _Sdrr_Runtime_Info_Size, 
+    "Error: sdrr_runtime_info structure too large for allocated space")

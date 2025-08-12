@@ -134,4 +134,7 @@ extern const sdrr_info_t sdrr_info;
 
 #define BOOTLOADER_SEL_MASK  0b10000111
 
+// Struct used to hold the runtime information for SDRR
+extern sdrr_runtime_info_t sdrr_runtime_info;
+
 #endif // SDRR_INCLUDE_H

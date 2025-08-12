@@ -8,6 +8,17 @@
 
 const char sdrr_build_date[] = __DATE__ " " __TIME__;
 
+sdrr_runtime_info_t sdrr_runtime_info __attribute__((section(".sdrr_runtime_info"))) = {
+    .magic = {'s', 'd', 'r', 'r'},  // Lower case to distinguish from firmware magic
+    .runtime_info_size = sizeof(sdrr_runtime_info_t),
+    .image_sel = 0xFF,
+    .rom_set_index = 0xFF,
+    .count_rom_access = 0x00,
+    .access_count = 0xFFFFFFFF,
+    .rom_table = NULL,
+    .rom_table_size = 0,
+};
+
 // Sets up the system registers, clock and logging as required
 void system_init(void) {
     if (sdrr_info.boot_logging_enabled) {
@@ -75,7 +86,6 @@ void system_init(void) {
 void gpio_init(void) {
     // Enable GPIO ports A, B, and C
     RCC_AHB1ENR |= (1 << 0) | (1 << 1) | (1 << 2);
-
 
     //
     // GPIOA
@@ -150,6 +160,7 @@ void enter_bootloader(void) {
 void check_enter_bootloader(void) {
     uint32_t sel_pins, sel_mask;
     sel_pins = check_sel_pins(&sel_mask);
+
     if (sel_mask == 0) {
         // Failure - no sel pins
         return;
@@ -186,8 +197,8 @@ int main(void) {
     system_init();
     gpio_init();
 
-    uint8_t set_index = get_rom_set_index();
-    const sdrr_rom_set_t *set = rom_set + set_index;
+    sdrr_runtime_info.rom_set_index = get_rom_set_index();
+    const sdrr_rom_set_t *set = rom_set + sdrr_runtime_info.rom_set_index;
 #if !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
     // Only bother to preload the ROM image if we are not running a test
     if (sdrr_info.preload_image_to_ram) {

@@ -53,6 +53,10 @@
 #define R_CS_INVERT_MASK    "r8"
 #define R_CS_CHECK_MASK     "r9"
 #define R_CS_TEST           "r10"
+#if defined(COUNT_ROM_ACCESS)
+#define R_AC_ADDR       "r11"
+#define R_AC_COUNT      "r12"
+#endif // COUNT_ROM_ACCESS
 
 // Assembly Outputs, Input, and Clobbers
 #if defined(MAIN_LOOP_ONE_SHOT)
@@ -62,6 +66,13 @@
 #else // !MAIN_LOOP_ONE_SHOT
 #define ASM_OUTPUTS
 #endif // MAIN_LOOP_ONE_SHOT
+#if defined(COUNT_ROM_ACCESS)
+#define ACCESS_COUNT_ASM_INPUT ,\
+    "r" (r_access_count_addr), \
+    "r" (r_access_count)
+#else // !COUNT_ROM_ACCESS
+#define ACCESS_COUNT_ASM_INPUT
+#endif // COUNT_ROM_ACCESS
 #define ASM_INPUTS \
     "r" (rom_table), \
     "r" (cs_invert_mask_reg), \
@@ -70,7 +81,7 @@
     "r" (gpioa_odr), \
     "r" (gpioa_moder), \
     "r" (data_output_mask), \
-    "r" (data_input_mask)
+    "r" (data_input_mask) ACCESS_COUNT_ASM_INPUT
 #define ASM_CLOBBERS R_ADDR_CS, R_DATA, R_CS_TEST, "cc", "memory"
 
 //
@@ -127,6 +138,18 @@
 // Branches unconditionally
 #define BRANCH(X)       "b " #X"%=" "\n"
 
+#if defined(COUNT_ROM_ACCESS)
+// Load the current access count value
+#define LOAD_COUNT      "ldr " R_AC_COUNT ", [" R_AC_ADDR "]\n"
+
+// Increment the access count value
+#define INC_COUNT       "add " R_AC_COUNT ", " R_AC_COUNT ", #1\n"
+
+// Store the access count value back to the address
+#define STORE_COUNT     "str " R_AC_COUNT ", [" R_AC_ADDR "]\n"
+
+#endif // COUNT_ROM_ACCESS
+
 // Main loop end code - used to end the main loop in the one shot case
 #if defined(MAIN_LOOP_ONE_SHOT)
 #define MAIN_LOOP_ONE_SHOT_END_LABEL(X) \
@@ -149,6 +172,13 @@
 // Pre-load registers.
 //
 // This is a macro so it's easy to put it just before each ASM block.
+#if defined(COUNT_ROM_ACCESS)
+#define PRELOAD_ACCESS_COUNT  ; \
+    register uint32_t r_access_count_addr asm(R_AC_ADDR) = access_count_addr; \
+    register uint32_t r_access_count asm(R_AC_COUNT) = access_count
+#else // !COUNT_ROM_ACCESS
+#define PRELOAD_ACCESS_COUNT
+#endif // COUNT_ROM_ACCESS
 #define PRELOAD_ASM_REGISTERS \
     register uint32_t data_output_mask asm(R_DATA_OUT_MASK) = data_output_mask_val; \
     register uint32_t data_input_mask asm(R_DATA_IN_MASK) = data_input_mask_val; \
@@ -157,7 +187,7 @@
     register uint32_t gpioc_idr asm(R_GPIO_ADDR_CS_IDR) = VAL_GPIOC_IDR; \
     register uint32_t gpioa_odr asm(R_GPIO_DATA_ODR) = VAL_GPIOA_ODR; \
     register uint32_t gpioa_moder asm(R_GPIO_DATA_MODER) = VAL_GPIOA_MODER; \
-    register uint32_t rom_table asm(R_ROM_TABLE) = rom_table_val
+    register uint32_t rom_table asm(R_ROM_TABLE) = rom_table_val PRELOAD_ACCESS_COUNT
 
 // This is the default algorith for serve a single ROM image. It:
 // - tests the CS line(s) twice as often as the data byte is loaded from RAM
@@ -383,3 +413,41 @@
         : ASM_INPUTS                                                        \
         : ASM_CLOBBERS                                                      \
     )
+
+#if defined(COUNT_ROM_ACCESS)
+// A variant of ALG2 that counts the number of times CS goes active
+#define ALG2_COUNT_ASM(TEST_CS_OPTION, BACT, BNACT)                         \
+    PRELOAD_ASM_REGISTERS;                                                  \
+    __asm volatile (                                                        \
+        BRANCH(ALG2_LOOP)                                                   \
+    LABEL(ALG2_CS_ACTIVE)                                                   \
+        LOAD_FROM_RAM                                                       \
+        SET_DATA_OUT                                                        \
+    LABEL(ALG2_CS_ACTIVE_MID)                                               \
+        STORE_TO_DATA                                                       \
+        INC_COUNT                                                           \
+        STORE_COUNT                                                         \
+        LOAD_ADDR_CS                                                        \
+        TEST_CS_OPTION                                                      \
+        LOAD_FROM_RAM                                                       \
+        BNACT(ALG2_CS_INACTIVE)                                             \
+    LABEL(ALG2_CS_ACTIVE_POST_COUNT)                                        \
+        STORE_TO_DATA                                                       \
+        LOAD_ADDR_CS                                                        \
+        TEST_CS_OPTION                                                      \
+        LOAD_FROM_RAM                                                       \
+        BACT(ALG2_CS_ACTIVE_POST_COUNT)                                     \
+    LABEL(ALG2_CS_INACTIVE)                                                 \
+        SET_DATA_IN                                                         \
+        MAIN_LOOP_ONE_SHOT_END_BRANCH(ALG2_END_LOOP)                        \
+    LABEL(ALG2_LOOP)                                                        \
+        LOAD_ADDR_CS                                                        \
+        TEST_CS_OPTION                                                      \
+        BACT(ALG2_CS_ACTIVE)                                                \
+        BRANCH(ALG2_LOOP)                                                   \
+    MAIN_LOOP_ONE_SHOT_END_LABEL(ALG2_END_LOOP)                             \
+        : ASM_OUTPUTS                                                       \
+        : ASM_INPUTS                                                        \
+        : ASM_CLOBBERS                                                      \
+    )
+#endif // COUNT_ROM_ACCESS

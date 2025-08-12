@@ -1,17 +1,19 @@
 [package]
 name = "sdrr-info"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 authors = ["Piers Finlayson <piers@piers.rocks>"]
 description = "Generates information from Software Defined Retro ROM (SDRR) firmware elf files"
 readme = "README.md"
 license = "MIT"
-keywords = ["commodore", "embedded", "sdrr", "rom", "eeprom", "eprom", "flash"]
+keywords = ["embedded", "rom", "eeprom", "eprom", "flash"]
 
 [dependencies]
-goblin = "0.10"
 anyhow = "1.0"
-clap = { version = "4.5", features = ["derive"] }
 chrono = "0.4"
+clap = { version = "4.5.42", features = ["derive"] }
+goblin = "0.10"
+smol = "2.0"
+
 sdrr-common = { path = "../sdrr-common" }
 sdrr-fw-parser = { path = "../sdrr-fw-parser", features = ["std"] }

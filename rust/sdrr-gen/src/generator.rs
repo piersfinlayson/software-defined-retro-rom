@@ -2,13 +2,19 @@
 //
 // MIT License
 
-use crate::config::Config;
-use crate::preprocessor::RomSet;
+//! sdrr-gen - Generates the firmware files required by SDRR.
+
 use anyhow::{Context, Result};
-use sdrr_common::sdrr_types::{CsLogic, RomType};
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::Path;
+use strum::IntoEnumIterator;
+
+use sdrr_common::{CsLogic, RomType};
+
+use crate::config::Config;
+use crate::file::{OutType, out_filename};
+use crate::preprocessor::RomSet;
 
 // Generate all output files
 pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
@@ -22,24 +28,20 @@ pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
         })?;
     }
 
-    // Generate roms.h
-    generate_roms_header_file(config, rom_sets)?;
-
-    // Generate roms.c
-    generate_roms_implementation_file(config, rom_sets)?;
-
-    // Generate sdrr_config.h
-    generate_sdrr_config_header(config)?;
-
-    // Generate sdrr_config.c
-    generate_sdrr_config_implementation(config, rom_sets)?;
-
-    // Generate Makefile fragment
-    generate_makefile_fragment(config)?;
-
-    // Generate linker script
-    generate_linker_script(config)?;
-
+    // Generate all of the output files
+    for out_type in OutType::iter() {
+        let filename = out_filename(out_type);
+        match out_type {
+            OutType::RomsC => generate_roms_implementation_file(&filename, config, rom_sets)?,
+            OutType::RomsH => generate_roms_header_file(&filename, config, rom_sets)?,
+            OutType::SdrrConfigH => generate_sdrr_config_header(&filename, config)?,
+            OutType::SdrrConfigC => {
+                generate_sdrr_config_implementation(&filename, config, rom_sets)?
+            }
+            OutType::GenMk => generate_makefile_fragment(&filename, config)?,
+            OutType::LinkerLd => generate_linker_script(&filename, config)?,
+        }
+    }
     Ok(())
 }
 
@@ -50,7 +52,7 @@ enum FileType {
     Linker,
 }
 
-fn create_file(output_dir: &PathBuf, filename: &str, filetype: FileType) -> Result<fs::File> {
+fn create_file(output_dir: &Path, filename: &Path, filetype: FileType) -> Result<fs::File> {
     let file_path = output_dir.join(filename);
     let mut file = fs::File::create(&file_path)
         .with_context(|| format!("Failed to create file: {}", file_path.display()))?;
@@ -60,7 +62,7 @@ fn create_file(output_dir: &PathBuf, filename: &str, filetype: FileType) -> Resu
     Ok(file)
 }
 
-fn write_header(name: &str, file: &mut fs::File, filetype: FileType) -> Result<()> {
+fn write_header(name: &Path, file: &mut fs::File, filetype: FileType) -> Result<()> {
     let comment = match filetype {
         FileType::C => "//",
         FileType::Makefile => "#",
@@ -69,7 +71,7 @@ fn write_header(name: &str, file: &mut fs::File, filetype: FileType) -> Result<(
     if filetype == FileType::Linker {
         writeln!(file, "/*")?;
     }
-    writeln!(file, "{comment} {}", name)?;
+    writeln!(file, "{comment} {}", name.display())?;
     writeln!(file)?;
     writeln!(
         file,
@@ -104,9 +106,8 @@ fn write_header(name: &str, file: &mut fs::File, filetype: FileType) -> Result<(
 }
 
 // Generate roms.h header file
-fn generate_roms_header_file(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
-    const FILENAME: &str = "roms.h";
-    let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
+fn generate_roms_header_file(filename: &Path, config: &Config, rom_sets: &[RomSet]) -> Result<()> {
+    let mut file = create_file(&config.output_dir, filename, FileType::C)?;
 
     writeln!(file, "#ifndef SDRR_ROMS_H")?;
     writeln!(file, "#define SDRR_ROMS_H")?;
@@ -130,9 +131,12 @@ fn generate_roms_header_file(config: &Config, rom_sets: &[RomSet]) -> Result<()>
 }
 
 // Generate roms.c implementation file
-fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
-    const FILENAME: &str = "roms.c";
-    let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
+fn generate_roms_implementation_file(
+    filename: &Path,
+    config: &Config,
+    rom_sets: &[RomSet],
+) -> Result<()> {
+    let mut file = create_file(&config.output_dir, filename, FileType::C)?;
 
     writeln!(file, "#include \"sdrr_config.h\"")?;
     writeln!(file, "#include \"config_base.h\"")?;
@@ -149,7 +153,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
             .unwrap_or(&rom_config.original_source);
         let filename = source
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or_else(|| panic!("Failed to extract valid filename from source: {}", source));
         writeln!(
             file,
@@ -281,7 +285,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                     "All ROMs in a multi-ROM set must have the same CS1 configuration"
                 ));
             }
-            
+
             if !rom_set.is_banked {
                 // Check that every ROM in this set has CS2 and CS3 ignored.
                 if rom_set.roms.iter().any(|rom| {
@@ -374,7 +378,7 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
                 write!(file, "    ")?;
             }
 
-            let byte = rom_set.get_byte(address, &hw);
+            let byte = rom_set.get_byte(address, hw);
             write!(file, "0x{:02x}, ", byte)?;
         }
 
@@ -386,9 +390,8 @@ fn generate_roms_implementation_file(config: &Config, rom_sets: &[RomSet]) -> Re
 }
 
 // Generate sdrr_config.h header file
-fn generate_sdrr_config_header(config: &Config) -> Result<()> {
-    const FILENAME: &str = "sdrr_config.h";
-    let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
+fn generate_sdrr_config_header(filename: &Path, config: &Config) -> Result<()> {
+    let mut file = create_file(&config.output_dir, filename, FileType::C)?;
 
     writeln!(file, "#ifndef SDRR_CONFIG_H")?;
     writeln!(file, "#define SDRR_CONFIG_H")?;
@@ -472,6 +475,18 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
         }
     } else {
         writeln!(file, "// PLL configuration not applicable for this variant")?;
+    }
+
+    // Count ROM access
+    writeln!(file)?;
+    writeln!(file, "// Count ROM access")?;
+    if config.count_rom_access {
+        writeln!(file, "#define COUNT_ROM_ACCESS 1")?;
+    } else {
+        writeln!(
+            file,
+            "// #define COUNT_ROM_ACCESS 0  // ROM access counting disabled"
+        )?;
     }
 
     writeln!(file)?;
@@ -576,9 +591,12 @@ fn generate_sdrr_config_header(config: &Config) -> Result<()> {
 }
 
 // Generate sdrr_config.c implementation file
-fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
-    const FILENAME: &str = "sdrr_config.c";
-    let mut file = create_file(&config.output_dir, FILENAME, FileType::C)?;
+fn generate_sdrr_config_implementation(
+    filename: &Path,
+    config: &Config,
+    rom_sets: &[RomSet],
+) -> Result<()> {
+    let mut file = create_file(&config.output_dir, filename, FileType::C)?;
 
     writeln!(file, "#include \"sdrr_config.h\"")?;
     writeln!(file, "#include \"config_base.h\"")?;
@@ -724,7 +742,12 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
 
     // ROM set info
     writeln!(file, "    .rom_set_count = {},", rom_sets.len())?;
-    writeln!(file, "    .pad2 = {{0, 0}},")?;
+    writeln!(
+        file,
+        "    .count_rom_access = {},",
+        if config.count_rom_access { 1 } else { 0 }
+    )?;
+    writeln!(file, "    .pad2 = {{0}},")?;
     writeln!(file, "    .rom_sets = rom_set,")?;
     writeln!(file, "    .pins = &sdrr_pins,")?;
 
@@ -736,9 +759,8 @@ fn generate_sdrr_config_implementation(config: &Config, rom_sets: &[RomSet]) -> 
     Ok(())
 }
 
-fn generate_makefile_fragment(config: &Config) -> Result<()> {
-    const FILENAME: &str = "generated.mk";
-    let mut file = create_file(&config.output_dir, FILENAME, FileType::Makefile)?;
+fn generate_makefile_fragment(filename: &Path, config: &Config) -> Result<()> {
+    let mut file = create_file(&config.output_dir, filename, FileType::Makefile)?;
 
     // STM32 variant
     writeln!(file, "# STM32 variant")?;
@@ -754,9 +776,8 @@ fn generate_makefile_fragment(config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn generate_linker_script(config: &Config) -> Result<()> {
-    const FILENAME: &str = "linker.ld";
-    let mut file = create_file(&config.output_dir, FILENAME, FileType::Linker)?;
+fn generate_linker_script(filename: &Path, config: &Config) -> Result<()> {
+    let mut file = create_file(&config.output_dir, filename, FileType::Linker)?;
 
     writeln!(file, "MEMORY")?;
     writeln!(file, "{{")?;

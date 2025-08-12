@@ -2,10 +2,15 @@
 //
 // MIT License
 
+//! sdrr-gen - Preprocessor for the SDRR generator.
+//!
+//! Handles mangling ROM images by address lines and data lines to match the
+//! hardware's pin mapping.
+
 use crate::config::{RomInSet, SizeHandling};
 use anyhow::{Context, Result};
 use sdrr_common::hardware::HwConfig;
-use sdrr_common::sdrr_types::{CsLogic, RomType};
+use sdrr_common::{CsLogic, RomType};
 use std::fs;
 use std::path::Path;
 
@@ -87,8 +92,8 @@ impl RomImage {
         // Start with 0 result
         let mut result = 0;
 
-        for pin in 0..phys_pin_to_addr_map.len() {
-            if let Some(addr_bit) = phys_pin_to_addr_map[pin] {
+        for (pin, item) in phys_pin_to_addr_map.iter().enumerate() {
+            if let Some(addr_bit) = item {
                 // Check if this pin is set in the original address
                 if (address & (1 << pin)) != 0 {
                     // Set the corresponding address bit in the result
@@ -122,6 +127,7 @@ impl RomImage {
         let mut result = 0;
 
         // For each bit in the original byte
+        #[allow(clippy::needless_range_loop)]
         for bit_pos in 0..8 {
             // Check if this bit is set in the original byte
             if (byte & (1 << bit_pos)) != 0 {
@@ -163,15 +169,17 @@ impl RomImage {
         assert!(transformed_address < self.data.len());
 
         // Get the byte from the logical ROM address.
-        let byte = self.data.get(transformed_address).copied().expect(
-            // Hitting this error suggests an internal error
-            format!(
-                "Address {} out of bounds for ROM image of size {}",
-                transformed_address,
-                self.data.len()
-            )
-            .as_str(),
-        );
+        let byte = self
+            .data
+            .get(transformed_address)
+            .copied()
+            .unwrap_or_else(|| {
+                panic!(
+                    "Address {} out of bounds for ROM image of size {}",
+                    transformed_address,
+                    self.data.len()
+                )
+            });
 
         // Now transform the byte, as the physical data lines are not in the
         // expected order (0-7).

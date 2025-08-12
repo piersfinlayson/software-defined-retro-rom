@@ -66,7 +66,7 @@ endif
 endif
 
 SEGGER_RTT_FLAGS := -DBUFFER_SIZE_UP=4096
-CFLAGS := $(EXTRA_C_FLAGS) $(COMMON_FLAGS) $(SEGGER_RTT_FLAGS) -Werror -I include -I $(OUTPUT_DIR) -I segger-rtt/RTT -I segger-rtt/Config -g -nostdlib -O3 -ffunction-sections -fdata-sections -Wall -Wextra -MMD -MD -MP
+CFLAGS := $(EXTRA_C_FLAGS) $(COMMON_FLAGS) $(SEGGER_RTT_FLAGS) -Werror -I include -I $(OUTPUT_DIR) -I segger-rtt/RTT -I segger-rtt/Config -g -nostdlib -O3 -ffunction-sections -fomit-frame-pointer -fdata-sections -Wall -Wextra -MMD -MD -MP
 LDFLAGS := $(COMMON_FLAGS) -Werror -L link -nostdlib -specs=nosys.specs -specs=nano.specs -Wl,--no-gc-sections -Wl,--fatal-warnings -Wl,-Map=$(MAP)
 
 # Phony targets

@@ -93,10 +93,19 @@ extern uint32_t _ram_func_start;    // Start of .ram_func section in RAM
 extern uint32_t _ram_func_end;      // End of .ram_func section in RAM
 #endif
 
+extern uint32_t _sdrr_runtime_info_start; // Start of .sdrr_runtime_info section on flash
+extern uint32_t _sdrr_runtime_info_ram;   // Start of .sdrr_runtime_info section in RAM
+extern uint32_t _sdrr_runtime_info_end;   // End of .sdrr_runtime_info section in flash
+
 // Reset handler
 void Reset_Handler(void) {
     // We use memcpy and memset because it's likely to be faster than anything
     // we could come up with.
+
+    // Copy sdrr_runtime_info_t from flash to RAM
+    memcpy(&_sdrr_runtime_info_start,
+           &_sdrr_runtime_info_ram,
+           (unsigned int)((char*)&_sdrr_runtime_info_end - (char*)&_sdrr_runtime_info_start));
 
     // Copy data section from flash to RAM
     memcpy(&_sdata, &_sidata, (unsigned int)((char*)&_edata - (char*)&_sdata));

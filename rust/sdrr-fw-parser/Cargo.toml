@@ -1,6 +1,6 @@
 [package]
 name = "sdrr-fw-parser"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 authors = ["Piers Finlayson <piers@piers.rocks>"]
 description = "Software Defined Retro ROM (SDRR) firmware parser"
@@ -13,7 +13,11 @@ categories = ["parsing", "embedded", "hardware-support", "no-std", "development-
 [features]
 default = ["std"]
 std = ["deku/std"]
+esp32 = []
 
 [dependencies]
 deku = { version = "0.19", default-features = false, features = ["alloc"] }
 static_assertions = "1.1"
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+log = "0.4"
+esp-println = { version = "0.15", features = ["esp32c3", "log-04"] }
