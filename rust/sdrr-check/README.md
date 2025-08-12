@@ -37,3 +37,13 @@ To use `sdrr-check`, flash it to the SDRR device and connect to the logging inte
 - check the jumpers work, by opening and closing them and checking the logs.
 
 The NRST pin can be verified by ensuring the LED "freezes" when the NRST jumper is closed, and restarts flashing when the jumper is opened.
+
+## Binary
+
+To get a binary file, in addition to the ELF file which cargo produces:
+
+```bash
+cargo install bin-utils
+rust-objcopy -O binary ../target/thumbv7em-none-eabi/release/sdrr-check /tmp/sdrrcheck.bin
+```
+
