@@ -135,3 +135,15 @@ B - Checks address lines only when CS is active, and applies to data lines (whic
 In all cases tested, `B` appears to be the superior algorithm, but `A` is kept in case it is incompatible with some systems.
 
 SDRR defaults to `B` is no algorithm is specified for single-ROM sets, and requires `B` (which is applies automatically, even if you specify `A`) for multi-ROM sets.
+
+## Extra C Flags
+
+There are some additional options that can be compiled in/out based on "hidden" C #defines.  You can use `EXTRA_C_FLAGS` to pass these in on the `make` command.
+
+For example this disables loading the ROM table to the STM32F405's CCM RAM, instead loading it to (normal) RAM (SRAM):
+
+```bash
+EXTRA_C_FLAGS=-DDISABLE_CCM=1 STM=f405rg make
+```
+
+See [`include.h`](../sdrr/include/include.h) for more information on available options.  These may be have left in a non-compiling state - raise an issue if you have problems.
