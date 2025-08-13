@@ -2,7 +2,7 @@
 
 23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
 
-**Unverified** - The BOM/CPL files have been unverified.  Use as your own risk.
+**Verified** - The BOM/CPL files have been verified using JLCPCB for both STM32F411RET6 and STM32F405RGT6 variants.
 
 This is slightly tweaked version of [rev f](../../verified/stm32f4-24-pin-rev-f/README.md), and includes:
 - Modified gerbers (just changed silkscreen layer)
@@ -17,7 +17,7 @@ The F411-based board is around $0.50 cheaper assembled than the F405.
 
 This revision has the following key improvements over rev E:
 
-- 2 x additional pins are broken out (labelled 'X1' and 'X2' on the underside), to allow a single SDRR to replace up to 3 2364 ROMs simultaneously, by wiring the chip select lines from the additional ROMs directly to these new pins.  
+- 2 x additional pins are broken out (labelled 'X1' and 'X2' on the underside), to allow a single SDRR to replace up to 3 2364 ROMs simultaneously, by wiring the chip select lines from the additional ROMs directly to these new pins.
 
 <div style="text-align: center;">
   <a href="/sdrr-pcb/unverified/stm32f4-24-pin-rev-f2/sdrr-24-pin-rev-f-side.png">
@@ -37,7 +37,7 @@ This revision has the following key improvements over rev E:
 
 ## Errata
 
-None
+If using the GD32F405RGT6, RC4, RC5 and C9 can be all be un-populated.
 
 ## Notes
 
