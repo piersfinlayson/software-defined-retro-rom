@@ -144,11 +144,13 @@ void gpio_init(void) {
     // PB0-2 but as PB7 isn't connected we can set it here as well.
     // We do this early doors, so the internal pull-downs will have settled
     // before we read the pins.
-    GPIOB_MODER |= 0x00000000;  // Set all GPIOs as inputs
+    // TODO the code to set PU/PD should be retired (and then tested as the
+    // PU/PD is now done in check_sel_pins()).
+    GPIOB_MODER = 0;  // Set all GPIOs as inputs
     GPIOB_PUPDR &= ~0x0000C03F;  // Clear pull-up/down for PB0-2 and PB7
     GPIOB_PUPDR |= 0x0000802A;   // Set pull-downs on PB0-2 and PB7
 
-    GPIOC_MODER &= 0x00000000;  // Set all GPIOs as inputs
+    GPIOC_MODER = 0;  // Set all GPIOs as inputs
 
 #if defined(MCO2)
     uint32_t gpioc_moder = GPIOC_MODER;
@@ -158,7 +160,7 @@ void gpio_init(void) {
     GPIOC_OSPEEDR |= 0x000C0000; // Set PC9 to very high speed
     GPIOC_OTYPER &= ~(0b1 << 9);  // Set as push-pull
 #else // !MCO2
-    GPIOC_PUPDR = 0x00000000; // No pull-up/down
+    GPIOC_PUPDR = 0; // No pull-up/down
 #endif // MCO2
 }
 
@@ -227,10 +229,15 @@ int main(void) {
     sdrr_runtime_info.rom_set_index = get_rom_set_index();
     const sdrr_rom_set_t *set = rom_set + sdrr_runtime_info.rom_set_index;
 #if !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
-    // Only bother to preload the ROM image if we are not running a test
+    // Set up the ROM table
     if (sdrr_info.preload_image_to_ram) {
-        preload_rom_image(set);
+        sdrr_runtime_info.rom_table = preload_rom_image(set);
+    } else {
+        // If we are not preloading the ROM image, we need to set up the
+        // rom_table to point to the flash location of the ROM image.
+        sdrr_runtime_info.rom_table = (void *)&(set->data[0]);
     }
+    sdrr_runtime_info.rom_table_size = set->size;
 #endif // !TIMER_TEST && !TOGGLE_PA4
 
     // Startup MCO after preloading the ROM - this allows us to test (with a

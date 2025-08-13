@@ -2,6 +2,13 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.3.1 - 2025-??-??
+
+### Changes
+
+- Support CCM RAM when using the F405.  The STM32F405 is under-performant vs the other devices at the same clock speed, even using CCM RAM, but this improves the situation to a 15-20% deficiency.  CCM RAM usage on F405s (for example to disable for GD32F405 which doesn't appear to need it) can be disabled using `C_EXTRA_FLAGS=-DDISABLE_CCM=1`.
+- Note tha hardware revision 24-f2 is now verified.
+
 ## v0.3.0 - 2025-08-12
 
 The main user facing change in this release is the addition of support for remote analysis and co-processing alongside the SDRR device via plug-ins, such as [Airfrog](https://piers.rocks/u/airfrog) - **a tiny $3 probe for ARM devices**.  This allows you to inspect the firmware and runtime state of the SDRR device, and change its configuration and ROM data - **while it is serving ROMs**.

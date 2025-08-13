@@ -289,14 +289,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(
 
     // Set up the ROM table variables (the ROM is already in RAM by this point,
     // if RAM preloading is enabled).
-    uint32_t rom_table_val;
-    if (info->preload_image_to_ram) {
-        rom_table_val = (uint32_t)&_ram_rom_image_start;
-    } else {
-        rom_table_val = (uint32_t)&(set->data[0]);
-    }
-    sdrr_runtime_info.rom_table = (void *)rom_table_val;
-    sdrr_runtime_info.rom_table_size = set->size;
+    uint32_t rom_table_val = (uint32_t)sdrr_runtime_info.rom_table;
 
 #if defined(COUNT_ROM_ACCESS)
     // If we are counting ROM accesses, set it up
@@ -550,14 +543,28 @@ uint8_t get_rom_set_index(void) {
     return rom_index;
 }
 
-void preload_rom_image(const sdrr_rom_set_t *set) {
+void* preload_rom_image(const sdrr_rom_set_t *set) {
     uint32_t *img_src, *img_dst;
     uint32_t img_size;
 
     // Find the start of this ROM image in the flash memory
     img_size = set->size;
     img_src = (uint32_t *)(set->data);
+#if defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
+    if (sdrr_info.stm_line == F405) {
+        // Preload to CCM RAM
+        LOG("F405: Preloading ROM image to CCM RAM");
+        img_dst = (uint32_t *)CCM_RAM_BASE;
+    } else {
+#else 
+    if (sdrr_info.stm_line == F405) {
+        LOG("F405: NOT Preloading ROM image to CCM RAM");
+    }
+#endif // defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
     img_dst = _ram_rom_image_start;
+#if defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
+    }
+#endif // defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
 
 #if defined(BOOT_LOGGING)
     DEBUG("ROM filename: %s", set->roms[0]->filename);
@@ -585,6 +592,8 @@ void preload_rom_image(const sdrr_rom_set_t *set) {
     LOG("ROM %s preloaded to RAM 0x%08X size %d bytes", set->roms[0]->filename, (uint32_t)_ram_rom_image_start, img_size);
     LOG("Set ROM count: %d, Serving algorithm: %d, multi-ROM CS1 state: %s",
         set->rom_count, set->serve, cs_values[set->multi_rom_cs1_state]);
+
+    return (void *)img_dst;
 }
 
 #endif // !TIMER_TEST/TOGGLE_PA4

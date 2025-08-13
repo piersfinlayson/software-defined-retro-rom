@@ -50,7 +50,7 @@ extern void main_loop(
 #endif // !EXECUTE_FROM_RAM
 );
 extern uint8_t get_rom_set_index(void);
-extern void preload_rom_image(const sdrr_rom_set_t *set);
+extern void* preload_rom_image(const sdrr_rom_set_t *set);
 #endif // !TIMER_TEST && !TOGGLE_PA4
 
 // test function prototypes
