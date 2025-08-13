@@ -111,6 +111,12 @@ The GD32F405 appears to run at 300MHz, although some host instabilities were not
 
 While currently untested, the STM32F446 may be able to be pushed much higher - as it has capacity for wait states supporting up to around 500MHz.
 
+The STM32F405 seems to max out at around 250MHz, probably due to the maximum number of flash wait states that can be configured.
+
+The GD32F405 appears to run at 300MHz, although some host instabilities were noticed at this speed - possible SDRR is running too fast (serving bytes too quickly, or on brief chip select line glitches, or de-serving them too quickly?).
+
+While currently untested, the STM32F446 may be able to be pushed much higher - as it has capacity for wait states supporting up to around 500MHz.
+
 ### `STATUS_LED`
 
 One ROM hardware revisions E and onwards provide a status LED, which is lit once the One ROM has booted and is ready to serve the image.  It also flashes this LED if it crashes.
