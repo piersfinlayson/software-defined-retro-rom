@@ -291,13 +291,13 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     // if RAM preloading is enabled).
     uint32_t rom_table_val = (uint32_t)sdrr_runtime_info.rom_table;
 
-#if defined(COUNT_ROM_ACCESS)
+#if defined(COUNT_ROM_ACCESS) && !defined(C_MAIN_LOOP)
     // If we are counting ROM accesses, set it up
     sdrr_runtime_info.access_count = 0;  // Update from 0xFFFFFFFF to 0.
     sdrr_runtime_info.count_rom_access = 1;  // Flag as enabled
     uint32_t access_count_addr = (uint32_t)&sdrr_runtime_info.access_count;
     uint32_t access_count = 0;  // Used to initialise the count register itself
-#endif
+#endif // defined(COUNT_ROM_ACCESS) && !defined(C_MAIN_LOOP)
 
     // Now log current state, and items we're going to load to registers.
     ROM_IMPL_DEBUG("%s", log_divider);
@@ -320,7 +320,6 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     ROM_IMPL_DEBUG("Access count: 0x%08X", access_count);
 #endif
     ROM_IMPL_DEBUG("%s", log_divider);
-
 
 #if defined(MAIN_LOOP_ONE_SHOT)
     uint32_t byte;
