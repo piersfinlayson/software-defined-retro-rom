@@ -229,10 +229,25 @@ void set_flash_ws(void) {
             wait_states = 5;
         } else if (sdrr_info.freq <= 210) {
             wait_states = 6;
-        } else if (sdrr_info.freq <= 240) {
+        } else if ((sdrr_info.freq <= 240) || (sdrr_info.stm_line == F405)) {
+            // F405 only has 3 bits for flash wait states so stop here
             wait_states = 7;
         } else if (sdrr_info.freq <= 270) {
             wait_states = 8;
+        } else if (sdrr_info.freq <= 300) {
+            wait_states = 9;
+        } else if (sdrr_info.freq <= 330) {
+            wait_states = 10;
+        } else if (sdrr_info.freq <= 360) {
+            wait_states = 11;
+        } else if (sdrr_info.freq <= 390) {
+            wait_states = 12;
+        } else if (sdrr_info.freq <= 420) {
+            wait_states = 13;
+        } else if (sdrr_info.freq <= 450) {
+            wait_states = 14;
+        } else {
+            wait_states = 15;
         }
     }
     FLASH_ACR &= ~FLASH_ACR_LATENCY_MASK;  // Clear latency bits

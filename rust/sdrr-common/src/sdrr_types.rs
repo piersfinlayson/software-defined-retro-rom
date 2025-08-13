@@ -111,8 +111,13 @@ impl StmProcessor {
         }
     }
 
-    pub fn vco_max_mhz(&self) -> u32 {
-        432
+    pub fn vco_max_mhz(&self, overclock: bool) -> u32 {
+        if !overclock {
+            432
+        } else {
+            // Theoretically allows up to 400MHz!
+            800
+        }
     }
 
     pub fn max_sysclk_mhz(&self) -> u32 {
@@ -130,10 +135,10 @@ impl StmProcessor {
     pub fn calculate_pll_hsi(
         &self,
         target_freq_mhz: u32,
-        overlock: bool,
+        overclock: bool,
     ) -> Option<(u8, u16, u8, u8)> {
         // Validate target frequency is within limits
-        if target_freq_mhz > self.max_sysclk_mhz() && !overlock {
+        if target_freq_mhz > self.max_sysclk_mhz() && !overclock {
             return None;
         }
 
@@ -147,7 +152,7 @@ impl StmProcessor {
             let vco_mhz = target_freq_mhz * pllp as u32;
 
             // Check VCO frequency is in valid range
-            if vco_mhz >= self.vco_min_mhz() && vco_mhz <= self.vco_max_mhz() {
+            if vco_mhz >= self.vco_min_mhz() && vco_mhz <= self.vco_max_mhz(overclock) {
                 let plln = vco_mhz / VCO_IN_MHZ;
 
                 // Check PLLN is in valid range (50-432)

@@ -105,6 +105,12 @@ This is not specified by default, which uses the maximum frequency for the chose
 
 Enabling this feature allows you to specify a higher frequency than supported by a particular STM32F4xxR variant.  SDRR uses very few peripherals and hence it should be possible for the STM32 to be powered at a higher than stock frequency, but the silicon may not be stable.
 
+The STM32F405 seems to max out at around 250MHz, probably due to the maximum number of flash wait states that can be configured.
+
+The GD32F405 appears to run at 300MHz, although some host instabilities were noticed at this speed - possible SDRR is running too fast (serving bytes too quickly, or on brief chip select line glitches, or de-serving them too quickly?).
+
+While currently untested, the STM32F446 may be able to be pushed much higher - as it has capacity for wait states supporting up to around 500MHz.
+
 ### `STATUS_LED`
 
 SDRR hardware revisions E and onwards provide a status LED, which is lit once the SDRR has booted and is ready to serve the image.  It also flashes this LED if it crashes.
