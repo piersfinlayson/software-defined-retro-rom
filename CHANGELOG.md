@@ -24,7 +24,7 @@ This release is a few odds and ends including some hardware improvements:
 - Validated STM32F446RCT6 (STM32F446RET6 highly likely to work as well).  Successfully tested as C64 char ROM, and verified clock speed of 180MHz (via MCO1 showing 45MHz = SYSCLK/4).  Also overclocked to 300MHz, ran stably.
 - Added **unverified** hardware revision 24-g.
 
-## Fixes
+### Fixes
 
 - Explicitly prevent COUNT_ROM_ACCESS and C_MAIN_LOOP being configured together, as they are incompatible.
 - Fixed ability to run main loop from RAM (this tends to be slower than from flash, so isn't recommended).
