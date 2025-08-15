@@ -44,7 +44,7 @@ The video below provides an introduction to the Software Defined Retro ROM:
 
 ## Hardware
 
-This is the STM32F4 24-pin version, hardware revison F.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
+This is the STM32F4 24-pin version, hardware revison G1.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
 
 <div style="display: flex; justify-content: center; gap: 20px;">
   <a href="docs/images/sdrr-24-pin-side.png">

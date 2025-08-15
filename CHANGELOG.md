@@ -9,6 +9,7 @@ All notables changes between versions are documented in this file.
 - Support CCM RAM when using the F405.  The STM32F405 is under-performant vs the other devices at the same clock speed, even using CCM RAM, but this improves the situation to a 15-20% deficiency.  CCM RAM usage on F405s (for example to disable for GD32F405 which doesn't appear to need it) can be disabled using `C_EXTRA_FLAGS=-DDISABLE_CCM=1`.
 - Note tha hardware revision 24-f2 is now verified.
 - Allow more aggressive overclocking (up to 400MHz).
+- Validated STM32F446RCT6 (STM32F446RET6 highly likely to work as well).  Successfully tested as C64 char ROM, and verified clock speed of 180MHz (via MCO1 showing 45MHz = SYSCLK/4).
 
 ## v0.3.0 - 2025-08-12
 
