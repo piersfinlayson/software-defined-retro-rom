@@ -37,7 +37,7 @@ This revision has the following key improvements over rev E:
 
 ## Errata
 
-If using the GD32F405RGT6, RC4, RC5 and C9 can be all be un-populated.
+If using the GD32F446RGT6, RC4, RC5 and C9 can be all be un-populated.
 
 ## Notes
 
