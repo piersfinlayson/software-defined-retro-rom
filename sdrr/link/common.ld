@@ -27,6 +27,8 @@ SECTIONS
         _isr_vector_end = .;
     } >FLASH
 
+    INCLUDE "platform.ld"
+
     /* Start at 0x200 to give some space after the vector table, in case */
     /* it's bigger than planned on a specific variant. */
     .sdrr_info :

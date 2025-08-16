@@ -7,6 +7,8 @@
 GEN_OUTPUT_DIR ?= output
 OUTPUT_DIR := ../$(GEN_OUTPUT_DIR)
 
+# sdrr-gen 
+
 # Include the auto-generated Makefile fragment
 # Only include generated.mk if we're not doing a clean target
 ifeq ($(filter clean clean-% distclean,$(MAKECMDGOALS)),)
@@ -31,9 +33,15 @@ OBJCOPY := $(TOOLCHAIN)/arm-none-eabi-objcopy
 SIZE := $(TOOLCHAIN)/arm-none-eabi-size
 
 # Source files
-SRCS := $(wildcard src/*.c)
-OBJS := $(addprefix $(BUILD_DIR)/,$(notdir $(SRCS:.c=.o)))
-
+SRCS := src/constants.c src/main.c src/rom_impl.c src/test.c src/utils.c src/vector.c
+ifeq ($(findstring stm32f4,$(VARIANT)),stm32f4)
+SRCS += src/stm32f4.c
+else ifeq ($(findstring rp2350,$(VARIANT)),rp2350)
+SRCS += src/rp235x.c
+else
+# Ignore
+endif
+OBJS := $(addprefix $(BUILD_DIR)/,$(notdir $(SRCS:.c=.o))) $(PLATFORM_OBJS)
 SEGGER_SRCS := segger-rtt/RTT/SEGGER_RTT.c segger-rtt/RTT/SEGGER_RTT_printf.c
 SEGGER_OBJS := $(BUILD_DIR)/SEGGER_RTT.o $(BUILD_DIR)/SEGGER_RTT_printf.o
 
@@ -43,7 +51,7 @@ SDRR_CONFIG_SRC := $(OUTPUT_DIR)/sdrr_config.c
 SDRR_CONFIG_OBJ := $(BUILD_DIR)/sdrr_config.o
 
 # Output files
-BIN_PREFIX := sdrr-$(VARIANT)
+BIN_PREFIX ?= sdrr-$(VARIANT)
 ELF := $(BUILD_DIR)/$(BIN_PREFIX).elf
 BIN := $(BUILD_DIR)/$(BIN_PREFIX).bin
 MAP := $(BUILD_DIR)/$(BIN_PREFIX).map
@@ -56,18 +64,22 @@ ifeq ($(filter clean clean-% distclean,$(MAKECMDGOALS)),)
 LDSCRIPT=$(OUTPUT_DIR)/linker.ld
 
 # Flags
+COMMON_FLAGS := -mthumb -mfloat-abi=hard -ffast-math
 ifeq ($(findstring stm32f4,$(VARIANT)),stm32f4)
-	COMMON_FLAGS := -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ffast-math
-#	COMMON_FLAGS := -mcpu=cortex-m4 -mthumb -mfloat-abi=soft
+COMMON_FLAGS += -mcpu=cortex-m4 -mfpu=fpv4-sp-d16
+PLATFORM_OBJS := stm32f4.o
+else ifeq ($(findstring rp2350,$(VARIANT)),rp2350)
+COMMON_FLAGS += -mcpu=cortex-m33 -mfpu=fpv5-sp-d16
+PLATFORM_OBJS := rp235x.o
 else
 $(error Unsupported variant: $(VARIANT))
 endif
 
-endif
+endif # End of variables set only if not cleaning
 
 SEGGER_RTT_FLAGS := -DBUFFER_SIZE_UP=4096
 CFLAGS := $(EXTRA_C_FLAGS) $(COMMON_FLAGS) $(SEGGER_RTT_FLAGS) -Werror -I include -I $(OUTPUT_DIR) -I segger-rtt/RTT -I segger-rtt/Config -g -nostdlib -O3 -ffunction-sections -fomit-frame-pointer -fdata-sections -Wall -Wextra -MMD -MD -MP
-LDFLAGS := $(COMMON_FLAGS) -Werror -L link -nostdlib -specs=nosys.specs -specs=nano.specs -Wl,--no-gc-sections -Wl,--fatal-warnings -Wl,-Map=$(MAP)
+LDFLAGS := $(COMMON_FLAGS) -Werror -Llink -L$(OUTPUT_DIR) -nostdlib -specs=nosys.specs -specs=nano.specs -Wl,--no-gc-sections -Wl,--fatal-warnings -Wl,-Map=$(MAP)
 
 # Phony targets
 .PHONY: all clean clean-segger segger size flash run

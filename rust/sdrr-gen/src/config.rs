@@ -4,14 +4,14 @@
 
 use crate::preprocessor::{RomImage, RomSet};
 use sdrr_common::HwConfig;
-use sdrr_common::{CsLogic, RomType, ServeAlg, StmVariant};
+use sdrr_common::{CsLogic, RomType, ServeAlg, McuVariant};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub roms: Vec<RomConfig>,
-    pub stm_variant: StmVariant,
+    pub mcu_variant: McuVariant,
     pub output_dir: PathBuf,
     pub swd: bool,
     pub count_rom_access: bool,
@@ -146,27 +146,27 @@ impl Config {
         }
 
         // Validate processor against family
-        if self.stm_variant.family() != self.hw.stm.family {
+        if self.mcu_variant.family() != self.hw.mcu.family {
             return Err(format!(
                 "STM32 variant {} does not match hardware family {}",
-                self.stm_variant.makefile_var(),
-                self.hw.stm.family
+                self.mcu_variant.makefile_var(),
+                self.hw.mcu.family
             ));
         }
 
         // Validate and set frequency
         #[allow(clippy::match_single_binding)]
-        match self.stm_variant.processor() {
+        match self.mcu_variant.processor() {
             _ => {
                 if !self
-                    .stm_variant
+                    .mcu_variant
                     .is_frequency_valid(self.freq, self.overclock)
                 {
                     return Err(format!(
                         "Frequency {}MHz is not valid for variant {}. Valid range: 16-{}MHz",
                         self.freq,
-                        self.stm_variant.makefile_var(),
-                        self.stm_variant.processor().max_sysclk_mhz()
+                        self.mcu_variant.makefile_var(),
+                        self.mcu_variant.processor().max_sysclk_mhz()
                     ));
                 }
             }
@@ -222,11 +222,11 @@ impl Config {
                     }
 
                     // Check STM variant supports banked sets
-                    if !self.stm_variant.supports_banked_roms() {
+                    if !self.mcu_variant.supports_banked_roms() {
                         return Err(format!(
                             "Set {}: banked ROMs are not supported on STM32 variant {} due to lack of RAM and/or flash",
                             set_id,
-                            self.stm_variant.makefile_var()
+                            self.mcu_variant.makefile_var()
                         ));
                     }
 
@@ -301,11 +301,11 @@ impl Config {
                     // Check this STM variant supports multi-ROM sets
                     if roms_in_set.len() > 1 {
                         #[allow(clippy::collapsible_if)]
-                        if !self.stm_variant.supports_multi_rom_sets() {
+                        if !self.mcu_variant.supports_multi_rom_sets() {
                             return Err(format!(
                                 "Set {}: multi-set ROMs are not supported on STM32 variant {} due to lack of RAM and/or flash",
                                 set_id,
-                                self.stm_variant.makefile_var()
+                                self.mcu_variant.makefile_var()
                             ));
                         }
                     }

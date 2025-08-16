@@ -1,0 +1,81 @@
+// RP235X registers header file
+
+// Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
+//
+// MIT License
+
+#ifndef REG_RP235X_H
+#define REG_RP235X_H
+
+#if !defined(RP235X)
+#error "RP235X family not defined"
+#endif // RP235X
+
+// Register base addresses
+#define CLOCKS_BASE     0x40010000
+#define RESETS_BASE     0x40020000
+#define IO_BANK0_BASE   0x40028000
+#define PADS_BANK0_BASE 0x40038000
+#define XOSC_BASE       0x40048000  
+#define PLL_SYS_BASE    0x40050000
+#define PLL_USB_BASE    0x40058000
+#define SIO_BASE        0xD0000000
+
+// Clock registers
+#define CLOCK_CLK_GPOUT0_CTRL   (*((volatile uint32_t *)(CLOCKS_BASE + 0x00)))
+#define CLOCK_CLK_GPOUT0_DIV    (*((volatile uint32_t *)(CLOCKS_BASE + 0x04)))
+#define CLOCK_CLK_GPOUT0_SEL    (*((volatile uint32_t *)(CLOCKS_BASE + 0x08)))
+#define CLOCK_REF_CTRL          (*((volatile uint32_t *)(CLOCKS_BASE + 0x30)))
+#define CLOCK_REF_SELECTED      (*((volatile uint32_t *)(CLOCKS_BASE + 0x38)))
+
+#define CLOCK_REF_SRC_XOSC      0x02
+#define CLOCK_REF_SRC_SEL_MASK  0b1111
+#define CLOCK_REF_SRC_SEL_XOSC  (1 << 2)
+
+// Reset registers
+#define RESET_RESET     (*((volatile uint32_t *)(RESETS_BASE + 0x00)))
+#define RESET_WDSEL     (*((volatile uint32_t *)(RESETS_BASE + 0x04)))
+#define RESET_DONE      (*((volatile uint32_t *)(RESETS_BASE + 0x08)))
+
+// Crystal Oscillator Registers
+#define XOSC_CTRL       (*((volatile uint32_t *)(XOSC_BASE + 0x00)))
+#define XOSC_STATUS     (*((volatile uint32_t *)(XOSC_BASE + 0x04)))
+#define XOSC_DORMANT    (*((volatile uint32_t *)(XOSC_BASE + 0x08)))
+#define XOSC_STARTUP    (*((volatile uint32_t *)(XOSC_BASE + 0x0C)))
+#define XOSC_COUNT      (*((volatile uint32_t *)(XOSC_BASE + 0x10)))
+
+// XOSC Values - See datasheet S8.2
+#define XOSC_STARTUP_DELAY_1MS  47
+#define XOSC_ENABLE         (0xfab << 12)
+#define XOSC_RANGE_1_15MHz  0xaa0
+#define XOSC_STATUS_STABLE  (1 << 31)
+
+// PLL Registers
+#define PLL_SYS_CS          (*((volatile uint32_t *)(PLL_SYS_BASE + 0x00)))
+#define PLL_SYS_PWR         (*((volatile uint32_t *)(PLL_SYS_BASE + 0x04)))
+#define PLL_SYS_FBDIV_INT   (*((volatile uint32_t *)(PLL_SYS_BASE + 0x08)))
+#define PLL_SYS_PRIM        (*((volatile uint32_t *)(PLL_SYS_BASE + 0x0C)))
+#define PLL_SYS_INTR        (*((volatile uint32_t *)(PLL_SYS_BASE + 0x10)))
+#define PLL_SYS_INTE        (*((volatile uint32_t *)(PLL_SYS_BASE + 0x14)))
+#define PLL_SYS_INTF        (*((volatile uint32_t *)(PLL_SYS_BASE + 0x18)))
+#define PLL_SYS_INTS        (*((volatile uint32_t *)(PLL_SYS_BASE + 0x1C)))
+
+// PLL Control/Status bits
+#define PLL_CS_LOCK         (1 << 31)
+#define PLL_CS_BYPASS       (1 << 8)
+#define PLL_CS_REFDIV_MASK  0b111111
+#define PLL_CS_REFDIV(X)    ((X) & PLL_CS_REFDIV_MASK)
+#define PLL_CS_REFDIV_SHIFT 0
+
+// PLL Power bits  
+#define PLL_PWR_PD          (1 << 0)    // Power down
+#define PLL_PWR_DSMPD       (1 << 2)    // DSM power down  
+#define PLL_PWR_POSTDIVPD   (1 << 3)    // Post divider power down
+#define PLL_PWR_VCOPD       (1 << 5)    // VCO power down
+
+// PLL Post divider bits
+#define PLL_SYS_PRIM_POSTDIV1(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 16)
+#define PLL_SYS_PRIM_POSTDIV2(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 12)
+#define PLL_PRIM_POSTDIV_MASK   0x7
+
+#endif // REG_RP235X_H

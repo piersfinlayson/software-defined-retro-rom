@@ -44,7 +44,7 @@ use std::path::Path;
 use args::{Args, Command, parse_args};
 use load::load_sdrr_firmware;
 use sdrr_fw_parser::{Parser, readers::MemoryReader};
-use sdrr_fw_parser::{SdrrAddress, SdrrCsSet, SdrrInfo, SdrrServe, SdrrStmPort, StmLine};
+use sdrr_fw_parser::{SdrrAddress, SdrrCsSet, SdrrInfo, SdrrServe, SdrrMcuPort, McuLine};
 use utils::add_commas;
 
 // SDRR info structure offset in firmware binary
@@ -181,21 +181,30 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
         info.hw_rev.as_deref().unwrap_or("unknown")
     );
 
-    if (info.stm_line == StmLine::F401BC) || (info.stm_line == StmLine::F401DE) {
-        println!(
-            "STM32:         F401R{} ({}KB flash, {}KB RAM)",
+    match info.stm_line {
+        McuLine::F401BC |
+        McuLine::F401DE => println!(
+            "MCU:           F401R{} ({}KB flash, {}KB RAM)",
             info.stm_storage.package_code(),
             info.stm_storage.kb(),
             info.stm_line.ram_kb()
-        );
-    } else {
-        println!(
-            "STM32:         {:?}R{} ({}KB flash, {}KB RAM)",
+        ),
+        McuLine::F405 |
+        McuLine::F411 |
+        McuLine::F446 => println!(
+            "MCU:           {:?}R{} ({}KB flash, {}KB RAM)",
             info.stm_line,
             info.stm_storage.package_code(),
             info.stm_storage.kb(),
             info.stm_line.ram_kb()
-        );
+        ),
+        McuLine::Rp2350 => {
+            println!(
+                "MCU:           RP2350 ({}KB flash, {}KB RAM)",
+                info.stm_storage.kb(),
+                info.stm_line.ram_kb()
+            );
+        }
     }
     println!(
         "Frequency:     {} MHz (Overclocking: {})",
@@ -250,7 +259,7 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
             for (ii, &pin) in pins.data.iter().enumerate() {
                 if pin != 0xFF {
                     println!(
-                        "  D{}: {}P{}{}",
+                        "  D{}: {}P{}:{}",
                         ii,
                         if ii < 10 { " " } else { "" },
                         pins.data_port,
@@ -263,7 +272,7 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
             for (ii, &pin) in pins.addr.iter().enumerate() {
                 if pin != 0xFF {
                     println!(
-                        "  A{}: {}P{}{}",
+                        "  A{}: {}P{}:{}",
                         ii,
                         if ii < 10 { " " } else { "" },
                         pins.addr_port,
@@ -274,55 +283,55 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
             println!();
             println!("Chip select pins:");
             if pins.cs1_2364 != 0xFF {
-                println!("  2364 CS1: P{}{}", pins.cs_port, pins.cs1_2364);
+                println!("  2364 CS1: P{}:{}", pins.cs_port, pins.cs1_2364);
             }
             if pins.cs1_2332 != 0xFF {
-                println!("  2332 CS1: P{}{}", pins.cs_port, pins.cs1_2332);
+                println!("  2332 CS1: P{}:{}", pins.cs_port, pins.cs1_2332);
             }
             if pins.cs2_2332 != 0xFF {
-                println!("  2332 CS2: P{}{}", pins.cs_port, pins.cs2_2332);
+                println!("  2332 CS2: P{}:{}", pins.cs_port, pins.cs2_2332);
             }
             if pins.cs1_2316 != 0xFF {
-                println!("  2316 CS1: P{}{}", pins.cs_port, pins.cs1_2316);
+                println!("  2316 CS1: P{}:{}", pins.cs_port, pins.cs1_2316);
             }
             if pins.cs2_2316 != 0xFF {
-                println!("  2316 CS2: P{}{}", pins.cs_port, pins.cs2_2316);
+                println!("  2316 CS2: P{}:{}", pins.cs_port, pins.cs2_2316);
             }
             if pins.cs3_2316 != 0xFF {
-                println!("  2316 CS3: P{}{}", pins.cs_port, pins.cs3_2316);
+                println!("  2316 CS3: P{}:{}", pins.cs_port, pins.cs3_2316);
             }
             if pins.ce_23128 != 0xFF {
-                println!("  23128 CE: P{}{}", pins.cs_port, pins.ce_23128);
+                println!("  23128 CE: P{}:{}", pins.cs_port, pins.ce_23128);
             }
             if pins.oe_23128 != 0xFF {
-                println!("  23128 OE: P{}{}", pins.cs_port, pins.oe_23128);
+                println!("  23128 OE: P{}:{}", pins.cs_port, pins.oe_23128);
             }
             if pins.x1 != 0xFF {
-                println!("  Multi X1: P{}{}", pins.cs_port, pins.x1);
+                println!("  Multi X1: P{}:{}", pins.cs_port, pins.x1);
             }
             if pins.x2 != 0xFF {
-                println!("  Multi X2: P{}{}", pins.cs_port, pins.x2);
+                println!("  Multi X2: P{}:{}", pins.cs_port, pins.x2);
             }
             println!();
             println!("Image select pins:");
             if pins.sel0 != 0xFF {
-                println!("  SEL0: P{}{}", pins.sel_port, pins.sel0);
+                println!("  SEL0: P{}:{}", pins.sel_port, pins.sel0);
             }
             if pins.sel1 != 0xFF {
-                println!("  SEL1: P{}{}", pins.sel_port, pins.sel1);
+                println!("  SEL1: P{}:{}", pins.sel_port, pins.sel1);
             }
             if pins.sel2 != 0xFF {
-                println!("  SEL2: P{}{}", pins.sel_port, pins.sel2);
+                println!("  SEL2: P{}:{}", pins.sel_port, pins.sel2);
             }
             if pins.sel3 != 0xFF {
-                println!("  SEL3: P{}{}", pins.sel_port, pins.sel3);
+                println!("  SEL3: P{}:{}", pins.sel_port, pins.sel3);
             }
             println!();
             println!("Status LED pin:");
-            if pins.status_port == SdrrStmPort::None {
+            if pins.status_port == SdrrMcuPort::None {
                 println!("  Pin: None");
             } else {
-                println!("  Pin: P{}{}", pins.status_port, pins.status);
+                println!("  Pin: P{}:{}", pins.status_port, pins.status);
             }
             println!();
         } else {

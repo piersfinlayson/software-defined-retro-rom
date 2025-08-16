@@ -10,10 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::sdrr_types::{RomType, StmFamily};
-
-// Maximum pin number on an STM32 port
-const MAX_STM_PIN_NUM: u8 = 15;
+use crate::sdrr_types::{RomType, McuFamily};
 
 /// Top level directory searched for hardware configuration files.
 pub const HW_CONFIG_DIRS: [&str; 2] = ["sdrr-hw-config", "../sdrr-hw-config"];
@@ -25,6 +22,7 @@ pub const HW_CONFIG_SUB_DIRS: [&str; 2] = ["user", "third-party"];
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Port {
     None,
+    Zero, // RP2350
     A,
     B,
     C,
@@ -34,6 +32,7 @@ pub enum Port {
 impl Port {
     fn from_str(s: &str) -> Option<Self> {
         match s.to_uppercase().as_str() {
+            "0" => Some(Port::Zero),
             "A" => Some(Port::A),
             "B" => Some(Port::B),
             "C" => Some(Port::C),
@@ -48,6 +47,7 @@ impl std::fmt::Display for Port {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Port::None => write!(f, "PORT_NONE"),
+            Port::Zero => write!(f, "PORT_0"),
             Port::A => write!(f, "PORT_A"),
             Port::B => write!(f, "PORT_B"),
             Port::C => write!(f, "PORT_C"),
@@ -108,19 +108,19 @@ pub struct StmPins {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct Stm {
+pub struct Mcu {
     #[serde(deserialize_with = "deserialize_stm_family")]
-    pub family: StmFamily,
+    pub family: McuFamily,
     pub ports: StmPorts,
     pub pins: StmPins,
 }
 
-fn deserialize_stm_family<'de, D>(deserializer: D) -> Result<StmFamily, D::Error>
+fn deserialize_stm_family<'de, D>(deserializer: D) -> Result<McuFamily, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    StmFamily::try_from_str(&s)
+    McuFamily::try_from_str(&s)
         .ok_or_else(|| serde::de::Error::custom(format!("Invalid STM family: {}", s)))
 }
 
@@ -156,7 +156,7 @@ pub struct HwConfig {
     pub name: String,
     pub description: String,
     pub rom: Rom,
-    pub stm: Stm,
+    pub mcu: Mcu,
     #[serde(skip)]
     phys_pin_to_addr_map: Vec<Option<usize>>,
     #[serde(skip)]
@@ -171,7 +171,7 @@ impl HwConfig {
 
         // Create pin maps for quick access
         let num_phys_addr_pins = if config.rom.pins.quantity == 24 {
-            14 // 24-pin ROMs have maximum 13 address lines + 1 CS
+            config.mcu.family.max_valid_addr_pin() // 24-pin ROMs have maximum 13 address lines + 1 CS
         } else if config.rom.pins.quantity == 28 {
             16 // 28 pin ROMs have 14 address lines + 2 CS
         } else {
@@ -182,21 +182,22 @@ impl HwConfig {
         };
 
         // Create address pin map.
-        // config.stm.pins.addr is indexed by address line (Ax).  We need the
+        // config.mcu.pins.addr is indexed by address line (Ax).  We need the
         // index phys_pin_to_addr_map to be indexed by physical pin (PCy).
         // Any pin that's unused (values 16-255) are set to None.
-        config.phys_pin_to_addr_map = vec![None; num_phys_addr_pins];
-        for (addr_line, &phys_pin) in config.stm.pins.addr.iter().enumerate() {
-            if phys_pin < 16 {
+        config.phys_pin_to_addr_map = Vec::new();
+        config.phys_pin_to_addr_map.resize_with(num_phys_addr_pins as usize, || None);
+        for (addr_line, &phys_pin) in config.mcu.pins.addr.iter().enumerate() {
+            if phys_pin < config.mcu.family.max_valid_addr_pin() {
                 config.phys_pin_to_addr_map[phys_pin as usize] = Some(addr_line);
             }
         }
 
         // Do the same for data lines
         config.phys_pin_to_data_map = [0; 8];
-        for (data_line, &phys_pin) in config.stm.pins.data.iter().enumerate() {
-            if phys_pin < 16 {
-                config.phys_pin_to_data_map[phys_pin as usize] = data_line;
+        for (data_line, &phys_pin) in config.mcu.pins.data.iter().enumerate() {
+            if phys_pin <= config.mcu.family.max_valid_data_pin() {
+                config.phys_pin_to_data_map[phys_pin as usize % 8] = data_line;
             } else {
                 bail!("Missing data pin {} in config {}", phys_pin, config.name);
             }
@@ -222,59 +223,59 @@ impl HwConfig {
     }
 
     pub fn port_data(&self) -> Port {
-        self.stm.ports.data_port
+        self.mcu.ports.data_port
     }
 
     pub fn port_addr(&self) -> Port {
-        self.stm.ports.addr_port
+        self.mcu.ports.addr_port
     }
 
     pub fn port_cs(&self) -> Port {
-        self.stm.ports.cs_port
+        self.mcu.ports.cs_port
     }
 
     pub fn port_sel(&self) -> Port {
-        self.stm.ports.sel_port
+        self.mcu.ports.sel_port
     }
 
     pub fn port_status(&self) -> Port {
-        self.stm.ports.status_port
+        self.mcu.ports.status_port
     }
 
     pub fn pin_status(&self) -> u8 {
-        self.stm.pins.status
+        self.mcu.pins.status
     }
 
     pub fn pin_cs1(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.cs1.get(rom_type).copied().unwrap_or(255)
+        self.mcu.pins.cs1.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_cs2(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.cs2.get(rom_type).copied().unwrap_or(255)
+        self.mcu.pins.cs2.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_cs3(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.cs3.get(rom_type).copied().unwrap_or(255)
+        self.mcu.pins.cs3.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_x1(&self) -> u8 {
-        self.stm.pins.x1.unwrap_or(255)
+        self.mcu.pins.x1.unwrap_or(255)
     }
 
     pub fn pin_x2(&self) -> u8 {
-        self.stm.pins.x2.unwrap_or(255)
+        self.mcu.pins.x2.unwrap_or(255)
     }
 
     pub fn pin_ce(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.ce.get(rom_type).copied().unwrap_or(255)
+        self.mcu.pins.ce.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_oe(&self, rom_type: &RomType) -> u8 {
-        self.stm.pins.oe.get(rom_type).copied().unwrap_or(255)
+        self.mcu.pins.oe.get(rom_type).copied().unwrap_or(255)
     }
 
     pub fn pin_sel(&self, sel: usize) -> u8 {
-        self.stm.pins.sel.get(sel).copied().unwrap_or(255)
+        self.mcu.pins.sel.get(sel).copied().unwrap_or(255)
     }
 
     pub fn cs_pin_for_rom_in_set(&self, rom_type: &RomType, set_index: usize) -> u8 {
@@ -292,8 +293,8 @@ impl HwConfig {
 
     pub fn supports_multi_rom_sets(&self) -> bool {
         // Requires both pins X1 and X2
-        if let Some(x1) = self.stm.pins.x1 {
-            if let Some(x2) = self.stm.pins.x2 {
+        if let Some(x1) = self.mcu.pins.x1 {
+            if let Some(x2) = self.mcu.pins.x2 {
                 if x1 < 255 && x2 < 255 {
                     assert!(x1 <= 15 && x2 <= 15, "X1 and X2 pins must be less than 15");
                     return true;
@@ -308,35 +309,36 @@ fn normalize_name(name: &str) -> String {
     name.to_lowercase().replace("_", "-")
 }
 
-fn validate_pin_number(pin: u8, pin_name: &str, config_name: &str) -> Result<()> {
-    if pin > MAX_STM_PIN_NUM && pin != 255 {
+fn validate_pin_number(mcu: &Mcu, pin: u8, pin_name: &str, config_name: &str) -> Result<()> {
+
+    if !mcu.family.valid_pin_num(pin) || pin == 255 {
         bail!(
-            "{}: invalid pin number {} for {}, must be 0-{} or 255",
+            "{}: invalid pin number {} for {}, must valid or 255 if pin not exposed",
             config_name,
             pin,
             pin_name,
-            MAX_STM_PIN_NUM
         );
     }
     Ok(())
 }
 
 fn validate_rom_types(
+    mcu: &Mcu,
     rom_map: &HashMap<RomType, u8>,
     pin_type: &str,
     config_name: &str,
 ) -> Result<()> {
     for (rom_type, &pin) in rom_map {
-        validate_pin_number(pin, &format!("{}[{:?}]", pin_type, rom_type), config_name)?;
+        validate_pin_number(mcu, pin, &format!("{}[{:?}]", pin_type, rom_type), config_name)?;
     }
     Ok(())
 }
 
-fn validate_pin_array(pins: &[u8], pin_type: &str, config_name: &str, max_pins: u8) -> Result<()> {
+fn validate_pin_array(mcu: &Mcu, pins: &[u8], pin_type: &str, config_name: &str, max_pins: u8) -> Result<()> {
     let mut seen = HashSet::new();
     let mut num_pins = 0;
     for &pin in pins {
-        validate_pin_number(pin, pin_type, config_name)?;
+        validate_pin_number(mcu, pin, pin_type, config_name)?;
         if !seen.insert(pin) {
             bail!(
                 "{}: duplicate pin {} in {} array",
@@ -385,32 +387,32 @@ fn validate_pin_values(
 
 fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
     // Check data pins are exactly 8
-    if config.stm.pins.data.len() != 8 {
+    if config.mcu.pins.data.len() != 8 {
         bail!(
             "{}: data pins must be exactly 8, found {}",
             name,
-            config.stm.pins.data.len()
+            config.mcu.pins.data.len()
         );
     }
 
     // Validate pins consistent within pin arrays
-    validate_pin_array(&config.stm.pins.data, "data", name, 8)?;
-    validate_pin_array(&config.stm.pins.addr, "addr", name, 16)?;
-    validate_pin_array(&config.stm.pins.sel, "sel", name, 4)?;
+    validate_pin_array(&config.mcu, &config.mcu.pins.data, "data", name, 8)?;
+    validate_pin_array(&config.mcu, &config.mcu.pins.addr, "addr", name, 16)?;
+    validate_pin_array(&config.mcu, &config.mcu.pins.sel, "sel", name, 4)?;
 
     // Validate values in pin arrays are within valid ranges, with minimum
     // numbers
-    validate_pin_values(&config.stm.pins.data, "data", name, 8, 7)?;
+    validate_pin_values(&config.mcu.pins.data, "data", name, 8, config.mcu.family.max_valid_data_pin())?;
     match config.rom.pins.quantity {
         24 => {
             // For 24-pin ROMs, we expect address pins A0-12 to be <= 13
             // Because 14/15 used for X1/X2 and require larger RAM image
-            validate_pin_values(&config.stm.pins.addr, "addr", name, 13, 13)?
+            validate_pin_values(&config.mcu.pins.addr, "addr", name, 13, config.mcu.family.max_valid_addr_pin())?
         }
         28 => {
             // For 28-pin ROMs, need 14 address lines, and 14/15 can be
             // used for an address line - CE/OE can be anywhere in the port
-            validate_pin_values(&config.stm.pins.addr, "addr", name, 14, 15)?
+            validate_pin_values(&config.mcu.pins.addr, "addr", name, 14, 15)?
         }
         _ => bail!(
             "{}: unsupported ROM type {}, expected 24 or 28-pin ROM",
@@ -420,143 +422,149 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
     }
 
     // Validate ROM type mappings
-    validate_rom_types(&config.stm.pins.cs1, "cs1", name)?;
-    validate_rom_types(&config.stm.pins.cs2, "cs2", name)?;
-    validate_rom_types(&config.stm.pins.cs3, "cs3", name)?;
-    validate_rom_types(&config.stm.pins.ce, "ce", name)?;
-    validate_rom_types(&config.stm.pins.oe, "oe", name)?;
+    validate_rom_types(&config.mcu, &config.mcu.pins.cs1, "cs1", name)?;
+    validate_rom_types(&config.mcu, &config.mcu.pins.cs2, "cs2", name)?;
+    validate_rom_types(&config.mcu, &config.mcu.pins.cs3, "cs3", name)?;
+    validate_rom_types(&config.mcu, &config.mcu.pins.ce, "ce", name)?;
+    validate_rom_types(&config.mcu, &config.mcu.pins.oe, "oe", name)?;
 
     // Validate ports
-    if config.stm.ports.data_port != Port::A {
+    if config.mcu.ports.data_port != config.mcu.family.allowed_data_port() {
         bail!(
-            "{}: data port must be A, found {:?}",
+            "{}: data port must be {:?}, found {:?}",
             name,
-            config.stm.ports.data_port
+            config.mcu.family.allowed_data_port(),
+            config.mcu.ports.data_port
         );
     }
-    if config.stm.ports.addr_port != Port::C {
+    if config.mcu.ports.addr_port != config.mcu.family.allowed_addr_port() {
         bail!(
-            "{}: address port must be C, found {:?}",
+            "{}: address port must be {:?}, found {:?}",
             name,
-            config.stm.ports.addr_port
+            config.mcu.family.allowed_addr_port(),
+            config.mcu.ports.addr_port
         );
     }
-    if config.stm.ports.cs_port != Port::C {
+    if config.mcu.ports.cs_port != config.mcu.family.allowed_cs_port() {
         bail!(
-            "{}: CS port must be C, found {:?}",
+            "{}: CS port must be {:?}, found {:?}",
             name,
-            config.stm.ports.cs_port
+            config.mcu.family.allowed_cs_port(),
+            config.mcu.ports.cs_port
         );
     }
-    if config.stm.ports.sel_port != Port::B {
+    if config.mcu.ports.sel_port != config.mcu.family.allowed_sel_port() {
         bail!(
-            "{}: SEL port must be B, found {:?}",
+            "{}: SEL port must be {:?}, found {:?}",
             name,
-            config.stm.ports.sel_port
+            config.mcu.family.allowed_sel_port(),
+            config.mcu.ports.sel_port
         );
     }
 
     // Validate optional pins
-    if let Some(pin) = config.stm.pins.x1 {
-        validate_pin_number(pin, "x1", name)?;
+    if let Some(pin) = config.mcu.pins.x1 {
+        validate_pin_number(&config.mcu, pin, "x1", name)?;
     }
-    if let Some(pin) = config.stm.pins.x2 {
-        validate_pin_number(pin, "x2", name)?;
+    if let Some(pin) = config.mcu.pins.x2 {
+        validate_pin_number(&config.mcu, pin, "x2", name)?;
     }
 
     // Group pins by port for conflict checking
     let mut port_pins: HashMap<Port, Vec<(&str, u8)>> = HashMap::new();
 
     // Add data pins
-    for &pin in &config.stm.pins.data {
+    for &pin in &config.mcu.pins.data {
         port_pins
-            .entry(config.stm.ports.data_port)
+            .entry(config.mcu.ports.data_port)
             .or_default()
             .push(("data", pin));
     }
 
     // Add address pins
-    for &pin in &config.stm.pins.addr {
+    for &pin in &config.mcu.pins.addr {
         port_pins
-            .entry(config.stm.ports.addr_port)
+            .entry(config.mcu.ports.addr_port)
             .or_default()
             .push(("addr", pin));
     }
 
     // Add sel pins
-    for &pin in &config.stm.pins.sel {
+    for &pin in &config.mcu.pins.sel {
         port_pins
-            .entry(config.stm.ports.sel_port)
+            .entry(config.mcu.ports.sel_port)
             .or_default()
             .push(("sel", pin));
     }
 
     // Add CS pins
-    for &pin in config.stm.pins.cs1.values() {
+    for &pin in config.mcu.pins.cs1.values() {
         port_pins
-            .entry(config.stm.ports.cs_port)
+            .entry(config.mcu.ports.cs_port)
             .or_default()
             .push(("cs1", pin));
     }
-    for &pin in config.stm.pins.cs2.values() {
+    for &pin in config.mcu.pins.cs2.values() {
         port_pins
-            .entry(config.stm.ports.cs_port)
+            .entry(config.mcu.ports.cs_port)
             .or_default()
             .push(("cs2", pin));
     }
-    for &pin in config.stm.pins.cs3.values() {
+    for &pin in config.mcu.pins.cs3.values() {
         port_pins
-            .entry(config.stm.ports.cs_port)
+            .entry(config.mcu.ports.cs_port)
             .or_default()
             .push(("cs3", pin));
     }
 
     // Add optional pins
-    if let Some(pin) = config.stm.pins.x1 {
+    if let Some(pin) = config.mcu.pins.x1 {
         port_pins
-            .entry(config.stm.ports.cs_port) // Assuming x1/x2 are on cs_port
+            .entry(config.mcu.ports.cs_port) // Assuming x1/x2 are on cs_port
             .or_default()
             .push(("x1", pin));
     }
-    if let Some(pin) = config.stm.pins.x2 {
+    if let Some(pin) = config.mcu.pins.x2 {
         port_pins
-            .entry(config.stm.ports.cs_port)
+            .entry(config.mcu.ports.cs_port)
             .or_default()
             .push(("x2", pin));
     }
 
-    for &pin in config.stm.pins.ce.values() {
+    for &pin in config.mcu.pins.ce.values() {
         port_pins
-            .entry(config.stm.ports.cs_port)
+            .entry(config.mcu.ports.cs_port)
             .or_default()
             .push(("ce", pin));
     }
-    for &pin in config.stm.pins.oe.values() {
+    for &pin in config.mcu.pins.oe.values() {
         port_pins
-            .entry(config.stm.ports.cs_port)
+            .entry(config.mcu.ports.cs_port)
             .or_default()
             .push(("oe", pin));
     }
-    let pin = config.stm.pins.status;
+    let pin = config.mcu.pins.status;
     port_pins
-        .entry(config.stm.ports.status_port)
+        .entry(config.mcu.ports.status_port)
         .or_default()
         .push(("status", pin));
 
     // Validate X1/X2 pins are fixed at 14/15 if provided
-    if let Some(x1_pin) = config.stm.pins.x1 {
-        if x1_pin != 14 {
-            bail!("{}: X1 pin must be 14, found {}", name, x1_pin);
+    if let Some(x1_pin) = config.mcu.pins.x1 {
+        let valid_pins = config.mcu.family.valid_x1_pins();
+        if !valid_pins.contains(&x1_pin) {
+            bail!("{}: X1 pin must be within {:?}, found {}", name, valid_pins, x1_pin);
         }
     }
-    if let Some(x2_pin) = config.stm.pins.x2 {
-        if x2_pin != 15 {
-            bail!("{}: X2 pin must be 15, found {}", name, x2_pin);
+    if let Some(x2_pin) = config.mcu.pins.x2 {
+        let valid_pins = config.mcu.family.valid_x2_pins();
+        if !valid_pins.contains(&x2_pin) {
+            bail!("{}: X2 pin must be within {:?}, found {}", name, valid_pins, x2_pin);
         }
     }
 
     // Both X1 and X2 must be provided together for multi-ROM support
-    if config.stm.pins.x1.is_some() != config.stm.pins.x2.is_some() {
+    if config.mcu.pins.x1.is_some() != config.mcu.pins.x2.is_some() {
         bail!(
             "{}: X1 and X2 pins must both be provided or both omitted",
             name
