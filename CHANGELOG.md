@@ -12,6 +12,8 @@ This release is a few odds and ends including some hardware improvements:
 - The fastest STM32F4 MCU, the STM32F446 has been verified to work.   This brings a max supported clock speed of 180MHz, and has run stably up to 300MHz in testing.
 - The STM32F405 has provided slower than expected (more details below).  It is supported and a decent choice, but the GigaDevices GD32F405 appears to be more performant.
 
+The project has been renamed One ROM.
+
 ### Changes
 
 - Speed up STM32F405 support:
