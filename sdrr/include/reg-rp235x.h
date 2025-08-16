@@ -12,6 +12,7 @@
 #endif // RP235X
 
 // Register base addresses
+#define SYSINFO_BASE    0x40000000
 #define CLOCKS_BASE     0x40010000
 #define RESETS_BASE     0x40020000
 #define IO_BANK0_BASE   0x40028000
@@ -19,7 +20,14 @@
 #define XOSC_BASE       0x40048000  
 #define PLL_SYS_BASE    0x40050000
 #define PLL_USB_BASE    0x40058000
+#define OTP_BASE        0x40120000
 #define SIO_BASE        0xD0000000
+#define SCB_BASE        0xE000ED00
+
+// SysInfo Registers
+#define SYSINFO_CHIP_ID         (*((volatile uint32_t *)(SYSINFO_BASE + 0x00)))
+#define SYSINFO_PACKAGE_SEL     (*((volatile uint32_t *)(SYSINFO_BASE + 0x04)))
+#define SYSINFO_GITREF_RP2350   (*((volatile uint32_t *)(SYSINFO_BASE + 0x14)))
 
 // Clock registers
 #define CLOCK_CLK_GPOUT0_CTRL   (*((volatile uint32_t *)(CLOCKS_BASE + 0x00)))
@@ -42,8 +50,34 @@
 #define RESET_WDSEL     (*((volatile uint32_t *)(RESETS_BASE + 0x04)))
 #define RESET_DONE      (*((volatile uint32_t *)(RESETS_BASE + 0x08)))
 
-#define RESET_JTAG  (1 << 8)
-#define RESET_PLL_SYS   (1 << 14)
+#define RESET_IOBANK0       (1 << 6)
+#define RESET_PADS_BANK0    (1 << 9)
+#define RESET_JTAG          (1 << 8)
+#define RESET_PLL_SYS       (1 << 14)
+#define RESET_SYSINFO       (1 << 21)
+
+// GPIO registers
+#define GPIO_STATUS_OFFSET  0x000
+#define GPIO_CTRL_OFFSET    0x004
+#define GPIO_SPACING        0x008
+
+#define GPIO_STATUS_INFROMPAD_BIT  17
+
+#define GPIO_STATUS(pin)    (*(volatile uint32_t*)(IO_BANK0_BASE + GPIO_STATUS_OFFSET + pin*GPIO_SPACING))
+#define GPIO_CTRL(pin)      (*(volatile uint32_t*)(IO_BANK0_BASE + GPIO_CTRL_OFFSET + pin*GPIO_SPACING))
+#define GPIO_READ(pin)      ((GPIO_STATUS(pin) >> GPIO_STATUS_INFROMPAD_BIT) & 1)
+
+#define GPIO_FUNC_SIO   5
+
+// PADS registers
+#define PAD_OFFSET_START    0x004
+#define PAD_SPACING         0x004
+#define GPIO_PAD(pin)       (*(volatile uint32_t*)(PADS_BANK0_BASE + PAD_OFFSET_START + pin*PAD_SPACING))  
+
+#define PAD_PUE_BIT     3   // Pull-up enable
+#define PAD_IE_BIT      6   // Input enable
+#define PAD_INPUT_PU    ((1 << PAD_PUE_BIT) | (1 << PAD_IE_BIT))
+#define PAD_FUNC_MASK   0b11111
 
 // Crystal Oscillator Registers
 #define XOSC_CTRL       (*((volatile uint32_t *)(XOSC_BASE + 0x00)))
@@ -86,6 +120,14 @@
 #define PLL_SYS_PRIM_POSTDIV2(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 12)
 #define PLL_PRIM_POSTDIV_MASK   0x7
 
+// SIO Registers
+#define SIO_CPUID           (*((volatile uint32_t *)(SIO_BASE + 0x00)))
+#define SIO_GPIO_IN         (*((volatile uint32_t *)(SIO_BASE + 0x04)))
+
+// RAM Size
+#define RP2350_RAM_SIZE_KB  520
+
+// Boot block structure
 typedef struct {
     uint32_t start_marker;          // 0xffffded3, start market
     uint8_t  image_type_tag;        // 0x42, image type
