@@ -38,6 +38,8 @@ cargo publish --dry-run -p sdrr-fw-parser
 cargo publish -p sdrr-fw-parser
 ```
 
+If on a branch, submit a pull request and merge it into main.
+
 Tag the version in git:
 
 ```bash
