@@ -87,15 +87,15 @@
 #define PLL_PRIM_POSTDIV_MASK   0x7
 
 typedef struct {
-    uint32_t start_marker;          // 0xffffded3
-    uint8_t  image_type_tag;        // 0x42 
-    uint8_t  image_type_len;        // 0x1
+    uint32_t start_marker;          // 0xffffded3, start market
+    uint8_t  image_type_tag;        // 0x42, image type
+    uint8_t  image_type_len;        // 0x1, item is one word in size
     uint16_t image_type_data;       // 0b0001000000100001, RP2350, ARM, Secure, EXE
-    uint8_t  last_tag;              // 0xff
-    uint16_t last_len;              // 0x0001
+    uint8_t  type;                  // 0xff, size type, last item
+    uint16_t size;                  // 0x0001, size
     uint8_t  pad;                   // 0
-    uint32_t next_block;            // 0 (no next block)
-    uint32_t end_marker;            // 0xab123579
+    uint32_t next_block;            // 0, link to self, no next block
+    uint32_t end_marker;            // 0xab123579, end marker
 } __attribute__((packed)) rp2350_boot_block_t;
 
 #endif // REG_RP235X_H

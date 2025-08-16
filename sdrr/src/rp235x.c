@@ -7,14 +7,19 @@
 #include "include.h"
 #include "roms.h"
 
-// RP350 firmware needs a special boot block so the bootloader will load it
-__attribute__((section(".rp2350_block"))) const rp2350_boot_block_t rp2350_metadata = {
+// RP2350 firmware needs a special boot block so the bootloader will load it.
+// See datasheet S5.9.5 and ../include/reg-rp235x.h.
+// It must be in the first 4KB of the flash firmware image.  This follows our
+// reset vectors, which is fine.  Given we do not include a VECTOR_TABLE
+// block, the bootloader assumes it is present at the start of flash - which it
+// is.
+__attribute__((section(".rp2350_block"))) const rp2350_boot_block_t rp2350_arm_boot_block = {
     .start_marker    = 0xffffded3,
     .image_type_tag  = 0x42,
     .image_type_len  = 0x1,
     .image_type_data = 0b0001000000100001,
-    .last_tag        = 0xff,
-    .last_len        = 0x0001,
+    .type            = 0xff,
+    .size            = 0x0001,
     .pad             = 0,
     .next_block      = 0,
     .end_marker      = 0xab123579
