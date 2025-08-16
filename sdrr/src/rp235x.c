@@ -7,10 +7,33 @@
 #include "include.h"
 #include "roms.h"
 
+// RP350 firmware needs a special boot block so the bootloader will load it
+__attribute__((section(".rp2350_block"))) const rp2350_boot_block_t rp2350_metadata = {
+    .start_marker    = 0xffffded3,
+    .image_type_tag  = 0x42,
+    .image_type_len  = 0x1,
+    .image_type_data = 0b0001000000100001,
+    .last_tag        = 0xff,
+    .last_len        = 0x0001,
+    .pad             = 0,
+    .next_block      = 0,
+    .end_marker      = 0xab123579
+};
+
+void platform_specific_init(void) {
+    // RP235X needs to reset the JTAG interface to enable SWD (for example for
+    // RTT loggin)
+    RESET_RESET &= ~RESET_JTAG;
+    while (!(RESET_DONE & RESET_JTAG));
+}
+
 void setup_clock(void) {
     LOG("Setting up clock for RP235X");
+
     setup_xosc();
     setup_pll();
+
+    LOG("RP235X clock set up complete");
 }
 
 void setup_gpio(void) {
@@ -19,12 +42,16 @@ void setup_gpio(void) {
 
 // Set up the PLL with the generated values
 void setup_pll(void) {
+    // Release PLL_SYS from reset
+    RESET_RESET &= ~RESET_PLL_SYS;
+    while (!(RESET_DONE & RESET_PLL_SYS));
+
     // Power down the PLL, set the feedback divider
     PLL_SYS_PWR = PLL_PWR_PD | PLL_PWR_VCOPD;
 
     // Set feedback divider and reference divider
     PLL_SYS_FBDIV_INT = PLL_SYS_FBDIV;
-    PLL_SYS_CS = PLL_CS_REFDIV(PLL_SYS_REFDIV) << PLL_CS_REFDIV_SHIFT;
+    PLL_SYS_CS = PLL_CS_REFDIV(PLL_SYS_REFDIV);
 
     // Power up VCO (keep post-dividers powered down)
     PLL_SYS_PWR = PLL_PWR_POSTDIVPD;
@@ -38,6 +65,10 @@ void setup_pll(void) {
 
     // Power up post dividers
     PLL_SYS_PWR = 0;
+
+    // Switch to the PLL
+    CLOCK_SYS_CTRL = CLOCK_SYS_SRC_AUX | CLOCK_SYS_AUXSRC_PLL_SYS;
+    while ((CLOCK_SYS_SELECTED & (1 << 1)) == 0);
 }
 
 void setup_mco(void) {

@@ -42,7 +42,7 @@ void log_init(void) {
     LOG("Pin Configuration ...");
     
     // Port assignments
-    const char *port_names[] = {"NONE", "A", "B", "C", "D"};
+    const char *port_names[] = {"NONE", "A", "B", "C", "D", "0"};
     
     LOG("ROM emulation: %d pin ROM", sdrr_info.pins->rom_pins);
     

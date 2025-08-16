@@ -20,12 +20,7 @@ sdrr_runtime_info_t sdrr_runtime_info __attribute__((section(".sdrr_runtime_info
 };
 
 // Sets up the system registers, clock and logging as required
-void system_init(void) {
-    // Enable logging
-    if (sdrr_info.boot_logging_enabled) {
-        LOG_INIT();
-    }
-
+void clock_init(void) {
     // Set up the clock
 #if defined(RP235X) || defined(STM32F4)
     setup_clock();
@@ -95,13 +90,21 @@ void check_enter_bootloader(void) {
 // remapping the data to the bit ordering we need, and to skip bit 3 (and use
 // bit 14 instead).
 int main(void) {
+    // Platform specific initialization
+    platform_specific_init();
+
     // Check if we should enter bootloader mode as the first thing we do
     if (sdrr_info.bootloader_capable) {
         check_enter_bootloader();
     }
 
-    // We didn't enter the bootloader, so kick off main processing
-    system_init();
+    // Enable logging
+    if (sdrr_info.boot_logging_enabled) {
+        LOG_INIT();
+    }
+
+    // Initialize clock and GPIO
+    clock_init();
     gpio_init();
 
     sdrr_runtime_info.rom_set_index = get_rom_set_index();
