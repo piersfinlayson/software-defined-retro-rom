@@ -61,13 +61,13 @@ Alternatively, either a GD32F405, STM32F405 or STM32F446 and running at maximum 
 
 (*) Or a slightly overclocked F401.
 
-When running multiple SDRRs in a single system, you may find you have to run each SDRR faster than these speeds, to avoid each conflicting with the other.  In this case, consider using multi-ROM support.
+When running multiple One ROMs in a single system, you may find you have to run each One ROM faster than these speeds, to avoid each conflicting with the other.  In this case, consider using multi-ROM support.
 
 When all CS lines on a ROM are active low, the serving algorithm is slightly quicker, and hence slower clock speeds are acceptable.
 
 ## ROM Image Capacity
 
-Each ROM image consumes 16KB of flash (irrespective of the ROM type - see [Technical Details](/docs/TECHNICAL-DETAILS.md) for why), so the maximum number of ROM images that can be stored is limited by the flash size for smaller variants.  The SDRR firmware itself consumes between 16-32KB of flash.  The rest of the flash can be used for images, up to a maximum of 16, which is limited by the number of select jumpers on the PCB, which in turn is limited by the phyical size of the original ROM footprint.
+Each ROM image consumes 16KB of flash (irrespective of the ROM type - see [Technical Details](/docs/TECHNICAL-DETAILS.md) for why), so the maximum number of ROM images that can be stored is limited by the flash size for smaller variants.  The One ROM firmware itself consumes between 16-32KB of flash.  The rest of the flash can be used for images, up to a maximum of 16, which is limited by the number of select jumpers on the PCB, which in turn is limited by the phyical size of the original ROM footprint.
 
 If you are using multi-ROM sets (of up to 3 images), each set consumes 64KB of flash, again irrespective of the image types.
 

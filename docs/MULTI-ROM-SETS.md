@@ -1,10 +1,10 @@
 # Multiple ROM Sets
 
-SDRR offers two models of run-time multi-ROM image support:
+One ROM offers two models of run-time multi-ROM image support:
 
-- **Dynamic bank switched image sets**.  In this mode, the ROM images in a set can dynamically switched at runtime (requiring no SDRR or host reset).  This is done by using the X1 and X2 pins as bank select lines.
+- **Dynamic bank switched image sets**.  In this mode, the ROM images in a set can dynamically switched at runtime (requiring no One ROM or host reset).  This is done by using the X1 and X2 pins as bank select lines.
 
-- **Multiple simultaneous ROM image sets**.  A set is a group of up to 3 ROM images, all of which SDRR will serve **simultaneously**.  In this model, extra chip select lines from the extra ROM sockets to be served are connected to SDRR pins X1 and X2.  This allows one SDRR to serve up to 3 ROM images.  (Restrictions apply, see below.)
+- **Multiple simultaneous ROM image sets**.  A set is a group of up to 3 ROM images, all of which One ROM will serve **simultaneously**.  In this model, extra chip select lines from the extra ROM sockets to be served are connected to One ROM pins X1 and X2.  This allows a single One ROM to serve up to 3 ROM images.  (Restrictions apply, see below.)
 
 ## Dynamic Bank Switching
 
@@ -21,9 +21,9 @@ Multiple simultaneous ROM image sets requires hardware revision E onwards, and f
 For this feature, the following conditions must be met:
 
 - All the ROMs being replaced share the same address and data buses.
-- SDRR is installed in the socket of the first ROM in the set to be replaced.
+- One ROM is installed in the socket of the first ROM in the set to be replaced.
 - The other ROM sockets to be replaced are empty.
-- The chip select line (pin 20) of the other, empty, ROM sockets to be replaced are connected to SDRR pins X1 (2nd image of set) and X2 (optional 3rd image of set).
+- The chip select line (pin 20) of the other, empty, ROM sockets to be replaced are connected to One ROM pins X1 (2nd image of set) and X2 (optional 3rd image of set).
 
 This feature is currently available only for 2364 ROMs, and 2332/2316 ROMs whose CS2/CS3 lines are permanently tied to the active state.  This is true, for example, for the C64 character ROM.  You can mix ROM types, so long as this condition is met - so both C64 2364 kernal/basic ROM images can share a set with the C64 2332 character ROM image.
 
@@ -33,7 +33,7 @@ You can find pre-built configurations in [`config`](/config/README.md), named `s
 
 ## Set Configuration
 
-Under the covers, the SDRR uses the concepts of sets, even if they are not specified - in this case, each ROM image is in its own set.  Hence the existing configuration model remains supported.  That single image set configuration looks like:
+Under the covers, One ROM uses the concepts of sets, even if they are not specified - in this case, each ROM image is in its own set.  Hence the existing configuration model remains supported.  That single image set configuration looks like:
 
 ```Makefile
 ROM_CONFIGS = \
@@ -82,7 +82,7 @@ Here, when set 0 is selected, by all the image select jumpers being open, the RO
 - X1 open/X2 closed - `rom_2364_3.bin` is served
 - X1/X2 closed - `rom_2364_1.bin` is served
 
-The last line takes some explaining.  As only 3 banks are configured, images 0-2 exist.  However, bank 3 has been selected by closing both X1 and X2.  SDRR takes the bank select **modulo** the number of images (i.e. wraps and starts counting again), so reverts to image 0.
+The last line takes some explaining.  As only 3 banks are configured, images 0-2 exist.  However, bank 3 has been selected by closing both X1 and X2.  One ROM takes the bank select **modulo** the number of images (i.e. wraps and starts counting again), so reverts to image 0.
 
 ## Future Enhancements
 

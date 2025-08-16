@@ -3,7 +3,7 @@
 This file contains a list of enhancements under consideration for future versions.
 
 - Support 16KB 23128 ROMs, and possibly 23256/23512 ROMs - see [23128 Support](#23128-support---prototyping).
-- Add a WiFi programming daughterboard, allowing the SDRR to be programmed over WiFi - see [WiFi Programming](#wifi-programming---prototyping).
+- Add a WiFi programming daughterboard, allowing One ROM to be programmed over WiFi - see [WiFi Programming](#wifi-programming---prototyping).
 - Support the Apple 2513 character ROM - see [Apple 2513 Character ROM](#apple-2513-character-rom).
 
 ## 23128 Support - prototyping
@@ -22,7 +22,7 @@ This enhancement adds an optional daughtboard, connecting on top, to the program
 
 A prototype PCB design [WiFi Programmer revision A](/sdrr-pcb/unverified/esp32-wifi-prog-rev-a/README.md) is under development.
 
-This prototype uses the ESP32-C3-Mini-1, so that the daughtboard footprint does not exceed SDRR's.
+This prototype uses the ESP32-C3-Mini-1, so that the daughtboard footprint does not exceed One ROM's.
 
 This enhancement is likely to take a bunch of development work to build the appropriate daughtboard firmware, although there a number of BlackMagicProbe ports to ESP32, one of which may be a good startig point.
 

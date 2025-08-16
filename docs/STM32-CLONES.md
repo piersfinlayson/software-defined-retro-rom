@@ -12,13 +12,13 @@ For example:
 | CKS          | [CKS32F405RGT6](#cks-cks32f405rgt6) | 168MHz    | 1024KB | 128KB | $2.77  | 962 | No |
 | Artery       | [AT32F405RCT7](#artery-at32f405rct7)  | 216MHz    | 256KB | 96KB | $2.34  | 160 | No |
 
-\* SRAM, not CCM (CCM is unused by SDRR)  
+\* SRAM, not CCM (CCM is unused by One ROM)  
 † Price at LCSC, for 1, as of July 2025.  aliexpress often has cheaper prices of the STM and other brand parts.  
 ‡ Stock at LCSC, as of July 2025
 
 ## GigaDevices GD32F405RGT6
 
-This device has been tested, using SDRR hardware revision E, using a C64, as both kernal and character ROMs.
+This device has been tested, using One ROM hardware revision E, using a C64, as both kernal and character ROMs.
 
 Some differences were noted when originally tested, although seem to be have disappeared in later testing.  On the other hand, the STM32F405RGT6 has been found to be 20-30% less performant than the GD32F405RGT6, so the GD32F405RGT6 is recommended, despite the potential issues below.
 
@@ -46,4 +46,4 @@ This device has significantly different specs than the other F405s listed:
 - It has less RAM
 - It has less flash.
 
-Even with these changes it _should_ be compatible with the SDRR firmware, but this is yet to be confirmed.
+Even with these changes it _should_ be compatible with One ROM firmware, but this is yet to be confirmed.

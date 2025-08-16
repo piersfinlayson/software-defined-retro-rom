@@ -1,10 +1,10 @@
 # Custom Hardware
 
-This document explains the key steps for designings custom SDRR hardware and integrating it with the SDRR build system.
+This document explains the key steps for designings custom One ROM hardware and integrating it with the One ROM build system.
 
 ## Hardware Design Requirements - STM32F4xxR
 
-There are a number of mandatory requirements when designing your own SDRR hardware.  These are explained in [Requirements Justification](#requirements-justification).
+There are a number of mandatory requirements when designing your own One ROM hardware.  These are explained in [Requirements Justification](#requirements-justification).
 
 If you are using an STM32F4xxR based system:
 
@@ -23,7 +23,7 @@ In addition, it is recommended to:
 - Avoid any external pull-ups/downs on the image select lines, as the firmware enables internal pull-downs on these lines.
 - Expose BOOT0.  While the firmware will keep SWD active at all times, if so configured, it may still be useful to be able to force the device into the bootloader mode by pulling BOOT0 high.
 - Tie NRST high, to avoid unexpected glitches.
-- Avoid the RT9013 or other switching regulators to provide 3.3V power to the STM32F4.  This voltage regular causes problems with some systems.  AP2112K-3.3 is a good, small form factor alternative, which is also used on the official SDRR hardware.
+- Avoid the RT9013 or other switching regulators to provide 3.3V power to the STM32F4.  This voltage regular causes problems with some systems.  AP2112K-3.3 is a good, small form factor alternative, which is also used on the official One ROM hardware.
 
 ## Non-STM32F4xxR Hardware
 
@@ -41,7 +41,7 @@ No firmware changes are required, so long as you follow the requirements above. 
 
 ## Building
 
-From the root of the SDRR repository, run:
+From the root of the One ROM repository, run:
 
 ```bash
 STM=f411re HW_REV=piers.rocks-24pin-rev-a BOOT_LOGGING=1 make       # Replace f411re with your STM model
@@ -70,7 +70,7 @@ The 64 pin STM32F4xx microcontroller is used, because it has sufficient 5V toler
 
 Port C is used for the address and CS lines, as:
 
-- All 16 GPIOs are exposed on the 64-pin package.  SDRR needs a minimum of 14 for the address and CS lines for the 2364 ROM.
+- All 16 GPIOs are exposed on the 64-pin package.  One ROM needs a minimum of 14 for the address and CS lines for the 2364 ROM.
 - We want the address and CS lines states to be on the same port as each other so they are retrievable with a single assembly instruction.
 - We want them to start from PC0, and to be contiguous, to avoid any bit shifting or other manipulation before using the read input register value as an offset into the ROM image being served.
 

@@ -1,8 +1,8 @@
-# SDRR Firmware
+# One ROM Firmware
 
-This directory and its subdirectories contain the source code for the SDRR firmware.
+This directory and its subdirectories contain the source code for the One ROM firmware.
 
-To build and flash the firmware, use the top-level Makefile in the SDRR repository.  For example:
+To build and flash the firmware, use the top-level Makefile in the One ROM repository.  For example:
 
 ```bash
 STM=f411re CONFIG=config/c64.mk make run

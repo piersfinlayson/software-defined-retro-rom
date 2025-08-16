@@ -1,6 +1,6 @@
 # Technical Summary
 
-This document summarises how SDRR provides the ROM emulation function, and hits the required timings.
+This document summarises how One ROM provides the ROM emulation function, and hits the required timings.
 
 If you'd rather consume similar content in video form:
 
@@ -8,7 +8,7 @@ If you'd rather consume similar content in video form:
 
 ## Overview
 
-SDRR replaces mask-programmed ROMs (2364/8KB, 2332/4KB, 2316/2KB) in retro systems using an STM32F4 microcontroller.  Unlike traditional ROM replacements that require hardware modifications or expensive programming equipment, SDRR provides a software-configurable solution that can store multiple ROM images of different types and switch between them via jumpers.  It can also be reprogrammed in situ, without needing to remove it from the system.
+One ROM replaces mask-programmed ROMs (2364/8KB, 2332/4KB, 2316/2KB) in retro systems using an STM32F4 microcontroller.  Unlike traditional ROM replacements that require hardware modifications or expensive programming equipment, One ROM provides a software-configurable solution that can store multiple ROM images of different types and switch between them via jumpers.  It can also be reprogrammed in situ, without needing to remove it from the system.
 
 ## Timing Requirements
 
@@ -24,7 +24,7 @@ A key challenge is that these access times reference time to go from address lin
 
 ### Hardware
 
-SDRR uses STM32F4 Cortex-M4 based microcontrollers because they provide:
+One ROM uses STM32F4 Cortex-M4 based microcontrollers because they provide:
 
 - **5V-tolerant GPIO pins**: Compatible with retro system logic levels without level shifters
 - **Optimal pin arrangement**: Sufficient contiguous 5V-tolerant pins for efficient assembly code
@@ -34,7 +34,7 @@ SDRR uses STM32F4 Cortex-M4 based microcontrollers because they provide:
 
 ### The Main Loop Theory
 
-The core of SDRR is an assembly main loop that continuously monitors the address and chip select lines, then responds by driving the data lines.  Interrupt latency on the Cortex-M4 is a worst case of 12 cycles (120ns at 100MHz- more than half of the chip select access time budget) which means that a polling approach is taken to hit the required timing.
+The core of One ROM is an assembly main loop that continuously monitors the address and chip select lines, then responds by driving the data lines.  Interrupt latency on the Cortex-M4 is a worst case of 12 cycles (120ns at 100MHz- more than half of the chip select access time budget) which means that a polling approach is taken to hit the required timing.
 
 Prior to entering this main loop, the code does various setup which keeps the loop as simple and fast as possible:
 
@@ -50,7 +50,7 @@ The assembly code operates as follows:
 
 Access times for the 23 series ROMs are asymmetric (chip select access time is around 200ns vs 350/450ns for the address lines), so the main loop tests for chip select active roughly twice as often as it loads data from the address lines.  This means the loop responds faster to the chip select active/deactive state changes than to address line changes - as required.
 
-SDRR takes advantage of this by interleaving the code to read the data byte from RAM, and store it to the data lines (two instructions in total) with the additional chip select state checks - this allows us to avoid ARM load use penalties (we are essentially using this penalty for useful work instead).
+One ROM takes advantage of this by interleaving the code to read the data byte from RAM, and store it to the data lines (two instructions in total) with the additional chip select state checks - this allows us to avoid ARM load use penalties (we are essentially using this penalty for useful work instead).
 
 Main loop:
 
@@ -64,7 +64,7 @@ Main loop:
 
 #### Chip Select active loop
 
-It is important to note that when chip select is active, SDRR must still query the address lines, as well as the chip select state.  Again, the timings are asymmetric, so the loop queries the chip select(s) roughly twice as often as the address lines.  As before the code is interleaved to read the data byte and store it with the chip select state checks, avoiding some load use penalties.
+It is important to note that when chip select is active, One ROM must still query the address lines, as well as the chip select state.  Again, the timings are asymmetric, so the loop queries the chip select(s) roughly twice as often as the address lines.  As before the code is interleaved to read the data byte and store it with the chip select state checks, avoiding some load use penalties.
 
 By definition, when entering this main loop, the "calling" code just read the address lines, as well as the chip select state, so it has the address lines sitting in a register.  These can then be used immedaitely to read the ROM data byte, without having to re-read the address lines.
 
@@ -83,7 +83,7 @@ By definition, when entering this main loop, the "calling" code just read the ad
 
 #### Chip select inactive - with a data byte in hand
 
-The ROM must continue transmitting valid data for a minimum time after chip select is deasserted.  This is typically 40ns.  SDRR currently doesn't implement this explicitly, and instead relies on the fact that getting to the code to set the data lines as inputs will take sufficient time.
+The ROM must continue transmitting valid data for a minimum time after chip select is deasserted.  This is typically 40ns.  One ROM currently doesn't implement this explicitly, and instead relies on the fact that getting to the code to set the data lines as inputs will take sufficient time.
 
 Should implementing this be required, one solution would be to have different chunks of chip select inactive code to branch to, depending on how quickly after loading the chip select state the code spotted it was now inactive, and pad the code with instructions that the Cortex-M4 cannot optimise out (like it can with NOPs).  This would need to be modified for different clock speeds.
 
@@ -111,7 +111,7 @@ It's also worth bearing in mind that the STM32F4 has a finite instruction cache 
 
 Due to PCB size and trace routing constraints, the address and data lines of the STM32F4 are not mapped to the equivalent ROM address and data lines.  For example, in hardware revision E, STM port C line 0 maps to A7, PC1 maps to A6, etc, and PA0 maps to D7, PA1 maps to D6, etc.
 
-SDRR pre-processes the ROM images during the build process to match the exact GPIO pin mapping.  Therefore _PC0_ is actually used as address line 0 looking up in the ROM image, but the data bytes in the ROM have been reordered so the correct byte is retrieved.  The bits within the data byte are also reordered, so that the real bit 7 is actually at the bit 0 location, etc.
+One ROM pre-processes the ROM images during the build process to match the exact GPIO pin mapping.  Therefore _PC0_ is actually used as address line 0 looking up in the ROM image, but the data bytes in the ROM have been reordered so the correct byte is retrieved.  The bits within the data byte are also reordered, so that the real bit 7 is actually at the bit 0 location, etc.
 
 This is all done during the build process to avoid either the startup code, or, worse, the main loop, from having to do any bit manipulation at runtime - keeping everything as fast as possible.
 
@@ -127,7 +127,7 @@ Again, the pre-processing into 16KB blocks is done during the build process.
 
 ### Configuration Flexibility
 
-Traditional ROMs had mask-programmed chip select behavior (active high or low). SDRR can emulate any combination - for example:
+Traditional ROMs had mask-programmed chip select behavior (active high or low). One ROM can emulate any combination - for example:
 
 ```bash
 # 2364 ROM, CS1 active low
@@ -150,9 +150,9 @@ Images are selected via the jumpers binary encoding 0-15 which are read at start
 
 ## Multi-ROM Support
 
-SDRR implements multi-ROM support, allowing replacement of up to 3 ROMs simultaneously, with a single SDRR.  This is done by installing the SDRR in one of the ROM sockets, and depopulating the other ROM sockets.  A flying lead is then used to connect the chip select line (pin 20) of the empty ROM sockets to pins X1 and X2 on SDRR board.
+One ROM implements multi-ROM support, allowing replacement of up to 3 ROMs simultaneously, with a single One ROM.  This is done by installing One ROM in one of the ROM sockets, and depopulating the other ROM sockets.  A flying lead is then used to connect the chip select line (pin 20) of the empty ROM sockets to pins X1 and X2 on the One ROM board.
 
-A ROM set configuration must be used, to program SDRR with the combined ROM images - see [`config/set*.mk`](/config/README.md#multi-image-rom-sets).
+A ROM set configuration must be used, to program One ROM with the combined ROM images - see [`config/set*.mk`](/config/README.md#multi-image-rom-sets).
 
 This feature works by
 
@@ -167,7 +167,7 @@ There are currently various limitations in this support.  For example:
 - All replaced ROMs must share both address and data buses.  The VIC-20 character ROM does not share the address bus with the Kernal and BASIC ROMs, so cannot be replaced by a multi-ROM set, but the C64 character ROM does share a bus, so all of Kernal, BASIC and character ROMs can be replaced by a single multi-ROM set.
 - Mixed ROM type support is only possible when the extra chip select lines of the smaller ROMs are tied to always active.  Again, the C64 character ROM is a good example - it is a 2332 ROM, unlike the Kernal and BASIC ROMs which are 2364 ROMs.  However, the 2332's second cs line is always tied active.
 - Only 2364, and 2364/2332 ROM types have been tested.
-- While single ROM and multi-ROM sets can be used in the same SDRR firmware image, you have to disconnect X1/X2 when using a single ROM set.  (And X2 must be disconnected when using a 2-ROM set.)
+- While single ROM and multi-ROM sets can be used in the same One ROM firmware image, you have to disconnect X1/X2 when using a single ROM set.  (And X2 must be disconnected when using a 2-ROM set.)
 
 It may be possible to lift some of these limitations, but that may require an (even) slower serving algorithm, and hence limit the systems it works on/STM32F4s you can run it on.  Having said that, smaller ROMs are typically used in slower systems.
 
@@ -189,7 +189,7 @@ The F405 at 168MHz and F446 at 180MHz provide substantial headroom for all these
 
 ### Multi-ROM performance
 
-When replacing multiple ROMs simultaneously, SDRR has to use a different, slighty less performant algorithm to serve the data.  This means that for multi-ROM support you require a faster variant than the above figures suggest:
+When replacing multiple ROMs simultaneously, One ROM has to use a different, slighty less performant algorithm to serve the data.  This means that for multi-ROM support you require a faster variant than the above figures suggest:
 
 | System | Min Frequency | STM32 Variant Required | Notes |
 |--------|---------------|------------------------|-------|
@@ -202,9 +202,9 @@ Startup performance varies based on the STM32F4 variant used and logging (and ot
 - **With logging**: ~3ms boot time
 - **Without logging**: ~1.5ms boot time
 
-These values were measured from a stable 5V power rail, to just before the device entering its main loop.  It is likely that most of the 1.5ms startup time is the STM32F4's hardware intialisation rather than the SDRR code itself, as avoiding copying the ROM data into RAM only (the bulk of the startup processing) saves a few 100us.
+These values were measured from a stable 5V power rail, to just before the device entering its main loop.  It is likely that most of the 1.5ms startup time is the STM32F4's hardware intialisation rather than the One ROM code itself, as avoiding copying the ROM data into RAM only (the bulk of the startup processing) saves a few 100us.
 
-As the processor is typically held at reset after power on, this gives SDRR sufficient time to start up and be ready to respond to the first access from the system.  It is possible that a non-"held-in-reset" device, like a video chip, may access the character ROM before SDRR is ready, in which case garbage (likely 0xFF) will be returned.  This is unlikely to be a problem in a practice, as the video output is probably not yet visible due to a CRT warming up, or monitor still locking to the video signal.  Worse case, garbage may appear for a few ms.
+As the processor is typically held at reset after power on, this gives One ROM sufficient time to start up and be ready to respond to the first access from the system.  It is possible that a non-"held-in-reset" device, like a video chip, may access the character ROM before One ROM is ready, in which case garbage (likely 0xFF) will be returned.  This is unlikely to be a problem in a practice, as the video output is probably not yet visible due to a CRT warming up, or monitor still locking to the video signal.  Worse case, garbage may appear for a few ms.
 
 ### Power Consumption
 

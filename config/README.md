@@ -4,7 +4,7 @@ Contains configuration files for various sample ROM collections.
 
 ## Usage
 
-Use these as follows to build and flash the SDRR firmware with your chosen collection of ROM images and configuration:
+Use these as follows to build and flash One ROM firmware with your chosen collection of ROM images and configuration:
 
 ```bash
 STM=f411re CONFIG=config/1541.mk make run
@@ -16,7 +16,7 @@ Replace `f411re` with your [target STM32 variant](/README.md#supported-stm32-mic
 
 ### Single image ROM sets
 
-Each of the configurations below contains a set of single ROM images, which can be selected using SDRR's image select jumpers.  When using these configurations, SDRR emulates a single ROM chip, for the socket it is inserted in.
+Each of the configurations below contains a set of single ROM images, which can be selected using One ROM's image select jumpers.  When using these configurations, One ROM emulates a single ROM chip, for the socket it is inserted in.
 
 | Configuration | Description |
 |---------------|-------------|
@@ -28,14 +28,14 @@ Each of the configurations below contains a set of single ROM images, which can 
 | [`2040.mk`](2040.mk) | 2040/3040 DOS1 disk drive stock ROMs |
 | [`4040.mk`](4040.mk) | 4040 (and 2040/3040) DOS2 disk drive stock ROMs |
 | [`ieee-diag.mk`](ieee-diag.mk) | 2040/3040/4040/8050/8250 IEEE-488 disk drive diagnostics ROMs |
-| [`test-sdrr-0.mk`](test-sdrr-0.mk) | SDRR test ROMs (for testing SDRR functionality) |
+| [`test-sdrr-0.mk`](test-sdrr-0.mk) | One ROM test ROMs (for testing One ROM functionality) |
 
 ### Multi-image ROM sets
 
-These configurations contain multiple ROM image sets, each set of which can be selected using SDRR's image select jumpers.  When using these configurations, SDRR emulates a multi-ROM chip, for the socket it is inserted in, plus any other (empty) sockets:
+These configurations contain multiple ROM image sets, each set of which can be selected using One ROM's image select jumpers.  When using these configurations, One ROM emulates a multi-ROM chip, for the socket it is inserted in, plus any other (empty) sockets:
 
-- which shares both address and data bus of the socket SDRR is installed in
-- whose chip select lines (pin 20) are connected to SDRR pins X1 (the second image of the set) and optionally X2 (third image of the set).
+- which shares both address and data bus of the socket One ROM is installed in
+- whose chip select lines (pin 20) are connected to One ROM pins X1 (the second image of the set) and optionally X2 (third image of the set).
 
 Some of the multi-image ROM sets have different numbers of images in each set - for example:
 
@@ -52,7 +52,7 @@ This allows you to use the image select jumper to select set 0, and if that does
 
 ### Bank switchable ROM sets
 
-These configurations contain multiple ROM images, which can be selected using SDRR's X1/X2 pins.  When using these configurations, images within a set can be switched dynamicallt while the host is running.
+These configurations contain multiple ROM images, which can be selected using One ROM's X1/X2 pins.  When using these configurations, images within a set can be switched dynamically while the host is running.
 
 | Configuration | Description |
 |---------------|-------------|

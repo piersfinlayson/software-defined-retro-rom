@@ -1,12 +1,12 @@
 # Logging
 
-There are three types of logging which can be enabled on SDRR.
+There are three types of logging which can be enabled on One ROM.
 
 ## `BOOT_LOGGING`
 
 This logs the boot process to the SWD interface, using RTT.  It is enabled by default.  This type of logging stops when the device enters its main ROM serving loop, as with logging enabled the device cannot hit the required performance.
 
-In general, you should be able to leave `BOOT_LOGGING` on, as this only adds around 1.5ms to SDRR's startup time, increasing it to roughly 3ms total.  This is substantially below most retro systems' reset circuit timers, so SDRR should boot and be ready to serve the configured ROM image well before it is required.
+In general, you should be able to leave `BOOT_LOGGING` on, as this only adds around 1.5ms to One ROM's startup time, increasing it to roughly 3ms total.  This is substantially below most retro systems' reset circuit timers, so One ROM should boot and be ready to serve the configured ROM image well before it is required.
 
 Sample boot logs from a startup of firmware built with [`c64-no-destestmax.mk`](/config/c64-no-destestmax.mk), are shown below:
 
@@ -61,7 +61,7 @@ Sample boot logs from a startup of firmware built with [`c64-no-destestmax.mk`](
 
 Pulling out some highlights:
 
-- The `Hardare info` section logs provide information about the SDRR hardware that this firmware image **was built for**.  This may not necessarily the hardware you are running the firmware on.
+- The `Hardare info` section logs provide information about the One ROM hardware that this firmware image **was built for**.  This may not necessarily the hardware you are running the firmware on.
 - The `Pin Configuration` section logs show the pin mapping used by the firmware, including:
   - The data pins (D[0-7])
   - The address pins (A[0-15])
@@ -75,7 +75,7 @@ Pulling out some highlights:
     - `0` means active low
     - `1` means active high
     - `-` means not used for this ROM type
-- The `Running ...` section logs show SDRR's main activities as it starts up, including:
+- The `Running ...` section logs show One ROM's main activities as it starts up, including:
   - Whether the VOS (voltage scaling) is set to scale 1 (only done on the F411 and only when `FREQ` is > 84Mhz).  While the F405 also required VOS set to scale 1 for high frequency operation, this is its power-on default.
   - What the PLL MNPQ values have been set to (to allow you to check they are as intended to achieve the target `FREQ`).
   - How many flash wait states have been configured (the STM32 required a different number of wait states based on the `FREQ`).
@@ -87,7 +87,7 @@ Pulling out some highlights:
 
 This logs extra debug information to the SWD interface, using RTT.  Enabling debug logging can sometimes cause RTT to lose some logs due to its added verbosity - this is typically shown as blank logs.  However, the RTT buffer has been increased in size, so this should not be a problem in most cases.
 
-It is disabled by default, but can be enabled by setting the `DEBUG_LOGGING` configuration option to `1`.  This type of logging is useful for debugging SDRR itself.
+It is disabled by default, but can be enabled by setting the `DEBUG_LOGGING` configuration option to `1`.  This type of logging is useful for debugging One ROM itself.
 
 Example debug logging:
 
@@ -180,10 +180,10 @@ This makes a log after every requested byte has been served, once the chip selec
 
 Some notes:
 
-- It is **highly** likely that enabling this will cause the SDRR to not be able to keep up with the requested data, and so it is disabled by default.
+- It is **highly** likely that enabling this will cause the One ROM to not be able to keep up with the requested data, and so it is disabled by default.
 - It is also likely, unless you are only querying the odd byte here and there, that RTT will not be able to keep up with the logged data.
 - Although the address and data values served are logged, these are **mangled** versions of each - they are the value read directly from the STM32 GPIO port with the address and CS lines, and the value written directly to the STM32 GPIO port with the data lines.  As the pin mapping is complex, they are not the values you would naively expect to see.  See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information on the the pin mapping.
 
-This logging is disabled by default and can be enabled by setting the `MAIN_LOOP_ONE_SHOT` configuration option to `1`.  This type of logging is useful for debugging the SDRR's main loop.
+This logging is disabled by default and can be enabled by setting the `MAIN_LOOP_ONE_SHOT` configuration option to `1`.  This type of logging is useful for debugging the One ROM's main loop.
 
 You must have `SWD`, `BOOT_LOGGING`, and `MAIN_LOOP_LOGGING` enabled for this to work.
