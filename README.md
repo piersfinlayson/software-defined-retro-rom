@@ -1,12 +1,12 @@
 # One ROM
 
-"One ROM To Rule Them All"
+**One ROM To Rule Them All**
 
 The most flexible ROM replacement for your retro computer. It is highly configurable and low-cost.  Get them fabbed at JLC for under $5 each in a quantity of 10 or more.
 
-One ROM emulates any system's 2364, 2332 and 2316 ROMs, with any chip select configuration, and can serve multi images to different ROM sockets simultaneously.
+One ROM emulates any system's 2364, 2332 and 2316 ROMs, with any chip select configuration, and can serve different images to multiple ROM sockets simultaneously.
 
-Replace failed ROMs in Commodore 64s, VIC-20s, PETs, disk drives.
+Replaces failed ROMs in Commodore 64s, VIC-20s, PETs, disk drives.
 
 One ROM was formerly known as Software Defined Retro ROM (SDRR).
 
