@@ -10,6 +10,10 @@ _Ram_Func_Size = 0x1000; /* 4KB */
 /* Space for sdrr_raminfo_t in RAM */
 _Sdrr_Runtime_Info_Size = 0x100; /* 256 bytes */
 
+/* Space for sdrr_info_t and other stuff required by main_loop when running */
+/* from RAM */
+_Sdrr_Info_Ram_Size = 0x100; /* 256 bytes */ 
+
 SECTIONS
 {
     /* Vector table and code must be in FLASH */
@@ -79,7 +83,7 @@ SECTIONS
         _sdrr_runtime_info_end = .;
     } >RAM AT> FLASH
 
-    /* Reserve space at start of RAM for ROM image */
+    /* Reserve space for ROM image */
     .ram_rom_image :
     {
         . = ALIGN(4);
@@ -89,7 +93,7 @@ SECTIONS
         _ram_rom_image_end = .;
     } >RAM
 
-    /* Reserve space at start of RAM for RAM functions */
+    /* Reserve space for RAM functions */
     .ram_func :
     {
         . = ALIGN(4);
@@ -98,6 +102,16 @@ SECTIONS
         . = ALIGN(4);
         _ram_func_end = .;
     } >RAM
+
+    /* Reserve space for data required by RAM functions */
+    .sdrr_info_ram :
+    {
+        . = ALIGN(4);
+        _sdrr_info_ram_start = .;
+        . = . + _Sdrr_Info_Ram_Size;
+        . = ALIGN(4);
+        _sdrr_info_ram_end = .;
+    }
 
     /* Data to be copied from flash to RAM */
     _sidata = LOADADDR(.data);

@@ -418,6 +418,12 @@ fn generate_sdrr_config_header(filename: &Path, config: &Config) -> Result<()> {
     writeln!(file, "{}", config.stm_variant.define_flash_size_kb())?;
     writeln!(file, "{}", config.stm_variant.define_ram_size_bytes())?;
     writeln!(file, "{}", config.stm_variant.define_ram_size_kb())?;
+    if let Some(ccm_ram_kb) = config.stm_variant.ccm_ram_kb() {
+        writeln!(file, "#define CCM_RAM_BASE 0x10000000")?;
+        writeln!(file, "#define CCM_RAM_SIZE {}", ccm_ram_kb*1024)?;
+        writeln!(file, "#define CCM_RAM_SIZE_KB {}", ccm_ram_kb)?;
+    }
+
     writeln!(file)?;
     writeln!(file, "// SDRR hardware variant")?;
     if config.hw.rom.pins.quantity == 24 {

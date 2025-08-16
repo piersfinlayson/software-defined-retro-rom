@@ -20,7 +20,9 @@ For example:
 
 This device has been tested, using One ROM hardware revision E, using a C64, as both kernal and character ROMs.
 
-Some differences were noted:
+Some differences were noted when originally tested, although seem to be have disappeared in later testing.  On the other hand, the STM32F405RGT6 has been found to be 20-30% less performant than the GD32F405RGT6, so the GD32F405RGT6 is recommended, despite the potential issues below.
+
+Issues found during original tests:
 
 - Anomalous pin behaviour on reset.  Status LED comes on immediately at "half" brightness on, then brightens, probably when the LED is actually turned on by the firmware.  On the STM32 the LED stays off until fully booted, then turns on.  This suggests the pins are in a different state to the STM32 on boot, but is unlikely to affect operation in practice.
 - Longer startup time.  The GD32F405 takes significantly longer to boot than the STM32F405.  The precise time has not been measured - perhaps 0.5-0.75s, which is much more than the ~1-3ms of the STM32F405.  This is _unlikely_ to be long enough to cause an issue in a device with a long reset delay, and didn't cause an issue with the C64 being tested.

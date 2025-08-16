@@ -38,9 +38,11 @@ cargo publish --dry-run -p sdrr-fw-parser
 cargo publish -p sdrr-fw-parser
 ```
 
+If on a branch, submit a pull request and merge it into main.
+
 Tag the version in git:
 
 ```bash
-git tag -s -a v<x.y.z> -m "Release v<x.y.z>
+git tag -s -a v<x.y.z> -m "Release v<x.y.z>"
 git push origin v<x.y.z>
 ```

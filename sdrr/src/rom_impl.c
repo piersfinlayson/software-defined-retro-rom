@@ -46,44 +46,55 @@ ram_log_fn ROM_IMPL_DEBUG = do_log;
 extern uint32_t _ram_rom_image_start[];
 extern uint32_t _ram_rom_image_end[];
 
-void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t *set) {
+void __attribute__((section(".main_loop"), used)) main_loop(
+#ifndef EXECUTE_FROM_RAM
+    const sdrr_info_t *info,
+    const sdrr_rom_set_t *set
+#else // EXECUTE_FROM_RAM
+    sdrr_info_t *info,
+    sdrr_rom_set_t *set
+#endif // !EXECUTE_FROM_RAM
+) {
 #ifdef MAIN_LOOP_LOGGING
+#ifdef EXECUTE_FROM_RAM
+#error "MAIN_LOOP_LOGGING cannot be used with EXECUTE_FROM_RAM"
+#endif // EXECUTE_FROM_RAM
     // Do a bunch of checking things are as we need them.  There's not much
     // point in doing this until MAIN_LOOP_LOGGING is defined, as no-one
     // will hear us if we scream ...
     // Note that sdrr-gen should have got this stuff right.
     ROM_IMPL_LOG("%s", log_divider);
     ROM_IMPL_LOG("Entered main_loop");
-    if (sdrr_info.pins->data_port != PORT_A) {
+    if (info->pins->data_port != PORT_A) {
         ROM_IMPL_LOG("!!! Data pins not using port A");
     }
-    if (sdrr_info.pins->addr_port != PORT_C) {
+    if (info->pins->addr_port != PORT_C) {
         ROM_IMPL_LOG("!!! Address pins not using port C");
     }
-    if (sdrr_info.pins->cs_port != PORT_C) {
+    if (info->pins->cs_port != PORT_C) {
         ROM_IMPL_LOG("!!! Chip select pins not using port C");
     }
-    if (sdrr_info.pins->rom_pins != 24) {
-        ROM_IMPL_LOG("!!! Have been told to emulate unsupported %d pin ROM", sdrr_info.pins->rom_pins);
+    if (info->pins->rom_pins != 24) {
+        ROM_IMPL_LOG("!!! Have been told to emulate unsupported %d pin ROM", info->pins->rom_pins);
     }
     for (int ii = 0; ii < 13; ii++) {
-        if (sdrr_info.pins->addr[ii] > 13) {
+        if (info->pins->addr[ii] > 13) {
             ROM_IMPL_LOG("!!! Address line A%d invalid", ii);
         }
     }
     for (int ii = 0; ii < 8; ii++) {
-        if (sdrr_info.pins->data[ii] > 7) {
+        if (info->pins->data[ii] > 7) {
             ROM_IMPL_LOG("!!! ROM line D%d invalid", ii);
         }
     }
     if (set->rom_count > 1) {
-        if (sdrr_info.pins->x1 > 15) {
+        if (info->pins->x1 > 15) {
             ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X1 invalid");
         }
-        if (sdrr_info.pins->x2 > 15) {
+        if (info->pins->x2 > 15) {
             ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X2 invalid");
         }
-        if (sdrr_info.pins->x1 == sdrr_info.pins->x2) {
+        if (info->pins->x1 == info->pins->x2) {
             ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X1=X2");
         }
     }
@@ -104,9 +115,12 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         serve_mode = SERVE_TWO_CS_ONE_ADDR;
     }
 
+#ifndef EXECUTE_FROM_RAM
+    // We don't copy filenames over in the RAM case, so this won't work
     for (int ii = 0; ii < set->rom_count; ii++) {
         ROM_IMPL_DEBUG("Serve ROM #%d: %s via mode: %d", ii, set->roms[ii]->filename, serve_mode);
     }
+#endif // EXECUTE_FROM_RAM
 
     //
     // Set up CS pin masks, using CS values from sdrr_info.
@@ -117,9 +131,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
     if (serve_mode == SERVE_ADDR_ON_ANY_CS)
     {
-        uint8_t pin_cs = sdrr_info.pins->cs1_2364;
-        uint8_t pin_x1 = sdrr_info.pins->x1;
-        uint8_t pin_x2 = sdrr_info.pins->x2;
+        uint8_t pin_cs = info->pins->cs1_2364;
+        uint8_t pin_x1 = info->pins->x1;
+        uint8_t pin_x2 = info->pins->x2;
         if (set->rom_count == 2)
         {
             cs_check_mask = (1 << pin_cs) | (1 << pin_x1);
@@ -137,9 +151,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             case ROM_TYPE_2316:
                 {
                     ROM_IMPL_DEBUG("ROM type: 2316");
-                    uint8_t pin_cs = sdrr_info.pins->cs1_2316;
-                    uint8_t pin_cs2 = sdrr_info.pins->cs2_2316;
-                    uint8_t pin_cs3 = sdrr_info.pins->cs3_2316;
+                    uint8_t pin_cs = info->pins->cs1_2316;
+                    uint8_t pin_cs2 = info->pins->cs2_2316;
+                    uint8_t pin_cs3 = info->pins->cs3_2316;
                     cs_check_mask = (1 << pin_cs) | (1 << pin_cs2) | (1 << pin_cs3);
                     if (rom->cs1_state == CS_ACTIVE_LOW) {
                         ROM_IMPL_DEBUG("CS1 active low");
@@ -165,8 +179,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             case ROM_TYPE_2332:
                 {
                     ROM_IMPL_DEBUG("ROM type: 2332");
-                    uint8_t pin_cs = sdrr_info.pins->cs1_2332;
-                    uint8_t pin_cs2 = sdrr_info.pins->cs2_2332;
+                    uint8_t pin_cs = info->pins->cs1_2332;
+                    uint8_t pin_cs2 = info->pins->cs2_2332;
                     cs_check_mask = (1 << pin_cs) | (1 << pin_cs2);
                     if (rom->cs1_state == CS_ACTIVE_LOW) {
                         ROM_IMPL_DEBUG("CS1 active low");
@@ -189,7 +203,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
             case ROM_TYPE_2364:
                 {
                     ROM_IMPL_DEBUG("ROM type: 2364");
-                    uint8_t pin_cs = sdrr_info.pins->cs1_2364;
+                    uint8_t pin_cs = info->pins->cs1_2364;
                     cs_check_mask = (1 << pin_cs);
                     if (rom->cs1_state == CS_ACTIVE_LOW) {
                         ROM_IMPL_DEBUG("CS1 active low");
@@ -247,21 +261,17 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         } else {
             pull = 0b01;  // Pull up
         }
-        gpioc_pupdr = (pull << (sdrr_info.pins->x1 * 2)) |
-                        (pull << (sdrr_info.pins->x2 * 2));
+        gpioc_pupdr = (pull << (info->pins->x1 * 2)) |
+                        (pull << (info->pins->x2 * 2));
     }
     GPIOC_PUPDR = gpioc_pupdr;
-
-    if (sdrr_info.status_led_enabled) {
-        setup_status_led();
-    }
 
     //
     // Calculcate pre-load values for all registers
     //
     uint32_t data_output_mask_val;
     uint32_t data_input_mask_val;
-    if (sdrr_info.mco_enabled) {
+    if (info->mco_enabled) {
         // PA8 is AF, PA0-7 are inputs
         data_output_mask_val = 0x00025555;
         data_input_mask_val = 0x00020000;
@@ -271,7 +281,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
         data_input_mask_val = 0x00000000;
     }
 
-    if (sdrr_info.swd_enabled) {
+    if (info->swd_enabled) {
         // Ensure PA13/14 remain AF (SWD enabled)
         data_output_mask_val |= 0x28000000;
         data_input_mask_val |= 0x28000000;
@@ -279,22 +289,15 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 
     // Set up the ROM table variables (the ROM is already in RAM by this point,
     // if RAM preloading is enabled).
-    uint32_t rom_table_val;
-    if (sdrr_info.preload_image_to_ram) {
-        rom_table_val = (uint32_t)&_ram_rom_image_start;
-    } else {
-        rom_table_val = (uint32_t)&(set->data[0]);
-    }
-    sdrr_runtime_info.rom_table = (void *)rom_table_val;
-    sdrr_runtime_info.rom_table_size = set->size;
+    uint32_t rom_table_val = (uint32_t)sdrr_runtime_info.rom_table;
 
-#if defined(COUNT_ROM_ACCESS)
+#if defined(COUNT_ROM_ACCESS) && !defined(C_MAIN_LOOP)
     // If we are counting ROM accesses, set it up
     sdrr_runtime_info.access_count = 0;  // Update from 0xFFFFFFFF to 0.
     sdrr_runtime_info.count_rom_access = 1;  // Flag as enabled
     uint32_t access_count_addr = (uint32_t)&sdrr_runtime_info.access_count;
     uint32_t access_count = 0;  // Used to initialise the count register itself
-#endif
+#endif // defined(COUNT_ROM_ACCESS) && !defined(C_MAIN_LOOP)
 
     // Now log current state, and items we're going to load to registers.
     ROM_IMPL_DEBUG("%s", log_divider);
@@ -318,7 +321,6 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 #endif
     ROM_IMPL_DEBUG("%s", log_divider);
 
-
 #if defined(MAIN_LOOP_ONE_SHOT)
     uint32_t byte;
     uint32_t addr_cs;
@@ -327,8 +329,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
 #else
     ROM_IMPL_LOG("Begin serving data");
 #endif // MAIN_LOOP_ONE_SHOT
-    if ((sdrr_info.status_led_enabled) && (sdrr_info.pins->status <= 15)) {
-        GPIOB_BSRR = (1 << (sdrr_info.pins->status + 16));
+    if ((info->status_led_enabled) && (info->pins->status <= 15)) {
+        GPIOB_BSRR = (1 << (info->pins->status + 16));
     }
 
 #if !defined(C_MAIN_LOOP)
@@ -429,16 +431,16 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
                     addr_cs_lines = GPIOC_IDR;  // ALG2_DUMB
                     while
                         ((((rom->cs1_state == CS_ACTIVE_LOW) &&
-                           !(addr_cs_lines & (1 << sdrr_info.pins->cs1_2332)))
+                           !(addr_cs_lines & (1 << info->pins->cs1_2332)))
                           ||
                           ((rom->cs1_state == CS_ACTIVE_HIGH) &&
-                           (addr_cs_lines & (1 << sdrr_info.pins->cs1_2332))))
+                           (addr_cs_lines & (1 << info->pins->cs1_2332))))
                          &&
                          (((rom->cs2_state == CS_ACTIVE_LOW) &&
-                           !(addr_cs_lines & (1 << sdrr_info.pins->cs2_2332)))
+                           !(addr_cs_lines & (1 << info->pins->cs2_2332)))
                           ||
                           ((rom->cs2_state == CS_ACTIVE_HIGH) &&
-                           (addr_cs_lines & (1 << sdrr_info.pins->cs2_2332))))) {
+                           (addr_cs_lines & (1 << info->pins->cs2_2332))))) {
                         data_byte = *(((uint8_t*)rom_table_val) + addr_cs_lines);
                         GPIOA_ODR = data_byte;
                         GPIOA_MODER = data_output_mask_val;                    
@@ -499,8 +501,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     }
 #endif // !C_MAIN_LOOP
 
-    if ((sdrr_info.status_led_enabled) && (sdrr_info.pins->status <= 15)) {
-        GPIOB_BSRR = (1 << sdrr_info.pins->status);
+    if ((info->status_led_enabled) && (info->pins->status <= 15)) {
+        GPIOB_BSRR = (1 << info->pins->status);
     }
 #if defined(MAIN_LOOP_ONE_SHOT)
         ROM_IMPL_LOG("Address/CS: 0x%08X Byte: 0x%08X", addr_cs, byte);
@@ -540,14 +542,28 @@ uint8_t get_rom_set_index(void) {
     return rom_index;
 }
 
-void preload_rom_image(const sdrr_rom_set_t *set) {
+void* preload_rom_image(const sdrr_rom_set_t *set) {
     uint32_t *img_src, *img_dst;
     uint32_t img_size;
 
     // Find the start of this ROM image in the flash memory
     img_size = set->size;
     img_src = (uint32_t *)(set->data);
+#if defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
+    if (sdrr_info.stm_line == F405) {
+        // Preload to CCM RAM
+        LOG("F405: Preloading ROM image to CCM RAM");
+        img_dst = (uint32_t *)CCM_RAM_BASE;
+    } else {
+#else 
+    if (sdrr_info.stm_line == F405) {
+        LOG("F405: NOT Preloading ROM image to CCM RAM");
+    }
+#endif // defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
     img_dst = _ram_rom_image_start;
+#if defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
+    }
+#endif // defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
 
 #if defined(BOOT_LOGGING)
     DEBUG("ROM filename: %s", set->roms[0]->filename);
@@ -575,6 +591,8 @@ void preload_rom_image(const sdrr_rom_set_t *set) {
     LOG("ROM %s preloaded to RAM 0x%08X size %d bytes", set->roms[0]->filename, (uint32_t)_ram_rom_image_start, img_size);
     LOG("Set ROM count: %d, Serving algorithm: %d, multi-ROM CS1 state: %s",
         set->rom_count, set->serve, cs_values[set->multi_rom_cs1_state]);
+
+    return (void *)img_dst;
 }
 
 #endif // !TIMER_TEST/TOGGLE_PA4

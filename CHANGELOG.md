@@ -2,6 +2,33 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.3.1 - 2025-08-16
+
+The project has been renamed One ROM (To Rule Them All).
+
+This release is a few odds and ends including some hardware improvements:
+- One ROM hardware revision [F2](/sdrr-pcb/verified/stm32f4-24-pin-rev-f2/README.md) is currently recommended.
+- An **unverified** hardware revision [G](/sdrr-pcb/unverified/stm32f4-24-pin-rev-g/README.md) is in testing.  This brings mostly layout improvements and slightly reduced manufacturing costs.
+- The fastest STM32F4 MCU, the STM32F446 has been verified to work.   This brings a max supported clock speed of 180MHz, and has run stably up to 300MHz in testing.
+- The STM32F405 has provided slower than expected (more details below).  It is supported and a decent choice, but the GigaDevices GD32F405 appears to be more performant.
+
+### Changes
+
+- Speed up STM32F405 support:
+  - The STM32F405 is under-performant vs the other devices at the same clock speed - needs around 30-40% faster clock speed.
+  - Added CCM RAM support for the F405, bringing the uplift in clock speed down to around 15-20%.
+  - To disable CCM RAM set `C_EXTRA_FLAGS=-DDISABLE_CCM=1` when building.
+  - The STM32F405 is still a decent MCU choice for One ROM, as its max clock speed is 168MHz compared with the F411's 100MHz.  However, users may wish to use the GigaDevices clone GD32F405, which appears to have no performance penalty. 
+- Hardware revision 24-f2 is now verified.  JLC have successfully fabbed using the hardware files both STM32F411 and STM32F405 variants.
+- Allow more aggressive overclocking (up to 400MHz).
+- Validated STM32F446RCT6 (STM32F446RET6 highly likely to work as well).  Successfully tested as C64 char ROM, and verified clock speed of 180MHz (via MCO1 showing 45MHz = SYSCLK/4).  Also overclocked to 300MHz, ran stably.
+- Added **unverified** hardware revision 24-g.
+
+## Fixes
+
+- Explicitly prevent COUNT_ROM_ACCESS and C_MAIN_LOOP being configured together, as they are incompatible.
+- Fixed ability to run main loop from RAM (this tends to be slower than from flash, so isn't recommended).
+
 ## v0.3.0 - 2025-08-12
 
 The main user facing change in this release is the addition of support for remote analysis and co-processing alongside the SDRR device via plug-ins, such as [Airfrog](https://piers.rocks/u/airfrog) - **a tiny $3 probe for ARM devices**.  This allows you to inspect the firmware and runtime state of the SDRR device, and change its configuration and ROM data - **while it is serving ROMs**.

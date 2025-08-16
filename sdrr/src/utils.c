@@ -229,10 +229,25 @@ void set_flash_ws(void) {
             wait_states = 5;
         } else if (sdrr_info.freq <= 210) {
             wait_states = 6;
-        } else if (sdrr_info.freq <= 240) {
+        } else if ((sdrr_info.freq <= 240) || (sdrr_info.stm_line == F405)) {
+            // F405 only has 3 bits for flash wait states so stop here
             wait_states = 7;
         } else if (sdrr_info.freq <= 270) {
             wait_states = 8;
+        } else if (sdrr_info.freq <= 300) {
+            wait_states = 9;
+        } else if (sdrr_info.freq <= 330) {
+            wait_states = 10;
+        } else if (sdrr_info.freq <= 360) {
+            wait_states = 11;
+        } else if (sdrr_info.freq <= 390) {
+            wait_states = 12;
+        } else if (sdrr_info.freq <= 420) {
+            wait_states = 13;
+        } else if (sdrr_info.freq <= 450) {
+            wait_states = 14;
+        } else {
+            wait_states = 15;
         }
     }
     FLASH_ACR &= ~FLASH_ACR_LATENCY_MASK;  // Clear latency bits
@@ -380,6 +395,12 @@ void log_init(void) {
         LOG("Bootloader: %s", disabled);
     }
 
+    if (sdrr_info.status_led_enabled) {
+        LOG("Status LED: enabled - PB%d", sdrr_info.pins->status);
+    } else {
+        LOG("Status LED: disabled");
+    }
+
 #if defined(C_MAIN_LOOP)
     LOG("C main loop: enabled");
 #endif // C_MAIN_LOOP
@@ -494,7 +515,7 @@ void execute_ram_func(uint32_t ram_addr) {
 
 #endif // EXECUTE_FROM_RAM
 
-// Common setup for stauts LED output using PB15 (inverted logic: 0=on, 1=off)
+// Common setup for status LED output using PB15 (inverted logic: 0=on, 1=off)
 void setup_status_led(void) {
     if (sdrr_info.pins->status_port != PORT_B) {
         LOG("!!! Status port not B - not using");

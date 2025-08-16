@@ -25,18 +25,38 @@ void system_init(void) {
         LOG_INIT();
     }
 
-    if ((sdrr_info.stm_line == F411) || (sdrr_info.stm_line == F446)) {
+    if ((sdrr_info.stm_line == F405) ||
+        (sdrr_info.stm_line == F411) || 
+        (sdrr_info.stm_line == F446)) {
         if (sdrr_info.freq > 84) {
             // Set power scale 1 mode, as clock speed is 100MHz (> 84MHz, <= 100MHz)
             // Scale defaults to 1 on STM32F405, and not required on STM32F401
             // Must be done before enabling PLL
+
+            // First, enbale the PWR clock
+            LOG("Set VOS to scale 1");
+            RCC_APB1ENR |= (1 << 28);   // PWREN bit
+
+            // Wait briefly to see if VOS is ready
+            for (int ii = 0; ii < 1000; ii++) {
+                if (PWR_CR & PWR_CSR_VOSRDY_MASK) {
+                    LOG("VOS ready");
+                    break;
+                }
+            }
             if (!(PWR_CR & PWR_CSR_VOSRDY_MASK)) {
                 LOG("!!! VOS not ready - proceeding anyway");
             }
-            LOG("Set VOS to scale 1");
-            RCC_APB1ENR |= (1 << 28);   // PWREN bit
-            PWR_CR &= ~PWR_VOS_MASK;    // Clear VOS bits
-            PWR_CR |= PWR_VOS_SCALE_1;  // Set VOS bits to scale 1
+
+            // Now configure VOS scale mode
+            if (sdrr_info.stm_line == F405) {
+                PWR_CR &= ~PWR_VOS_MASK_F405; // Clear VOS bits for F405
+                PWR_CR |= PWR_VOS_SCALE_1_F405; // Set VOS bits to scale 1 for F405
+            } else {
+                // For F411 and F446, set VOS to scale 1
+                PWR_CR &= ~PWR_VOS_MASK;    // Clear VOS bits
+                PWR_CR |= PWR_VOS_SCALE_1;  // Set VOS bits to scale 1
+            }
         }
     }
 
@@ -60,10 +80,17 @@ void system_init(void) {
     DEBUG("PLL started");
 
     if ((sdrr_info.stm_line == F446) && (sdrr_info.freq > 168)) {
-        // Need to set overdrive mode
+        // Need to set overdrive mode - wait for it to be ready
+        for (int ii = 0; ii < 1000; ii++) {
+            if (PWR_CR & PWR_CSR_ODRDY_MASK) {
+                LOG("OD ready");
+                break;
+            }
+        }
         if (!(PWR_CR & PWR_CSR_ODRDY_MASK)) {
             LOG("!!! OD not ready - proceeding anyway");
         }
+
         LOG("Set overdrive mode");
         PWR_CR |= PWR_CR_ODEN;       // Set ODEN bit
         while (!(PWR_CSR & PWR_CSR_ODRDY_MASK)); // Wait for OD to be ready
@@ -117,11 +144,13 @@ void gpio_init(void) {
     // PB0-2 but as PB7 isn't connected we can set it here as well.
     // We do this early doors, so the internal pull-downs will have settled
     // before we read the pins.
-    GPIOB_MODER |= 0x00000000;  // Set all GPIOs as inputs
+    // TODO the code to set PU/PD should be retired (and then tested as the
+    // PU/PD is now done in check_sel_pins()).
+    GPIOB_MODER = 0;  // Set all GPIOs as inputs
     GPIOB_PUPDR &= ~0x0000C03F;  // Clear pull-up/down for PB0-2 and PB7
     GPIOB_PUPDR |= 0x0000802A;   // Set pull-downs on PB0-2 and PB7
 
-    GPIOC_MODER &= 0x00000000;  // Set all GPIOs as inputs
+    GPIOC_MODER = 0;  // Set all GPIOs as inputs
 
 #if defined(MCO2)
     uint32_t gpioc_moder = GPIOC_MODER;
@@ -131,7 +160,7 @@ void gpio_init(void) {
     GPIOC_OSPEEDR |= 0x000C0000; // Set PC9 to very high speed
     GPIOC_OTYPER &= ~(0b1 << 9);  // Set as push-pull
 #else // !MCO2
-    GPIOC_PUPDR = 0x00000000; // No pull-up/down
+    GPIOC_PUPDR = 0; // No pull-up/down
 #endif // MCO2
 }
 
@@ -200,10 +229,15 @@ int main(void) {
     sdrr_runtime_info.rom_set_index = get_rom_set_index();
     const sdrr_rom_set_t *set = rom_set + sdrr_runtime_info.rom_set_index;
 #if !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
-    // Only bother to preload the ROM image if we are not running a test
+    // Set up the ROM table
     if (sdrr_info.preload_image_to_ram) {
-        preload_rom_image(set);
+        sdrr_runtime_info.rom_table = preload_rom_image(set);
+    } else {
+        // If we are not preloading the ROM image, we need to set up the
+        // rom_table to point to the flash location of the ROM image.
+        sdrr_runtime_info.rom_table = (void *)&(set->data[0]);
     }
+    sdrr_runtime_info.rom_table_size = set->size;
 #endif // !TIMER_TEST && !TOGGLE_PA4
 
     // Startup MCO after preloading the ROM - this allows us to test (with a
@@ -216,19 +250,74 @@ int main(void) {
     // - ~3ms    F411 100MHz BOOT_LOGGING=1
     // - ~1.5ms  F411 100MHz BOOT_LOGGING=0
 
+    // Setup status LED up now, so we don't need to call the function from the
+    // main loop - which might be running from RAM.
+    if (sdrr_info.status_led_enabled) {
+        setup_status_led();
+    }
+
     // Execute the main_loop
 #if !defined(MAIN_LOOP_LOGGING)
     LOG("Start main loop - logging ends");
 #endif // !MAIN_LOOP_LOGGING
 
 #if !defined(EXECUTE_FROM_RAM)
-    main_loop(set);
+    main_loop(&sdrr_info, set);
 #else // EXECUTE_FROM_RAM
+#ifndef PRELOAD_TO_RAM
+#error "PRELOAD_TO_RAM must be defined when EXECUTE_FROM_RAM is enabled"
+#endif // !PRELOAD_TO_RAM
+
+    // We need to set up a copy of some of sdrr_info and linked to data, in
+    // order for main_loop() to be able to access it.  If we don't do this,
+    // main_loop() will try to access the original sdrr_info, which is in
+    // flash, and it will use relative addressing, which won't work.
+
+    // Set up addresses to copy sdrr_info and related data to
+
+    // These come from the linker
+    extern uint8_t _sdrr_info_ram_start[];
+    extern uint8_t _sdrr_info_ram_end[];
+
+    // The _addresses_ of the linker variables are the locations we're
+    // interested in
+    uint8_t *sdrr_info_ram_start = &_sdrr_info_ram_start[0];
+    uint8_t *sdrr_info_ram_end = &_sdrr_info_ram_end[0];
+    uint32_t ram_size = sdrr_info_ram_end - sdrr_info_ram_start;
+    uint32_t required_size = sizeof(sdrr_info_t) + sizeof(sdrr_pins_t) + sizeof(sdrr_rom_set_t);
+    DEBUG("RAM start: 0x%08X, end: 0x%08X", (unsigned int)sdrr_info_ram_start, (unsigned int)sdrr_info_ram_end);
+    DEBUG("RAM size: 0x%08X bytes, required size: 0x%08X bytes", ram_size, required_size);
+    if (required_size > ram_size) {
+        LOG("!!! Not enough RAM for sdrr_info and related data");
+    }
+    // Continue away :-|
+
+    // Copy sdrr_info to RAM
+    uint8_t *ptr = sdrr_info_ram_start;
+    sdrr_info_t *info = (sdrr_info_t *)ptr;
+    memcpy(info, &sdrr_info, sizeof(sdrr_info_t));
+    DEBUG("Copied sdrr_info to RAM at 0x%08X", (uint32_t)info);
+    ptr += sizeof(sdrr_info_t);
+
+    // Copy the pins and update sdrr_info which points to pins
+    sdrr_pins_t *pins = (sdrr_pins_t *)ptr;
+    memcpy(pins, sdrr_info.pins, sizeof(sdrr_pins_t));
+    DEBUG("Copied sdrr_pins to RAM at 0x%08X", (uint32_t)pins);
+    info->pins = pins;
+    ptr += sizeof(sdrr_pins_t);
+
+    // Copy the rom_set to RAM
+    sdrr_rom_set_t *rom_set = (sdrr_rom_set_t *)ptr;
+    memcpy(rom_set, set, sizeof(sdrr_rom_set_t));
+    DEBUG("Copied sdrr_rom_set to RAM at 0x%08X", (uint32_t)rom_set);
+    ptr += sizeof(sdrr_rom_set_t);
+
     // The main loop function was copied to RAM in the ResetHandler
-    extern uint32_t _ram_func_start;    // Start of .ram_func section in RAM
-    void (*ram_func)(uint8_t) = (void(*)(void))(_ram_func_start | 1);
-    ram_func(rom);
-#endif
+    extern uint32_t _ram_func_start;
+    void (*ram_func)(const sdrr_info_t *, const sdrr_rom_set_t *set) = (void(*)(const sdrr_info_t *, const sdrr_rom_set_t *set))((uint32_t)&_ram_func_start | 1);
+    DEBUG("Executing main_loop from RAM at 0x%08X", (uint32_t)ram_func);
+    ram_func(info, rom_set);
+#endif // !EXECUTE_FROM_RAM
 
     return 0;
 }

@@ -1,6 +1,6 @@
 [package]
 name = "sdrr-check"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 authors = ["Piers Finlayson <piers@piers.rocks>"]
 description = "Software Defined Retro ROM (SDRR) manufacturing check tool"

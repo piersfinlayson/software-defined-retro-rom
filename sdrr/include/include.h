@@ -23,6 +23,13 @@
 // #define MAIN_LOOP_LOGGING 1  // Enable main loop logging
 // #define MAIN_LOOP_ONE_SHOT 1 // Run the main loop once, then log, then run
 //                              // it again
+// #define DISABLE_CCM 1    // Disable CCM RAM - only relevant for variants
+//                          // that support CCM RAM
+// #define C_MAIN_LOOP 1    // Disable assembly main loop, use less performant
+//                          // C main loop
+// define DUMB_C_MAIN_LOOP_2_CS // Requires C_MAIN_LOOP, and even worse
+//                              // implementation, which only supports 2 CS
+//                              // lines.  Probably don't use.
 //
 // sdrr-gen also provides the rom images:
 //

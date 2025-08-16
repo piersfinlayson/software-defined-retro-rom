@@ -50,7 +50,7 @@ The video below provides an introduction to the Software Defined Retro ROM:
 
 ## Hardware
 
-This is the STM32F4 24-pin version, hardware revison F.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
+This is the STM32F4 24-pin version, hardware revison G1.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
 
 <div style="display: flex; justify-content: center; gap: 20px;">
   <a href="docs/images/sdrr-24-pin-side.png">
@@ -67,7 +67,7 @@ You have two options
 
 ### Pre-built Binaries
 
-Use your favourite STM32 programmer to flash the pre-built binaries from the project's [releases](https://github.com/piersfinlayson/software-defined-retro-rom/releases/) page.  Scroll down to the "Assets" section of the latest release, and download the `bin-*.zip` or `elf-*.zip` file for your STM32 variant.  These zip files contain pre-built binaries for the various One ROM image collections, including the C64, VIC-20, PET, and 1541 disk drive.
+Use [Airfrog](https://piers.rocks/u/airfrog) or your favourite STM32 programmer to flash the pre-built binaries from the project's [releases](https://github.com/piersfinlayson/software-defined-retro-rom/releases/) page.  Scroll down to the "Assets" section of the latest release, and download the `bin-*.zip` or `elf-*.zip` file for your STM32 variant.  These zip files contain pre-built binaries for the various One ROM image collections, including the C64, VIC-20, PET, and 1541 disk drive.
 
 ### Build Yourself
 

@@ -105,6 +105,12 @@ This is not specified by default, which uses the maximum frequency for the chose
 
 Enabling this feature allows you to specify a higher frequency than supported by a particular STM32F4xxR variant.  One ROM uses very few peripherals and hence it should be possible for the STM32 to be powered at a higher than stock frequency, but the silicon may not be stable.
 
+The STM32F405 seems to max out at around 250MHz, probably due to the maximum number of flash wait states that can be configured.
+
+The GD32F405 appears to run at 300MHz, although some host instabilities were noticed at this speed - it is possible One ROM is running too fast (serving bytes too quickly, or on brief chip select line glitches, or de-serving them too quickly?).
+
+While currently untested, the STM32F446 may be able to be pushed much higher - as it has capacity for wait states supporting up to around 500MHz.
+
 ### `STATUS_LED`
 
 One ROM hardware revisions E and onwards provide a status LED, which is lit once the One ROM has booted and is ready to serve the image.  It also flashes this LED if it crashes.
@@ -134,4 +140,16 @@ B - Checks address lines only when CS is active, and applies to data lines (whic
 
 In all cases tested, `B` appears to be the superior algorithm, but `A` is kept in case it is incompatible with some systems.
 
-One ROM defaults to `B` is no algorithm is specified for single-ROM sets, and requires `B` (which is applies automatically, even if you specify `A`) for multi-ROM sets.
+SDRR defaults to `B` is no algorithm is specified for single-ROM sets, and requires `B` (which is applies automatically, even if you specify `A`) for multi-ROM sets.
+
+## Extra C Flags
+
+There are some additional options that can be compiled in/out based on "hidden" C #defines.  You can use `EXTRA_C_FLAGS` to pass these in on the `make` command.
+
+For example this disables loading the ROM table to the STM32F405's CCM RAM, instead loading it to (normal) RAM (SRAM):
+
+```bash
+EXTRA_C_FLAGS=-DDISABLE_CCM=1 STM=f405rg make
+```
+
+See [`include.h`](../sdrr/include/include.h) for more information on available options.  These may be have left in a non-compiling state - raise an issue if you have problems.

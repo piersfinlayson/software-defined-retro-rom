@@ -93,7 +93,7 @@ One ROM is extremely flexible in the STM32F4xxR variants it supports, so you can
 
 **Q: Are clones just as good as the real deal STM32?**
 
-A: Mostly, but not entirely.  The GigaDevices GD32F405 takes longer to boot than the STM32F405, and the pins show different behaviour on reset.  However, it is unlikely you'd notice any difference in praactice.  See [STM32 Clones](/docs/STM32-CLONES.md) for more details.
+A: Mostly, but not entirely.  The GigaDevices GD32F405 may take longer to boot than the STM32F405, but generally appears more performantSee [STM32 Clones](/docs/STM32-CLONES.md) for more details.
 
 ## Installation and Setup
 
