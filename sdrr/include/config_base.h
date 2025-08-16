@@ -16,8 +16,9 @@ typedef enum {
     F411 = 0x0002,
     F446 = 0x0003,
     F401BC = 0x0004,  // Only 64KB RAM
-    STM_LINE_FORCE_UINT16 = 0xFFFF,
-} stm_line_t;
+    RP2350_LINE = 0x0005,
+    MCU_LINE_FORCE_UINT16 = 0xFFFF,
+} mcu_line_t;
 
 typedef enum {
     STORAGE_8 = 0x00,
@@ -27,32 +28,36 @@ typedef enum {
     STORAGE_E = 0x04,
     STORAGE_F = 0x05,
     STORAGE_G = 0x06,
-    STM_STORAGE_FORFCE_UINT16 = 0xFFFF,
-} stm_storage_t;
+    STORAGE_2MB = 0x07,
+    MCU_STORAGE_FORFCE_UINT16 = 0xFFFF,
+} mcu_storage_t;
 
 // Only ports A-D are exposed on the 64-pin STM32F4s.
+// RP2350 has port (bank) 0.
 typedef enum {
     PORT_NONE = 0x00,
     PORT_A    = 0x01,
     PORT_B    = 0x02,
     PORT_C    = 0x03,
     PORT_D    = 0x04,
-} sdrr_stm_port_t;
+    PORT_0    = 0x05,  // RP2350
+} sdrr_mcu_port_t;
 
 // Pin allocations
 //
 // All pin numbers are physical pins - allocated from the configured STM32F4
-// port.  Valid numbers are 0-15.  255 indicates a particular pin is present.
-// The index into the array is ROM Ax or Dx number.
+// port.  Valid numbers are 0-15 on the STM32, 0-29 on the RP2350.
+// 255 indicates a particular pin is present.
+// The index into the array is ROM Address x or Data x number.
 typedef struct {
-    // SDRR STM32 pin port locations
+    // SDRR MCU pin port locations
     // Offset: 0
     // 8 x 1 byte = 8 bytes
-    sdrr_stm_port_t data_port;  // Data lines
-    sdrr_stm_port_t addr_port;  // Address lines
-    sdrr_stm_port_t cs_port;    // Chip select/enable lines
-    sdrr_stm_port_t sel_port;   // Image select jumpers
-    sdrr_stm_port_t status_port; // Status LED
+    sdrr_mcu_port_t data_port;  // Data lines
+    sdrr_mcu_port_t addr_port;  // Address lines
+    sdrr_mcu_port_t cs_port;    // Chip select/enable lines
+    sdrr_mcu_port_t sel_port;   // Image select jumpers
+    sdrr_mcu_port_t status_port; // Status LED
     uint8_t rom_pins;           // Number of pins this ROM is emulating 
     uint8_t reserved1[2];
 
@@ -130,11 +135,11 @@ typedef struct {
     // 4 bytes
     const char* hw_rev;
 
-    // STM32 product line
+    // MCU product line
     // Offset: 28
     // 2 x 2 bytes = 4 bytes
-    const stm_line_t stm_line;
-    const stm_storage_t stm_storage;
+    const mcu_line_t mcu_line;
+    const mcu_storage_t mcu_storage;
 
     // Target frequency in MHz
     // Offset: 32

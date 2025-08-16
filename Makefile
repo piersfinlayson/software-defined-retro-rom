@@ -1,6 +1,6 @@
-# Top level Makefile for SDRR project
+# Top level Makefile for One ROM
 #
-# Running this Makefile will generate the SDRR firmware binary in sdrr/build
+# Running this Makefile will generate the One ROM firmware binary in sdrr/build
 # according to the settings below.
 #
 # You can override the settings in this file by creating a config file which
@@ -11,12 +11,12 @@
 # You can also override some of the below settings in a config file, and others
 # on the command line, like this:
 #
-# STM=f411rc CONFIG=configs/your_config.mk make
+# MCU=f411rc CONFIG=configs/your_config.mk make
 #
 
 VERSION_MAJOR := 0
-VERSION_MINOR := 3
-VERSION_PATCH := 1
+VERSION_MINOR := 4
+VERSION_PATCH := 0
 BUILD_NUMBER := 1
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 export VERSION_MAJOR VERSION_MINOR VERSION_PATCH BUILD_NUMBER GIT_COMMIT
@@ -37,25 +37,27 @@ endif
 # configuration.
 #
 
-# STM types
-# f446rc - F446 256KB flash version
-# f446re - F446 512KB flash version
-# f411rc - F411 256KB flash version
-# f411re - F411 512KB flash version
-# f405rg - F405 1024KB flash version
-# f401re - F401 512KB flash version
-# f401rb - F401 128KB flash version
-# f401rc - F401 256KB flash version
+# MCU types
+# f446rc - STM32F446 256KB flash version
+# f446re - STM32F446 512KB flash version
+# f411rc - STM32F411 256KB flash version
+# f411re - STM32F411 512KB flash version
+# f405rg - STM32F405/GD32F405 1024KB flash version
+# f401re - STM32F401 512KB flash version
+# f401rb - STM32F401 128KB flash version
+# f401rc - STM32F401 256KB flash version
+# rp2350 - RP2350 2MB flash version
 
-# STM ?= f446rc
-# STM ?= f446re
-# STM ?= f411rc
-# STM ?= f411re
-# STM ?= f405rg
-# STM ?= f401re
-# STM ?= f401rb
-# STM ?= f401rc
-STM ?= f411re
+# MCU ?= rp2350
+# MCU ?= f446rc
+# MCU ?= f446re
+# MCU ?= f411rc
+# MCU ?= f411re
+# MCU ?= f405rg
+# MCU ?= f401re
+# MCU ?= f401rb
+# MCU ?= f401rc
+MCU ?= f411re
 
 # Hardware revision
 #
@@ -97,7 +99,7 @@ ROM_CONFIGS ?= \
 
 # Status LED
 #
-# The status LED is used to indicate the status of the SDRR device.
+# The status LED is used to indicate the status of One ROM.
 # Only supported from HW revision e onwards.
 #
 # You can disable it in order to reduce the power consumption of the device.
@@ -132,19 +134,18 @@ COUNT_ROM_ACCESS ?= 1
 # Development and debug settings
 #
 # It is recommended to leave these settings as is unless you are developing or
-# debugging the SDRR firmware.
+# debugging the One ROM firmware.
 #
-# However, if you are having problems with the SDRR firmware, you may want to
+# However, if you are having problems with the One ROM firmware, you may want to
 # disable any enabled features.
 #
 
 # SWD - Serial Wire Debug protocol
 #
-# This is used to communicate with the STM32 chip for debugging and
-# programming.
+# This is used to communicate with the MCU for debugging and programming.
 #
-# If you are using an STM32F4xx series chip it is recommended to leave SWD
-# enabled, as it makes it easier to reprogram the chip with new images.
+# It is recommended to leave SWD enabled, as it makes it easier to reprogram
+# the chip with new images.
 #
 # SWD is required for the logging options to work.
 
@@ -230,27 +231,30 @@ MCO ?= 0
 MCO2 ?= 0
 # MCO2 ?= 1
 
-# Oscillator
+# Oscillator - Used for STM32 only
 # 
 # Which oscillator to use.  The options are:
 # - HSI (High Speed Internal) - the internal oscillator
 # - HSE (High Speed External) - an external crystal or clock source (no longer supported)
 #
-# SDRR has been designed to work primrily with the internal oscillator, in
+# One ROM has been designed to work primrily with the internal oscillator, in
 # order to reduce component count and cost (and a more stable clock source is
 # not required for this application).  Hence HSI operation is recommended.
+#
+# On the RP2350 an external crystal oscillator running at 12MHz is assumed
 
 OSC ?= HSI
 # OSC ?= HSE
 
 # Frequency
 #
-# Target frequency of the processor - only valid for STM32F4xx series chips.
+# Target frequency of the processor
 # Leave blank to use the max frequency of the chip:
-# - F401: 84MHz
-# - F411: 100MHz
-# - F405: 168MHz
-# - F446: 180MHz
+# - STM32F401: 84MHz
+# - STM32F411: 100MHz
+# - STM32F405: 168MHz
+# - STM32F446: 180MHz
+# - RP2350: 150MHz
 #
 # Some guidance on speeds required to run stably:
 # - PET 4032 character ROM >= 26MHz
@@ -262,8 +266,8 @@ OSC ?= HSI
 # - VIC 20 PAL character ROM >= 72MHz
 #
 # Your mileage may vary.  Faster machines will require the device to operate
-# at higher frequencies.  Lower clock frequencies will cause SDRR to draw less
-# power.  The F405 draws around 30mA at 30MHz and >60mA at 168MHz.  The SDRR
+# at higher frequencies.  Lower clock frequencies will cause One ROM to draw less
+# power.  The F405 draws around 30mA at 30MHz and >60mA at 168MHz.  One ROM's
 # voltage regulator also consumes some power.
 #
 # It is suggested to leave this blank (i.e. use the maximum frequency) for most
@@ -274,8 +278,8 @@ OSC ?= HSI
 
 # Overclocking
 #
-# Can be used to allow the STM32F4xx chip to be run at a higher frequency than
-# officially supported.  Use with caution, as this may damage the chip.
+# Can be used to allow the MCU to be run at a higher frequency than officially
+# supported.  Use with caution, as this may damage the chip.
 #
 # You must manually set the desired frequency using the FREQ variable.
 
@@ -309,11 +313,11 @@ DISABLE_PRELOAD_TO_RAM ?= 0
 
 # Byte serving algorithm
 #
-# Byte default, the SDRR firmware checks for CS line changes twice as often as
+# Byte default, the One ROM firmware checks for CS line changes twice as often as
 # addr lines - due to the asymetric timings for these lines.
 #
 # When serving mulit-ROM sets, the address lines are only checked when CS goes
-# active - as SDRR doesn't know which ROM image to pull the byte from until
+# active - as One ROM doesn't know which ROM image to pull the byte from until
 # that happens.
 #
 # Another algorithm can be chosen for the single image/set case.  It has no
@@ -341,7 +345,7 @@ CARGO_PROFILE ?= release
 
 # Extra C Flags
 #
-# Use to pass extra flags into SDRR's compile stage.
+# Use to pass extra flags into One ROM's compile stage.
 #
 # For example this enables the C main loop test function/
 # EXTRA_C_FLAGS ?= -DC_MAIN_LOOP
@@ -358,16 +362,28 @@ COLOUR_RED := $(shell echo -e '\033[31m')
 
 ifneq ($(SUPPRESS_OUTPUT),1)
   $(info ==========================================)
-  $(info Building SDRR v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH))
+  $(info Building One ROM v$(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_PATCH))
   $(info ==========================================)
-  $(info SDRR Makefile env settings:)
+  $(info One ROM Makefile env settings:)
 endif
 
-# STM
-ifneq ($(STM),)
+# MCU
+ifneq ($(MCU),)
+  MCU_PREFIX=
+  ifneq ($(filter f%,$(MCU)),)
+    MCU_PREFIX=stm32
+  endif
+  BIN_PREFIX=sdrr-$(MCU_PREFIX)$(MCU)
 ifneq ($(SUPPRESS_OUTPUT),1)
-  $(info - STM=$(STM))
+  $(info - MCU=$(MCU))
 endif
+endif
+ifeq ($(BIN_PREFIX),)
+ $(error - MCU not set)
+else
+  ifneq ($(SUPPRESS_OUTPUT),1)
+    $(info - BIN_PREFIX=$(BIN_PREFIX))
+  endif
 endif
 
 ifneq ($(CONFIG),)
@@ -402,7 +418,7 @@ ifneq ($(SUPPRESS_OUTPUT),1)
 endif
   STATUS_LED_FLAG = --status-led
 else
-  STATUS_LED_FLAG = 
+  STATUS_LED_FLAG =
 endif
 
 # Set count_rom_access flag based on COUNT_ROM_ACCESS variable
@@ -601,7 +617,7 @@ endif
 WARNINGS=0
 
 ifneq ($(SUPPRESS_OUTPUT),1)
-$(info SDRR Build Warnings: )
+$(info One ROM Build Warnings: )
 ifneq ($(SWD), 1)
   $(info - $(COLOUR_YELLOW)SWD is disabled$(COLOUR_RESET) - this will prevent you from reprogramming the device via SWD after flashing with this image)
   WARNINGS += 1
@@ -616,11 +632,11 @@ endif
 
 all: firmware info
 	@echo "=========================================="
-	@echo "SDRR firmware build complete:"
+	@echo "One ROM firmware build complete:"
 	@echo "- firmware files are in sdrr/build/"
 	@echo "-----"
-	@ls -ltr sdrr/build/sdrr-stm32$(STM).elf
-	@ls -ltr sdrr/build/sdrr-stm32$(STM).bin
+	@ls -ltr sdrr/build/$(BIN_PREFIX).elf
+	@ls -ltr sdrr/build/$(BIN_PREFIX).bin
 	@echo "=========================================="
 
 sdrr-gen:
@@ -628,7 +644,7 @@ sdrr-gen:
 	@echo "Building sdrr-gen, to:"
 	@echo "- generate firmware settings"
 	@echo "- retrieve ROM data"
-	@echo "- process ROM data into SDRR firmware files"
+	@echo "- process ROM data into One ROM firmware files"
 	@echo "-----"
 	@cd rust && cargo build --$(CARGO_PROFILE)
 
@@ -639,42 +655,43 @@ gen: $(CARGO_TARGET_DIR)/sdrr-gen
 	@echo "Running sdrr-gen, to:"
 	@echo "- generate firmware settings"
 	@echo "- retrieve ROM data"
-	@echo "- process ROM data into SDRR firmware files"
+	@echo "- process ROM data into One ROM firmware files"
+	@echo "- Args: --mcu $(MCU) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(COUNT_ROM_ACCESS_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output-dir $(GEN_OUTPUT_DIR)"
 	@echo "-----"
 	@mkdir -p $(GEN_OUTPUT_DIR)
-	@$(CARGO_TARGET_DIR)/sdrr-gen --stm $(STM) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(COUNT_ROM_ACCESS_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output-dir $(GEN_OUTPUT_DIR)
+	@$(CARGO_TARGET_DIR)/sdrr-gen --mcu $(MCU) $(HW_REV_FLAG) $(OSC_FLAG) $(ROM_ARGS) $(SWD_FLAG) $(COUNT_ROM_ACCESS_FLAG) $(BOOT_LOGGING_FLAG) $(MAIN_LOOP_LOGGING_FLAG) $(DEBUG_LOGGING_FLAG) $(MCO_FLAG) $(MCO2_FLAG) $(FREQ_FLAG) $(OVERCLOCK_FLAG) $(STATUS_LED_FLAG) $(BOOTLOADER_FLAG) $(DISABLE_PRELOAD_TO_RAM_FLAG) $(SERVE_ALG_FLAG) $(ARGS) --overwrite --output-dir $(GEN_OUTPUT_DIR)
 
 sdrr-info:
 	@echo "=========================================="
 	@echo "Building sdrr-info, to:"
-	@echo "- Validate SDRR firmware"
-	@echo "- Extract key SDRR firmware properties"
+	@echo "- Validate One ROM firmware"
+	@echo "- Extract key One ROM firmware properties"
 	@echo "-----"
 	@cd rust && cargo build --$(CARGO_PROFILE)
 
 info: sdrr-info firmware
 	@echo "=========================================="
 	@echo "Running sdrr-info, to:"
-	@echo "- Validate SDRR firmware"
-	@echo "- Extract key SDRR firmware properties"
+	@echo "- Validate One ROM firmware"
+	@echo "- Extract key One ROM firmware properties"
 	@echo "-----"
-	@$(CARGO_TARGET_DIR)/sdrr-info info sdrr/build/sdrr-stm32$(STM).bin
+	@$(CARGO_TARGET_DIR)/sdrr-info info sdrr/build/$(BIN_PREFIX).bin
 	@echo "-----"
 	@echo "Use <SAME_ARGS> make info-detail to see more details about the firmware"
 
 info-detail: sdrr-info firmware
 	@echo "=========================================="
 	@echo "Running sdrr-info, to:"
-	@echo "- Validate SDRR firmware"
-	@echo "- Extract key SDRR firmware properties"
-	@echo "- Show detailed SDRR firmware properties"
+	@echo "- Validate One ROM firmware"
+	@echo "- Extract key One ROM firmware properties"
+	@echo "- Show detailed One ROM firmware properties"
 	@echo "-----"
-	@$(CARGO_TARGET_DIR)/sdrr-info info -d sdrr/build/sdrr-stm32$(STM).bin
+	@$(CARGO_TARGET_DIR)/sdrr-info info -d sdrr/build/$(BIN_PREFIX).bin
 	@echo "=========================================="
 
 firmware: gen
 	@echo "=========================================="
-	@echo "Building SDRR firmware for:"
+	@echo "Building One ROM firmware for:"
 	@echo "- MCU variant: STM32$(shell echo $(STM) | tr '[:lower:]' '[:upper:]')"
 	@echo "- HW revision: $(HW_REV)"
 	@echo "-----"
@@ -683,13 +700,13 @@ firmware: gen
 # Call make run-actual - this causes a new instance of make to be invoked and generated.mk exists, so it can load PROBE_RS_CHIP_ID
 run: firmware info
 	@echo "=========================================="
-	@echo "Flash SDRR firmware to device and attach to logging:"
+	@echo "Flash One ROM firmware to device and attach to logging:"
 	@echo "-----"
 	@SUPPRESS_OUTPUT=1 make --no-print-directory run-actual
 
 flash: firmware info
 	@echo "=========================================="
-	@echo "Flash SDRR firmware to device:"
+	@echo "Flash One ROM firmware to device:"
 	@echo "-----"
 	@SUPPRESS_OUTPUT=1 make --no-print-directory flash-actual
 
@@ -710,10 +727,10 @@ test: firmware
 -include $(GEN_OUTPUT_DIR)/generated.mk
 
 run-actual:
-	@probe-rs run --chip $(PROBE_RS_CHIP_ID) sdrr/build/sdrr-stm32$(STM).elf
+	@probe-rs run --chip $(PROBE_RS_CHIP_ID) sdrr/build/$(BIN_PREFIX).elf
 
 flash-actual:
-	@probe-rs download --chip $(PROBE_RS_CHIP_ID) sdrr/build/sdrr-stm32$(STM).bin
+	@probe-rs download --chip $(PROBE_RS_CHIP_ID) sdrr/build/$(BIN_PREFIX).bin
 
 clean-firmware-build:
 	+cd sdrr && make clean-build

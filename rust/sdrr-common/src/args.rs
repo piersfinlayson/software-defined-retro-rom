@@ -3,11 +3,11 @@
 // MIT License
 
 use crate::hardware::{HwConfig, get_hw_config};
-use crate::sdrr_types::{ServeAlg, StmVariant};
+use crate::sdrr_types::{ServeAlg, McuVariant};
 
-pub fn parse_stm_variant(s: &str) -> Result<StmVariant, String> {
-    StmVariant::try_from_str(s)
-        .ok_or_else(|| format!("Invalid STM32 variant: {}. Valid values are: f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc", s))
+pub fn parse_mcu_variant(s: &str) -> Result<McuVariant, String> {
+    McuVariant::try_from_str(s)
+        .ok_or_else(|| format!("Invalid MCU variant: {}. Valid values are: f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc for STM32, and rp2350 for Raspberry Pi", s))
 }
 
 pub fn parse_hw_rev(hw_rev: &str) -> Result<HwConfig, String> {

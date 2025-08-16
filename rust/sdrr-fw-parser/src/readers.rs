@@ -54,6 +54,7 @@ impl MemoryReader {
     pub fn new(data: Vec<u8>, base_address: u32) -> Self {
         Self { data, base_address }
     }
+
 }
 
 impl Reader for MemoryReader {
@@ -79,5 +80,9 @@ impl Reader for MemoryReader {
 
         buf.copy_from_slice(&self.data[offset..end]);
         Ok(())
+    }
+
+    fn update_base_address(&mut self, new_base: u32) {
+        self.base_address = new_base;
     }
 }

@@ -21,7 +21,7 @@ use crate::SdrrInfo;
     Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
 )]
 #[deku(id_type = "u16", ctx = "endian: deku::ctx::Endian")]
-pub enum StmLine {
+pub enum McuLine {
     /// F401D/E - 96KB RAM
     #[deku(id = "0x0000")]
     F401DE,
@@ -41,27 +41,33 @@ pub enum StmLine {
     /// F401B/C - 64KB RAM
     #[deku(id = "0x0004")]
     F401BC,
+
+    /// RP2350
+    #[deku(id = "0x0005")]
+    Rp2350,
 }
 
-impl fmt::Display for StmLine {
+impl fmt::Display for McuLine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StmLine::F401DE => write!(f, "STM32F401DE"),
-            StmLine::F405 => write!(f, "STM32F405"),
-            StmLine::F411 => write!(f, "STM32F411"),
-            StmLine::F446 => write!(f, "STM32F446"),
-            StmLine::F401BC => write!(f, "STM32F401BC"),
+            McuLine::F401DE => write!(f, "STM32F401DE"),
+            McuLine::F405 => write!(f, "STM32F405"),
+            McuLine::F411 => write!(f, "STM32F411"),
+            McuLine::F446 => write!(f, "STM32F446"),
+            McuLine::F401BC => write!(f, "STM32F401BC"),
+            McuLine::Rp2350 => write!(f, "RP2350"),
         }
     }
 }
 
-impl StmLine {
+impl McuLine {
     /// Returns the amount of SRAM of the device (not including any CCM RAM)
     pub fn ram_kb(&self) -> &str {
         match self {
-            StmLine::F401DE => "96",
-            StmLine::F401BC => "64",
-            StmLine::F405 | StmLine::F411 | StmLine::F446 => "128",
+            McuLine::F401DE => "96",
+            McuLine::F401BC => "64",
+            McuLine::F405 | McuLine::F411 | McuLine::F446 => "128",
+            McuLine::Rp2350 => "520",
         }
     }
 }
@@ -75,7 +81,7 @@ impl StmLine {
     Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
 )]
 #[deku(id_type = "u16", ctx = "endian: deku::ctx::Endian")]
-pub enum StmStorage {
+pub enum McuStorage {
     /// 8 = 64KB
     #[deku(id = "0")]
     Storage8,
@@ -103,37 +109,43 @@ pub enum StmStorage {
     /// G = 1024KB
     #[deku(id = "6")]
     StorageG,
+
+    /// 2MB
+    #[deku(id = "7")]
+    Storage2MB,
 }
 
-impl StmStorage {
+impl McuStorage {
     /// Returns the storage size in kilobytes
     pub fn kb(&self) -> &str {
         match self {
-            StmStorage::Storage8 => "64",
-            StmStorage::StorageB => "128",
-            StmStorage::StorageC => "256",
-            StmStorage::StorageD => "384",
-            StmStorage::StorageE => "512",
-            StmStorage::StorageF => "768",
-            StmStorage::StorageG => "1024",
+            McuStorage::Storage8 => "64",
+            McuStorage::StorageB => "128",
+            McuStorage::StorageC => "256",
+            McuStorage::StorageD => "384",
+            McuStorage::StorageE => "512",
+            McuStorage::StorageF => "768",
+            McuStorage::StorageG => "1024",
+            McuStorage::Storage2MB => "2048",
         }
     }
 
     /// Returns the storage package code
     pub fn package_code(&self) -> &str {
         match self {
-            StmStorage::Storage8 => "8",
-            StmStorage::StorageB => "B",
-            StmStorage::StorageC => "C",
-            StmStorage::StorageD => "D",
-            StmStorage::StorageE => "E",
-            StmStorage::StorageF => "F",
-            StmStorage::StorageG => "G",
+            McuStorage::Storage8 => "8",
+            McuStorage::StorageB => "B",
+            McuStorage::StorageC => "C",
+            McuStorage::StorageD => "D",
+            McuStorage::StorageE => "E",
+            McuStorage::StorageF => "F",
+            McuStorage::StorageG => "G",
+            McuStorage::Storage2MB => "2MB",
         }
     }
 }
 
-impl fmt::Display for StmStorage {
+impl fmt::Display for McuStorage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.package_code())
     }
@@ -281,7 +293,7 @@ impl fmt::Display for SdrrServe {
     Debug, Clone, Copy, PartialEq, Eq, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize,
 )]
 #[deku(id_type = "u8")]
-pub enum SdrrStmPort {
+pub enum SdrrMcuPort {
     /// No port (pin set is not exposed/used)
     #[deku(id = "0x00")]
     None,
@@ -301,16 +313,21 @@ pub enum SdrrStmPort {
     /// Port D
     #[deku(id = "0x04")]
     PortD,
+
+    /// Port 0 (RP2350 only)
+    #[deku(id = "0x05")]
+    Port0,
 }
 
-impl fmt::Display for SdrrStmPort {
+impl fmt::Display for SdrrMcuPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SdrrStmPort::None => write!(f, "None"),
-            SdrrStmPort::PortA => write!(f, "A"),
-            SdrrStmPort::PortB => write!(f, "B"),
-            SdrrStmPort::PortC => write!(f, "C"),
-            SdrrStmPort::PortD => write!(f, "D"),
+            SdrrMcuPort::None => write!(f, "None"),
+            SdrrMcuPort::PortA => write!(f, "A"),
+            SdrrMcuPort::PortB => write!(f, "B"),
+            SdrrMcuPort::PortC => write!(f, "C"),
+            SdrrMcuPort::PortD => write!(f, "D"),
+            SdrrMcuPort::Port0 => write!(f, "0"),
         }
     }
 }

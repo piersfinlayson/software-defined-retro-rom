@@ -8,7 +8,7 @@
 #define CONSTANTS_H
 
 // Metadata strings to include in the binary
-extern const char stm_variant[];
+extern const char mcu_variant[];
 extern const char license[];
 extern const char project_url[];
 extern const char copyright[];

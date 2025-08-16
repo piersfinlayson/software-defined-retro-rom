@@ -1,11 +1,11 @@
 {
-  "description": "SDRR 24-pin rev d",
+  "description": "One ROM 24-pin rev d",
   "rom": {
     "pins": {
       "quantity": 24
     }
   },
-  "stm": {
+  "mcu": {
     "family": "f4",
     "ports": {
         "data_port": "A",

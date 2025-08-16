@@ -11,7 +11,7 @@ use static_assertions::const_assert_eq;
 
 use crate::Reader;
 use crate::{MAX_VERSION_MAJOR, MAX_VERSION_MINOR, MAX_VERSION_PATCH};
-use crate::{SdrrCsState, SdrrRomType, SdrrServe, StmLine, StmStorage};
+use crate::{SdrrCsState, SdrrRomType, SdrrServe, McuLine, McuStorage};
 use crate::{SdrrPins, SdrrRomInfo, SdrrRomSet};
 
 #[cfg(not(feature = "std"))]
@@ -79,8 +79,8 @@ pub(crate) struct SdrrInfoHeader {
     pub commit: [u8; 8],
     #[deku(endian = "little")]
     pub hw_rev_ptr: u32,
-    pub stm_line: StmLine,
-    pub stm_storage: StmStorage,
+    pub stm_line: McuLine,
+    pub stm_storage: McuStorage,
     #[deku(endian = "little")]
     pub freq: u16,
     pub overclock: u8,

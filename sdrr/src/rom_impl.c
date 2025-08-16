@@ -1,4 +1,4 @@
-// 2332/2364 ROM implementation.
+// One ROM 2316/2332/2364 ROM implementation.
 
 // Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
 //
@@ -46,6 +46,7 @@ ram_log_fn ROM_IMPL_DEBUG = do_log;
 extern uint32_t _ram_rom_image_start[];
 extern uint32_t _ram_rom_image_end[];
 
+#if defined(STM32F4)
 void __attribute__((section(".main_loop"), used)) main_loop(
 #ifndef EXECUTE_FROM_RAM
     const sdrr_info_t *info,
@@ -509,6 +510,24 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     }
 #endif // MAIN_LOOP_ONE_SHOT
 }
+#elif defined(RP235X)
+void __attribute__((section(".main_loop"), used)) main_loop(
+#ifndef EXECUTE_FROM_RAM
+    const sdrr_info_t *info,
+    const sdrr_rom_set_t *set
+#else // EXECUTE_FROM_RAM
+    sdrr_info_t *info,
+    sdrr_rom_set_t *set
+#endif // !EXECUTE_FROM_RAM
+) {
+    (void)info;
+    (void)set;
+    LOG("RP235X main loop not implemented yet");
+}
+#else 
+#error "Unsupported MCU line - please define STM32F4 or RP235X"
+#endif // !STM32F4 && !RP235X
+
 
 // Get the index of the selected ROM by reading the select jumpers
 //
@@ -550,13 +569,13 @@ void* preload_rom_image(const sdrr_rom_set_t *set) {
     img_size = set->size;
     img_src = (uint32_t *)(set->data);
 #if defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)
-    if (sdrr_info.stm_line == F405) {
+    if (sdrr_info.mcu_line == F405) {
         // Preload to CCM RAM
         LOG("F405: Preloading ROM image to CCM RAM");
         img_dst = (uint32_t *)CCM_RAM_BASE;
     } else {
 #else 
-    if (sdrr_info.stm_line == F405) {
+    if (sdrr_info.mcu_line == F405) {
         LOG("F405: NOT Preloading ROM image to CCM RAM");
     }
 #endif // defined(CCM_RAM_BASE) && !defined(DISABLE_CCM)

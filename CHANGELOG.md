@@ -2,6 +2,10 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.4.0 - 2025-??-??
+
+The RP2350 release.
+
 ## v0.3.1 - 2025-08-16
 
 The project has been renamed One ROM (To Rule Them All).

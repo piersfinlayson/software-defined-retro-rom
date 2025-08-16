@@ -10,8 +10,8 @@ use deku::prelude::*;
 
 use crate::{ParseError, Parser, Reader};
 use crate::{
-    SdrrAddress, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrStmPort, StmLine,
-    StmStorage,
+    SdrrAddress, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrMcuPort, McuLine,
+    McuStorage,
 };
 
 #[cfg(not(feature = "std"))]
@@ -51,8 +51,8 @@ pub struct SdrrInfo {
     pub patch_version: u16,
     pub build_number: u16,
     pub commit: [u8; 8],
-    pub stm_line: StmLine,
-    pub stm_storage: StmStorage,
+    pub stm_line: McuLine,
+    pub stm_storage: McuStorage,
     pub freq: u16,
     pub overclock: bool,
     pub swd_enabled: bool,
@@ -369,11 +369,11 @@ pub struct SdrrRomInfo {
 /// Reflects `sdrr_pins_t` from `sdrr/include/config_base.h`
 #[derive(Debug, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
 pub struct SdrrPins {
-    pub data_port: SdrrStmPort,
-    pub addr_port: SdrrStmPort,
-    pub cs_port: SdrrStmPort,
-    pub sel_port: SdrrStmPort,
-    pub status_port: SdrrStmPort,
+    pub data_port: SdrrMcuPort,
+    pub addr_port: SdrrMcuPort,
+    pub cs_port: SdrrMcuPort,
+    pub sel_port: SdrrMcuPort,
+    pub status_port: SdrrMcuPort,
     pub rom_pins: u8,
     #[deku(pad_bytes_before = "2")]
     #[deku(count = "8")]

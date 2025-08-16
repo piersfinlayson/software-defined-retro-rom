@@ -5,14 +5,14 @@
 //! sdrr-gen - Handles command-line arguments for the SDRR generator
 //!
 //! Generates a configuration based on user input, including hardware
-//! revision, STM32 variant, ROM configurations, and various options for
+//! revision, MCU variant, ROM configurations, and various options for
 //! logging, preloading image to RAM, and more.
 
 use clap::Parser;
 use std::path::PathBuf;
 
-use sdrr_common::args::{parse_hw_rev, parse_serve_alg, parse_stm_variant};
-use sdrr_common::{CsLogic, HwConfig, RomType, ServeAlg, StmVariant};
+use sdrr_common::args::{parse_hw_rev, parse_serve_alg, parse_mcu_variant};
+use sdrr_common::{CsLogic, HwConfig, RomType, ServeAlg, McuVariant};
 
 use crate::config::{Config, CsConfig, RomConfig, SizeHandling};
 use crate::file::{FileSource, check_output_dir, source_image_file};
@@ -28,9 +28,9 @@ pub struct Args {
     #[clap(long, alias = "rom-config", required_unless_present = "list_hw_revs")]
     rom: Vec<String>,
 
-    /// STM32 variant (f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc)
-    #[clap(long, required_unless_present = "list_hw_revs", value_parser = parse_stm_variant)]
-    stm: Option<StmVariant>,
+    /// MCU variant (f446rc, f446re, f411rc, f411re, f405rg, f401re, f401rb, f401rc, rp2350)
+    #[clap(long, alias = "stm", required_unless_present = "list_hw_revs", value_parser = parse_mcu_variant)]
+    mcu: Option<McuVariant>,
 
     /// Enable SWD
     #[clap(long)]
@@ -93,7 +93,7 @@ pub struct Args {
     #[clap(long)]
     status_led: bool,
 
-    /// Support overclocking the processor (STM32F4xx only)
+    /// Support overclocking the processor
     #[clap(long)]
     overclock: bool,
 
@@ -134,8 +134,8 @@ impl Args {
     }
 
     /// Returns the STM variant desired
-    fn stm_variant(&self) -> Option<StmVariant> {
-        self.stm
+    fn stm_variant(&self) -> Option<McuVariant> {
+        self.mcu
     }
 
     /// Returns whether SWD should be enabled
@@ -220,13 +220,13 @@ impl Args {
         self.serve_alg.unwrap_or(ServeAlg::Default)
     }
 
-    /// Returns the STM variant and the desired frequency in MHz.  The
+    /// Returns the MCU variant and the desired frequency in MHz.  The
     /// frequency is either user-specified, or, if unspecified, the maximum
-    /// frequency for the STM32 variant.
-    fn stm_and_freq(&self) -> Result<(StmVariant, u32), String> {
+    /// frequency for the MCU variant.
+    fn mcu_and_freq(&self) -> Result<(McuVariant, u32), String> {
         let stm_variant = self
             .stm_variant()
-            .ok_or("STM32 variant must be specified")?;
+            .ok_or("MCU variant must be specified")?;
         let freq = self
             .freq
             .unwrap_or_else(|| stm_variant.processor().max_sysclk_mhz());
@@ -256,13 +256,13 @@ impl Args {
         // Parse the ROM arguments
         let roms = self.parse_rom_args()?;
 
-        // Get the STM variant and frequency
-        let (stm_variant, freq) = self.stm_and_freq()?;
+        // Get the MCU variant and frequency
+        let (mcu_variant, freq) = self.mcu_and_freq()?;
 
         // Return the config object
         Ok(Config {
             roms,
-            stm_variant,
+            mcu_variant,
             output_dir: self.output_dir.clone(),
             swd: self.swd(),
             count_rom_access: self.count_rom_access,
