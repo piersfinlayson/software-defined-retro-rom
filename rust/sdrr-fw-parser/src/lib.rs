@@ -37,7 +37,7 @@ use esp_println as _;
 /// Maximum SDRR firmware versions supported by this version of`sdrr-fw-parser`
 pub const MAX_VERSION_MAJOR: u16 = 0;
 pub const MAX_VERSION_MINOR: u16 = 3;
-pub const MAX_VERSION_PATCH: u16 = 0;
+pub const MAX_VERSION_PATCH: u16 = 1;
 
 // lib.rs - Public API and core traits
 pub mod info;

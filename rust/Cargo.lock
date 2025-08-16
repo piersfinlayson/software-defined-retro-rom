@@ -2269,7 +2269,7 @@ checksum = "f93c025f9cfe4c388c328ece47d11a54a823da3b5ad0370b22d95ad47137f85a"
 
 [[package]]
 name = "sdrr-check"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
@@ -2289,7 +2289,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-common"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "serde",
@@ -2298,7 +2298,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-fw-parser"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "deku",
  "esp-println",
@@ -2309,7 +2309,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-gen"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2324,7 +2324,7 @@ dependencies = [
 
 [[package]]
 name = "sdrr-info"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "chrono",
