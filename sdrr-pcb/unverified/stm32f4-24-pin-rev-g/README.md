@@ -20,6 +20,7 @@ There is a single set of gerbers, one CPL/POS file and multiple BOM files, one f
 - STM32F401RET6
 - STM32F411RET6
 - GD32F405RGT6
+- STM32F405RGT6
 - STM32F446RET6
 
 <div style="text-align: center;">
