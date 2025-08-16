@@ -12,7 +12,13 @@ This release is a few odds and ends including some hardware improvements:
 - The fastest STM32F4 MCU, the STM32F446 has been verified to work.   This brings a max supported clock speed of 180MHz, and has run stably up to 300MHz in testing.
 - The STM32F405 has provided slower than expected (more details below).  It is supported and a decent choice, but the GigaDevices GD32F405 appears to be more performant.
 
-The project has been renamed One ROM.
+The project has been renamed One ROM (To Rule Them All).
+
+This release is a few odds and ends including some hardware improvements:
+- One ROM hardware revision [F2](/sdrr-pcb/verified/stm32f4-24-pin-rev-f2/README.md) is currently recommended.
+- An **unverified** hardware revision [G](/sdrr-pcb/unverified/stm32f4-24-pin-rev-g/README.md) is in testing.  This brings mostly layout improvements and slightly reduced manufacturing costs.
+- The fastest STM32F4 MCU, the STM32F446 has been verified to work.   This brings a max supported clock speed of 180MHz, and has run stably up to 300MHz in testing.
+- The STM32F405 has provided slower than expected (more details below).  It is supported and a decent choice, but the GigaDevices GD32F405 appears to be more performant.
 
 ### Changes
 
