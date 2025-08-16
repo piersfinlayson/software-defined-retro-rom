@@ -163,7 +163,7 @@ uint32_t check_sel_pins(uint32_t *sel_mask) {
     uint32_t sel_1bit_mask = 0;
     uint32_t sel_2bit_mask = 0;
     uint32_t pull_downs = 0;
-    for (int ii = 0; ii < 4; ii++) {
+    for (int ii = 0; ii < MAX_IMG_SEL_PINS; ii++) {
         uint8_t pin = sdrr_info.pins->sel[ii];
         if (pin < 255) {
             // Pin is present, so set the mask
@@ -518,7 +518,7 @@ void platform_logging(void) {
         LOG("!!! MCU mismatch: actual %s, firmware expected %s", idcode_mcu_variant, mcu_variant);
     }
 
-    LOG("PCB rev %s", sdrr_info.hw_rev);
+    LOG("PCB rev: %s", sdrr_info.hw_rev);
     uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
     uint32_t flash_kb = flash_bytes / 1024;
     if (flash_bytes % 1024 != 0) {

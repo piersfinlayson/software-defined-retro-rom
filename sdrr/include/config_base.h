@@ -90,8 +90,9 @@ typedef struct {
     // Image select lines
     // Offset: 52
     // 8 x 4 bytes = 8 bytes
-    uint8_t sel[4];
-    uint8_t reserved4[4];
+#define MAX_IMG_SEL_PINS 4
+    uint8_t sel[MAX_IMG_SEL_PINS];
+    uint8_t reserved4[8-MAX_IMG_SEL_PINS];
 
     // Status LED line
     // Offset: 60

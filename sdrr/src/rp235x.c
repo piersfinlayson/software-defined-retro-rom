@@ -27,22 +27,25 @@ __attribute__((section(".rp2350_block"))) const rp2350_boot_block_t rp2350_arm_b
 
 void platform_specific_init(void) {
     // RP235X needs to reset the JTAG interface to enable SWD (for example for
-    // RTT loggin)
+    // RTT logging)
+    RESET_RESET |= RESET_JTAG;
     RESET_RESET &= ~RESET_JTAG;
     while (!(RESET_DONE & RESET_JTAG));
 }
 
 void setup_clock(void) {
-    LOG("Setting up clock for RP235X");
+    LOG("Setting up clock");
 
     setup_xosc();
     setup_pll();
-
-    LOG("RP235X clock set up complete");
 }
 
 void setup_gpio(void) {
-    LOG("!!! RP235x GPIO setup not implemented");
+    LOG("Setting up GPIO");
+
+    // Take IO bank and pads bank out of reset
+    RESET_RESET &= ~(RESET_IOBANK0 | RESET_PADS_BANK0);
+    while (!(RESET_DONE & (RESET_IOBANK0 | RESET_PADS_BANK0)));
 }
 
 // Set up the PLL with the generated values
@@ -80,11 +83,40 @@ void setup_mco(void) {
     LOG("!!! MCO not supported on RP235X");
 }
 
+// On all RP2350 boards, the SEL pins are pulled low by jumpers to indicate
+// a 1, so reverse to the default STM32F4 behavior.
 uint32_t check_sel_pins(uint32_t *sel_mask) {
-    // RP235X does not have SEL pins, so we return 0
-    LOG("!!! SEL pins not supported on RP235X");
+    // Ensure GPIO port is enabled
+    RESET_RESET &= ~(RESET_IOBANK0 | RESET_PADS_BANK0);
+    while (!(RESET_DONE & (RESET_IOBANK0 | RESET_PADS_BANK0)));
+
+    uint32_t value;
     *sel_mask = 0;
-    return 0;
+
+    // Setup the pins first.  Do this first to allow any pull-ups to settle
+    // before reading.
+    for (int ii = 0; ((ii < MAX_IMG_SEL_PINS) && (sdrr_info.pins->sel[ii] < 255)); ii++) {
+        uint8_t pin = sdrr_info.pins->sel[ii];
+        if (pin < 32) {
+            // Set the pin as SIO function - clear everything else
+            GPIO_CTRL(pin) = GPIO_FUNC_SIO;
+
+            // Enable as input and pull-up
+            GPIO_PAD(pin) = PAD_INPUT_PU;
+
+            // Set the pin in our bit mask
+            *sel_mask |= (1 << pin);
+        } else {
+            LOG("!!! Sel pin %d > 31 - not using", pin);
+        }
+    }
+
+    // Read the pins
+    LOG("Reading SEL pins: mask 0x%08X", *sel_mask);
+    LOG("Reading SIO_GPIO_IN: 0x%08X", SIO_GPIO_IN);
+    value = SIO_GPIO_IN & *sel_mask;
+
+    return value;
 }
 
 void setup_status_led(void) {
@@ -99,7 +131,39 @@ void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
 }
 
 void platform_logging(void) {
+    LOG("%s", log_divider);
+    LOG("Detected hardware info ...");
+
+    // Reset the SysInfo registers
+    RESET_RESET &= ~RESET_SYSINFO;
+
+    // Output hardware information
     LOG("MCU: RP235X");
+    LOG("Chip ID: 0x%08X", SYSINFO_CHIP_ID);
+    char *package;
+    if (SYSINFO_PACKAGE_SEL & 0b1) {
+        package = "QFN60";
+    } else {
+        package = "QFN80";
+    }
+    LOG("Package: %s", package);
+    LOG("Chip gitref: 0x%08X", SYSINFO_GITREF_RP2350);
+    LOG("Running on core: %d", SIO_CPUID);
+    LOG("PCB rev %s", sdrr_info.hw_rev);
+    LOG("Firmware configured flash size: %dKB", MCU_FLASH_SIZE_KB);
+    if ((MCU_RAM_SIZE_KB != RP2350_RAM_SIZE_KB) || (MCU_RAM_SIZE != RP2350_RAM_SIZE_KB * 1024)) {
+        LOG("!!! RAM size mismatch: actual %dKB (%d bytes), firmware expected: %dKB (%d bytes)", MCU_RAM_SIZE_KB, MCU_RAM_SIZE, RP2350_RAM_SIZE_KB, RP2350_RAM_SIZE_KB * 1024);
+    } else {
+        LOG("Firmware configured RAM size: %dKB (default)");
+    }
+    LOG("Flash configured RAM: %dKB (%d bytes)", MCU_RAM_SIZE_KB, MCU_RAM_SIZE);
+
+    LOG("Target freq: %dMHz", TARGET_FREQ_MHZ);
+    #define PLL_SYS_REFDIV    1
+#define PLL_SYS_FBDIV     50
+#define PLL_SYS_POSTDIV1  4
+#define PLL_SYS_POSTDIV2  1
+    LOG("PLL values: %d/%d/%d/%d (refdiv/fbdiv/postdiv1/postdiv2)", PLL_SYS_REFDIV, PLL_SYS_FBDIV, PLL_SYS_POSTDIV1, PLL_SYS_POSTDIV2);
 }
 
 void setup_xosc(void) {

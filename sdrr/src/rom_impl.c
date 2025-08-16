@@ -523,6 +523,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     (void)info;
     (void)set;
     LOG("RP235X main loop not implemented yet");
+    while (1);
 }
 #else 
 #error "Unsupported MCU line - please define STM32F4 or RP235X"
