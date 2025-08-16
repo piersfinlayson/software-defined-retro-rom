@@ -1,6 +1,6 @@
-# Software Defined Retro ROM - Release Notes
+# One ROM - Release Notes
 
-Provides a highly configurable and low-cost ROM replacement solution for vintage computers using STM32F4 microcontrollers.
+The most flexible ROM replacement for your retro computer.
 
 ## Changes In This Release
 
@@ -10,7 +10,7 @@ Provides a highly configurable and low-cost ROM replacement solution for vintage
 
 **Most users:** Depending on your flashing method, either download the **bin-*.zip** files or the **elf-*.zip** files.
 
-**For developers:** Download **full-*.zip** files for complete build outputs including disassembly and map # Software Defined Retro ROM - Release Notes
+**For developers:** Download **full-*.zip** files for complete build outputs including disassembly and map files
 
 ## File Types
 
@@ -42,5 +42,5 @@ Firmware for ROM image configurations that require explicit licence acceptance (
 
 For documentation, hardware setup guides, and support:
 
-- GitHub: [Project](https://github.com/piersfinlayson/software-defined-retro-rom)
+- GitHub: [Project](https://piers.rocks/u/one)
 - YouTube: [@piers.rocks](https://www.youtube.com/@piers_rocks)
