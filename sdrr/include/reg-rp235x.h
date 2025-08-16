@@ -27,15 +27,23 @@
 #define CLOCK_CLK_GPOUT0_SEL    (*((volatile uint32_t *)(CLOCKS_BASE + 0x08)))
 #define CLOCK_REF_CTRL          (*((volatile uint32_t *)(CLOCKS_BASE + 0x30)))
 #define CLOCK_REF_SELECTED      (*((volatile uint32_t *)(CLOCKS_BASE + 0x38)))
+#define CLOCK_SYS_CTRL          (*((volatile uint32_t *)(CLOCKS_BASE + 0x3C)))
+#define CLOCK_SYS_SELECTED      (*((volatile uint32_t *)(CLOCKS_BASE + 0x44)))
 
 #define CLOCK_REF_SRC_XOSC      0x02
 #define CLOCK_REF_SRC_SEL_MASK  0b1111
 #define CLOCK_REF_SRC_SEL_XOSC  (1 << 2)
 
+#define CLOCK_SYS_SRC_AUX           (1 << 0)
+#define CLOCK_SYS_AUXSRC_PLL_SYS    (0x0 << 5)
+
 // Reset registers
 #define RESET_RESET     (*((volatile uint32_t *)(RESETS_BASE + 0x00)))
 #define RESET_WDSEL     (*((volatile uint32_t *)(RESETS_BASE + 0x04)))
 #define RESET_DONE      (*((volatile uint32_t *)(RESETS_BASE + 0x08)))
+
+#define RESET_JTAG  (1 << 8)
+#define RESET_PLL_SYS   (1 << 14)
 
 // Crystal Oscillator Registers
 #define XOSC_CTRL       (*((volatile uint32_t *)(XOSC_BASE + 0x00)))
@@ -64,7 +72,7 @@
 #define PLL_CS_LOCK         (1 << 31)
 #define PLL_CS_BYPASS       (1 << 8)
 #define PLL_CS_REFDIV_MASK  0b111111
-#define PLL_CS_REFDIV(X)    ((X) & PLL_CS_REFDIV_MASK)
+#define PLL_CS_REFDIV(X)    (((X) & PLL_CS_REFDIV_MASK) << PLL_CS_REFDIV_SHIFT)
 #define PLL_CS_REFDIV_SHIFT 0
 
 // PLL Power bits  
@@ -77,5 +85,17 @@
 #define PLL_SYS_PRIM_POSTDIV1(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 16)
 #define PLL_SYS_PRIM_POSTDIV2(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 12)
 #define PLL_PRIM_POSTDIV_MASK   0x7
+
+typedef struct {
+    uint32_t start_marker;          // 0xffffded3
+    uint8_t  image_type_tag;        // 0x42 
+    uint8_t  image_type_len;        // 0x1
+    uint16_t image_type_data;       // 0b0001000000100001, RP2350, ARM, Secure, EXE
+    uint8_t  last_tag;              // 0xff
+    uint16_t last_len;              // 0x0001
+    uint8_t  pad;                   // 0
+    uint32_t next_block;            // 0 (no next block)
+    uint32_t end_marker;            // 0xab123579
+} __attribute__((packed)) rp2350_boot_block_t;
 
 #endif // REG_RP235X_H

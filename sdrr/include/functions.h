@@ -29,6 +29,7 @@ extern void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats);
 
 // rp235x.c
 #if defined(RP235X)
+extern void platform_specific_init(void);
 extern void setup_clock(void);
 extern void setup_gpio(void);
 extern void setup_mco(void);
@@ -44,6 +45,7 @@ extern void setup_pll(void);
 
 // stm32f4.c
 #if defined(STM32F4)
+extern void platform_specific_init(void);
 extern void setup_clock(void);
 extern void setup_gpio(void);
 extern void setup_mco(void);

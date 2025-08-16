@@ -7,6 +7,10 @@
 #include "include.h"
 #include "roms.h"
 
+void platform_specific_init(void) {
+    // Nothing required
+}
+
 void setup_clock(void) {
         if ((sdrr_info.mcu_line == F405) ||
         (sdrr_info.mcu_line == F411) || 
