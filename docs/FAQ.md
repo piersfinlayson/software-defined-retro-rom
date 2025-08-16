@@ -1,14 +1,18 @@
-# SDRR Frequently Asked Questions
+# One ROM Frequently Asked Questions
 
-## What is SDRR?
+## What is One ROM?
 
-**Q: What exactly is Software Defined Retro ROM (SDRR)?**
+**Q: What exactly is One ROM?**
 
-A: SDRR is a ROM replacement solution that uses a cheap STM32F4 microcontroller to emulate failed or missing ROMs in retro computers. It is easily reprogrammed, can store up to 16 different ROM images and switch between them using jumpers, eliminating the need for expensive EEPROM programmers or multiple physical ROM chips.
+A: One ROM is a ROM replacement solution that uses a cheap STM32F4 microcontroller to emulate failed or missing ROMs in retro computers. It is easily reprogrammed, can store up to 16 different ROM images and switch between them using jumpers, eliminating the need for expensive EEPROM programmers or multiple physical ROM chips.
 
-**Q: Why would I use SDRR instead of buying replacement ROMs or using an EEPROM?**
+**Q: What is Software Defined Retro ROM (SDRR)?**
 
-A: SDRR offers several advantages:
+A: The old name for One ROM.  While it captures the technical essence of One ROM, it wasn't exactly catchy.
+
+**Q: Why would I use One ROM instead of buying replacement ROMs or using an EEPROM?**
+
+A: One ROM offers several advantages:
 
 - Much cheaper to program than xEPROMs ($5 programmer vs $40+ for xEPROM programmers).
 - Fits the exact footprint of original ROMs, no overhanging the socket.
@@ -18,11 +22,11 @@ A: SDRR offers several advantages:
 - Is faster to build and program (just `make run` vs complex xEPROM procedures).
 - Makes it easy to download and combine ROM images from various sources - no need to build combination ROM images by hand.
 
-**Q: What ROM types does SDRR support?**
+**Q: What ROM types does One ROM support?**
 
-A: SDRR emulates 2364 (8KB), 2332 (4KB), and 2316 (2KB) ROMs commonly used in Commodore systems, disk drives, and other retro computers.
+A: One ROM emulates 2364 (8KB), 2332 (4KB), and 2316 (2KB) ROMs commonly used in Commodore systems, disk drives, and other retro computers.
 
-The original ROMs had mask programmable chip select behaviour, which meant they could be either low or high when selected. SDRR can emulate this by configuring the chip select lines in software, allowing it to work with any system that uses these ROM types - and can support multiple images with different chip select configurations in a single firmware build.
+The original ROMs had mask programmable chip select behaviour, which meant they could be either low or high when selected. One ROM can emulate this by configuring the chip select lines in software, allowing it to work with any system that uses these ROM types - and can support multiple images with different chip select configurations in a single firmware build.
 
 ## Hardware Compatibility
 
@@ -39,7 +43,7 @@ The F405/F446 are recommended for maximum compatibility as they runs fastest and
 
 See the [Supported STM32 Microcontrollers](/README.md#supported-stm32-microcontrollers) section for more details.
 
-**Q: What retro systems work with SDRR?**
+**Q: What retro systems work with One ROM?**
 
 A: Tested systems include Commodore PETs, VIC-20s, C64s, 1541 drives, and IEEE-488 drives. The F405 variant running at 168MHz should support virtually any system using compatible ROM types, including faster 2MHz systems.
 
@@ -59,14 +63,14 @@ In the case of the Raspberry Pi Pico/RP2040, its GPIOs are not 5V tolerant, and 
 
 There is a more detailed explanation of the STM32 choice in [Hardware Selection](/docs/TECHNICAL-DETAILS.md#hardware-selection).
 
-Update 29 July 2025.  Raspberry Pi announced 5V tolerance in the A4 stepping (version) of the RP2350.  This makes a RP2350 version of the SDRR more feasible, but there are still issues:
+Update 29 July 2025.  Raspberry Pi announced 5V tolerance in the A4 stepping (version) of the RP2350.  This makes a RP2350 version of the One ROM more feasible, but there are still issues:
 - The RP2350 A4 is tolerant up to 5.5V.  However, the original chips in retro machines, and the STM32F4 are tolerant to 7V.  Voltages about 5.5V in old machines with questionable voltage regulators re not unheard of, and could lead to a dead RP2350.
 - An external flash chip is still required, as it seems that the RP2354 (which built-in flash) is not yet 5V tolerant.
-- 5V tolerance is limited to GPIOs 0-25 (this is sufficient for SDRR).
+- 5V tolerance is limited to GPIOs 0-25 (this is sufficient for One ROM).
 - An external oscillator is still required, as are other components in addition to the STM32F4 - such as more substantial power circuitry.  This continues makes a single sided layout challenging.
 - The RP2350 is not really hand solderable.
 
-If someone builds an RP2350 version of the SDRR a software port should be relatively easy!
+If someone builds an RP2350 version of the One ROM a software port should be relatively easy!
 
 **Q: Why are you using the STM32's internal oscillator - doesn't that make it unstable?**
 
@@ -85,7 +89,7 @@ As of July 2025:
 
 The aliexpress seller referred to above was also offering free shipping when buying more than 4 or 5 parts.
 
-SDRR is extremely flexible in the STM32F4xxR variants it supports, so you can choose the cheapest one that meets your requirements.
+One ROM is extremely flexible in the STM32F4xxR variants it supports, so you can choose the cheapest one that meets your requirements.
 
 **Q: Are clones just as good as the real deal STM32?**
 
@@ -97,7 +101,7 @@ A: Mostly, but not entirely.  The GigaDevices GD32F405 takes longer to boot than
 
 A: You need:
 
-- SDRR PCB
+- One ROM PCB
 - a supported STM32F4 microcontroller
 - some other components (voltage regulator, LED, resistors and capacitors)
 - ARM GNU toolchain, Rust, probe-rs
@@ -123,9 +127,9 @@ See the [Pi Pico Programmer Guide](/docs/PI-PICO-PROGRAMMER.md) for detailed ins
 
 ## Programming and Flashing
 
-**Q: How do I flash firmware to SDRR?**
+**Q: How do I flash firmware to One ROM?**
 
-A: Connect your programmer's CLK, DIO, and GND lines to SDRR, then run:
+A: Connect your programmer's CLK, DIO, and GND lines to One ROM, then run:
 
 ```bash
 STM=f411re CONFIG=config/c64.mk make run
@@ -135,11 +139,11 @@ This automatically downloads ROMs, generates firmware, and flashes the device.
 
 There are other pre-collated collections of ROMs available in the [`config/`](/config/) directory, such as `vic20-pal.mk`, `pet-4-40-50.mk`, and `1541.mk`. You can also create your own custom configurations.
 
-**Q: Can I reprogram SDRR while it's installed in my retro system?**
+**Q: Can I reprogram One ROM while it's installed in my retro system?**
 
 A: Yes! You can flash in-situ with the system powered on. The system may crash during flashing but will work normally after completion.
 
-**Never** externally power SDRR when installed in a retro system.
+**Never** externally power One ROM when installed in a retro system.
 
 **Q: What if I have flashing problems?**
 
@@ -161,7 +165,7 @@ A: You can use [`sdrr-info`](/rust/sdrr-info/README.md) to inspect firmware `.el
 
 A: Use the image select jumpers labeled 1, 2, 4, and 8 on the PCB bottom.  Close jumpers to form a binary number (0-15) corresponding to your desired ROM image.  A closed jumper corresponds to 1, an open jumper 0.
 
-You must reboot SDRR after changing jumpers.
+You must reboot One ROM after changing jumpers.
 
 **Q: How many ROM images can I store?**
 
@@ -183,19 +187,19 @@ Or create your own [config file](/config/).
 
 ## Performance and Technical
 
-**Q: Can you add feature X to SDRR?**
+**Q: Can you add feature X to One ROM?**
 
 A: Perhaps - raise an issue on the [GitHub issues page](https://github.com/piersfinlayson/software-defined-retro-rom/issues).
 
-SDRR is very busy serving ROM images, so has few spare cycles for additional features.  However, it can be augmented by a co-processor such as [Airfrog](https://piers.rocks/u/airfrog) to provide additional functionality, such as remote access and control, or telemetry.
+One ROM is very busy serving ROM images, so has few spare cycles for additional features.  However, it can be augmented by a co-processor such as [Airfrog](https://piers.rocks/u/airfrog) to provide additional functionality, such as remote access and control, or telemetry.
 
-**Q: Why does SDRR store all ROM images as 16KB in flash?**
+**Q: Why does One ROM store all ROM images as 16KB in flash?**
 
 A: This optimization allows the main loop to use chip select states as direct address offsets, eliminating runtime calculations and achieving the required access speeds.
 
 See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information.
 
-**Q: What makes SDRR fast enough for retro systems?**
+**Q: What makes One ROM fast enough for retro systems?**
 
 A: Multiple optimizations: maximum clock speeds, highly optimised assembly main loop, preloaded ROM data in RAM, no interrupts, flash prefetch/caching, and "mangled" ROM storage that matches the PCB pin mapping.
 
@@ -203,7 +207,7 @@ See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information.
 
 **Q: Why not use interrupts?**
 
-A: Interrupts would add latency that could cause the system to miss critical timing windows. The polling-based approach ensures consistent, predictable response times.  As SDRR does nothing other than serve flash, a tight main loop with no interrupts is sufficient **and** optimal.
+A: Interrupts would add latency that could cause the system to miss critical timing windows. The polling-based approach ensures consistent, predictable response times.  As One ROM does nothing other than serve flash, a tight main loop with no interrupts is sufficient **and** optimal.
 
 **Q: Isn't the STM32 a 3.3V device? How does it work in 5V systems?**
 
@@ -211,7 +215,7 @@ A: Most of the GPIO pins on the STM32F4xx are 5V tolerant, and the maximum and m
 
 There's a detailed analysis in [Voltage Levels](/docs/VOLTAGE-LEVELS.md).
 
-**Q: What languages are used in SDRR?**
+**Q: What languages are used in One ROM?**
 
 A: The main [`sdrr`](/sdrr/) firmware is written in a combination of C and assembly.  Assembly is used for the main loop to achieve the required performance, while C is used for the startup-up logic.
 
@@ -238,11 +242,11 @@ A: Enable boot logging (default) to see startup information via SWD/RTT. This sh
 
 See [Logging](/docs/LOGGING.md) for more details.
 
-**Q: My retro system doesn't boot with SDRR installed. What should I check?**
+**Q: My retro system doesn't boot with One ROM installed. What should I check?**
 
-A: Verify the correct ROM type and chip select configuration, ensure SDRR is fully seated in the socket, check that the STM32 variant can run fast enough for your system, and review boot logs for errors.
+A: Verify the correct ROM type and chip select configuration, ensure One ROM is fully seated in the socket, check that the STM32 variant can run fast enough for your system, and review boot logs for errors.
 
-It would be worth reprogramming SDRR with your firmware image in-situ, and viewing the logs to ensure the expected ROM image is being served.
+It would be worth reprogramming One ROM with your firmware image in-situ, and viewing the logs to ensure the expected ROM image is being served.
 
 See [`BOOT_LOGGING`](/docs/LOGGING.md#boot_logging) for more details on how to interpret boot logging.
 
@@ -254,7 +258,7 @@ A: Lower the clock frequency using the `FREQ` option, disable the status LED wit
 
 ## Cost and Availability
 
-**Q: How much does SDRR cost to build?**
+**Q: How much does One ROM cost to build?**
 
 A: In small quantities, expect around $5 per device.  The STM32F4 costs around $2 depending on variant, PCB manufacturing is inexpensive (2-layer, single-side components), and the BOM is minimal.
 
@@ -262,7 +266,7 @@ A: In small quantities, expect around $5 per device.  The STM32F4 costs around $
 
 A: Order the latest revision from [OSH Park](https://oshpark.com) using the provided link for your chosen revision in the [`sdrr-pcb`](/sdrr-pcb/README.md), or manufacture using the open-source design files.
 
-**Q: Is SDRR open source?**
+**Q: Is One ROM open source?**
 
 A: Yes! Software/firmware uses MIT license, hardware uses CC BY-SA 4.0. You can modify, improve, and share the designs within the license terms.
 

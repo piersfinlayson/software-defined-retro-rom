@@ -28,7 +28,7 @@ See [Supported STM32 Microcontrollers](/README.md#supported-stm32-microcontrolle
 
 ## `HW_REV`
 
-Use this to specify the hardware revision of your SDRR's PCB.  It is silkscreened on the underside of the PCB.  Other ways to identify the revision are:
+Use this to specify the hardware revision of your One ROM's PCB.  It is silkscreened on the underside of the PCB.  Other ways to identify the revision are:
 
 - Rev D
   - Uses 0402 passives.
@@ -45,7 +45,7 @@ HW_REV=e
 
 ## `ROM_CONFIGS`
 
-Use this option to specify all of the ROM images to include in your SDRR firmware.  They will be numbered, in the order you provide them, starting from 0.  They can then be selected at boot type, using the image select jumpers.
+Use this option to specify all of the ROM images to include in your One ROM firmware.  They will be numbered, in the order you provide them, starting from 0.  They can then be selected at boot type, using the image select jumpers.
 
 The format of ROM_CONFIGS is:
 
@@ -89,38 +89,38 @@ This option is also required for [`BOOT_LOGGING`](#boot_logging) (and the other 
 
 ### `BOOT_LOGGING`
 
-This is enabled by default, and logs using RTT over SWD as the SDRR boots up.  It stops logging when it enters its main ROM serving loop for performance reasons.
+This is enabled by default, and logs using RTT over SWD as the One ROM boots up.  It stops logging when it enters its main ROM serving loop for performance reasons.
 
-You may wish to disable this logging, if startup speed of SDRR is a problem.  With boot logging enabled, SDRR takes around 2ms to start up and be ready to serve the ROM.  Without boot logging it takes around 500us.
+You may wish to disable this logging, if startup speed of One ROM is a problem.  With boot logging enabled, One ROM takes around 2ms to start up and be ready to serve the ROM.  Without boot logging it takes around 500us.
 
 These timings will vary based on clock speed.
 
 ### `FREQ`
 
-This is not specified by default, which uses the maximum frequency for the chosen STM32F4xxR variant.  You can lower the frequency if you want to reduce SDRR's power draw.  The [Makefile](/Makefile) gives some guidance on what values are required by what systems, but your mileage may vary.
+This is not specified by default, which uses the maximum frequency for the chosen STM32F4xxR variant.  You can lower the frequency if you want to reduce One ROM's power draw.  The [Makefile](/Makefile) gives some guidance on what values are required by what systems, but your mileage may vary.
 
 ### `OVERCLOCK`
 
 ⚠️ Use with Caution
 
-Enabling this feature allows you to specify a higher frequency than supported by a particular STM32F4xxR variant.  SDRR uses very few peripherals and hence it should be possible for the STM32 to be powered at a higher than stock frequency, but the silicon may not be stable.
+Enabling this feature allows you to specify a higher frequency than supported by a particular STM32F4xxR variant.  One ROM uses very few peripherals and hence it should be possible for the STM32 to be powered at a higher than stock frequency, but the silicon may not be stable.
 
 ### `STATUS_LED`
 
-SDRR hardware revisions E and onwards provide a status LED, which is lit once the SDRR has booted and is ready to serve the image.  It also flashes this LED if it crashes.
+One ROM hardware revisions E and onwards provide a status LED, which is lit once the One ROM has booted and is ready to serve the image.  It also flashes this LED if it crashes.
 
 If you want to reduce power consumption, or just not have the LED lit, use this option (or do not populate the LED on your board).
 
 ### `BOOTLOADER`
 
-In addition to the BOOT0 jumper, SDRR provides an option, disabled by default, which will put the STM32 into bootloader mode if all image select jumpers are closed.  This may be useful if you consistently hit [problems flashing](/README.md#flashing-problems).
+In addition to the BOOT0 jumper, One ROM provides an option, disabled by default, which will put the STM32 into bootloader mode if all image select jumpers are closed.  This may be useful if you consistently hit [problems flashing](/README.md#flashing-problems).
 
 To use:
 
 - Close all image select jumpers (`1`, `2`, `4`, `8`), but not the BOOT0 (`B0`) jumper.
-- Reboot the SDRR device.  It will now be in bootloader mode.
+- Reboot the One ROM device.  It will now be in bootloader mode.
 - Optionally change the image select jumpers to the selection you want when the device next boots.
-- Reprogram the SDRR device.  It will then reboot, re-read the image select jumpers and start serving the appropriate image.
+- Reprogram the One ROM device.  It will then reboot, re-read the image select jumpers and start serving the appropriate image.
 
 Enabling this option means that the 16th image (if installed) cannot be selected.
 
@@ -134,4 +134,4 @@ B - Checks address lines only when CS is active, and applies to data lines (whic
 
 In all cases tested, `B` appears to be the superior algorithm, but `A` is kept in case it is incompatible with some systems.
 
-SDRR defaults to `B` is no algorithm is specified for single-ROM sets, and requires `B` (which is applies automatically, even if you specify `A`) for multi-ROM sets.
+One ROM defaults to `B` is no algorithm is specified for single-ROM sets, and requires `B` (which is applies automatically, even if you specify `A`) for multi-ROM sets.

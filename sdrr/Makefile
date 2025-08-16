@@ -1,7 +1,7 @@
-# SDRR firmware Makefile
+# One ROM firmware Makefile
 
 # To build, use the top-level /Makefile, which generates the required files and
-# configuration to build SDRR, then calls this Makefile.
+# configuration to build One ROM, then calls this Makefile.
 
 # sdrr-gen Output directory
 GEN_OUTPUT_DIR ?= output

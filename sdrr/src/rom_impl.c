@@ -233,7 +233,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(const sdrr_rom_set_t
     }
     else {
         // Hardware revision F has X1/X2 on the PCB, so up to 2 extra ROM chip
-        // select lines can be terminated on SDRR.  Set pull-ups or downs on
+        // select lines can be terminated on One ROM.  Set pull-ups or downs on
         // these lines so they are default inactive, in case the user doesn't
         // connect them.
         //

@@ -1,8 +1,8 @@
 # Docker
 
-This directory contains Dockerfiles for building the SDRR project in a consistent environment.
+This directory contains Dockerfiles for building One ROM in a consistent environment.
 
-* `Dockerfile.build` - creates `sdrr-build` container for building the SDRR project.
+* `Dockerfile.build` - creates `sdrr-build` container for building One ROM.
 * `Dockerfile` - creates `sdrr` tooling and firmware, using `sdrr-build` container.
 
 Uses:
@@ -11,7 +11,7 @@ Uses:
 * arm-gnu-toolchain-14.3.rel1-x86_64-arm-none
 * Latest Rust and probe-rs versions
 
-## Building SDRR
+## Building One ROM
 
 Either build via the [`sdrr` container](#building-sdrr-via-sdrr-container) or use the `sdrr-build` container directly, like this:
 
@@ -41,9 +41,9 @@ docker buildx build \
     -f ci/docker/Dockerfile.build .
 ```
 
-## Building SDRR via `sdrr` Container
+## Building One ROM via `sdrr` Container
 
-To build SDRR, create the sdrr container, from the repo root:
+To build One ROM, create the sdrr container, from the repo root:
 
 ```bash
 docker build \

@@ -1,6 +1,6 @@
-# SDRR Build System Explanation
+# One ROM Build System Explanation
 
-The SDRR build system is a multi-stage pipeline that transforms ROM images and configuration into flashable STM32 firmware. This document explains how the build process works internally.
+The One ROM build system is a multi-stage pipeline that transforms ROM images and configuration into flashable STM32 firmware. This document explains how the build process works internally.
 
 ## Build Pipeline Overview
 
@@ -81,7 +81,7 @@ Original ROM → Size Validation → Pin Mapping → Flash Layout → C Arrays
 
 **Generated Files** (in [`/output/`](/output/) directory):
 
-- `sdrr_config.h` - SDRR configuration constants
+- `sdrr_config.h` - One ROM configuration constants
 - `roms.c` - ROM data as C arrays
 - `roms.h` - ROM declarations and types  
 - `generated.mk` - Makefile fragment with STM32 variant information
@@ -113,7 +113,7 @@ OBJCOPY := $(TOOLCHAIN)/bin/arm-none-eabi-objcopy
 - `/sdrr/link/stm32-common.ld` - Common linker script for all STM32 variants
 - `/output/roms.c` - Generated ROM data
 - `/output/roms.h` - Generated ROM data
-- `/output/sdrr_config.h` - Generated SDRR configuration
+- `/output/sdrr_config.h` - Generated One ROM configuration
 - `/output/linker.ld` - Generated linker script for specific STM32 variant
 - `/sdrr/segger-rtt/RTT/*.c` - Debug logging library (downloaded automatically by build process)
 
