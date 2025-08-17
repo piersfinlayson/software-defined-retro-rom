@@ -142,10 +142,17 @@
 // SIO Registers
 #define SIO_CPUID           (*((volatile uint32_t *)(SIO_BASE + 0x00)))
 #define SIO_GPIO_IN         (*((volatile uint32_t *)(SIO_BASE + 0x04)))
+#define SIO_GPIO_OUT        (*((volatile uint32_t *)(SIO_BASE + 0x10)))
 #define SIO_GPIO_OUT_SET    (*((volatile uint32_t *)(SIO_BASE + 0x18)))
 #define SIO_GPIO_OUT_CLR    (*((volatile uint32_t *)(SIO_BASE + 0x20)))
+#define SIO_GPIO_OE         (*((volatile uint32_t *)(SIO_BASE + 0x30)))
 #define SIO_GPIO_OE_SET     (*((volatile uint32_t *)(SIO_BASE + 0x38)))
 #define SIO_GPIO_OE_CLR     (*((volatile uint32_t *)(SIO_BASE + 0x40)))
+
+// Used by assembly
+#define VAL_SIO_GPIO_IN         (SIO_BASE + 0x04)
+#define VAL_SIO_GPIO_OUT        (SIO_BASE + 0x10)
+#define VAL_SIO_GPIO_OE         (SIO_BASE + 0x30)
 
 // RAM Size
 #define RP2350_RAM_SIZE_KB  520

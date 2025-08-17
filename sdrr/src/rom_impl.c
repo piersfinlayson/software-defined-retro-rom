@@ -200,7 +200,6 @@ static inline void __attribute__((always_inline)) configure_x_pulls(
     }
 }
 
-#if defined(STM32F4)
 void __attribute__((section(".main_loop"), used)) main_loop(
     const sdrr_info_t *info,
     const sdrr_rom_set_t *set
@@ -470,31 +469,14 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     }
 #endif // !C_MAIN_LOOP
 
-    if ((info->status_led_enabled) && (info->pins->status <= 15)) {
-        GPIOB_BSRR = (1 << info->pins->status);
+    if ((info->status_led_enabled) && (info->pins->status <= MAX_USED_GPIOS)) {
+        status_led_off(info->pins->status);
     }
 #if defined(MAIN_LOOP_ONE_SHOT)
         ROM_IMPL_LOG("Address/CS: 0x%08X Byte: 0x%08X", addr_cs, byte);
     }
 #endif // MAIN_LOOP_ONE_SHOT
 }
-#elif defined(RP235X)
-void __attribute__((section(".main_loop"), used)) main_loop(
-    const sdrr_info_t *info,
-    const sdrr_rom_set_t *set
-) {
-    (void)info;
-    (void)set;
-    LOG("RP235X main loop not implemented yet");
-    if ((info->status_led_enabled) && (info->pins->status <= MAX_USED_GPIOS)) {
-        status_led_on(info->pins->status);
-    }
-    while (1);
-}
-#else 
-#error "Unsupported MCU line - please define STM32F4 or RP235X"
-#endif // !STM32F4 && !RP235X
-
 
 // Get the index of the selected ROM by reading the select jumpers
 //

@@ -77,9 +77,9 @@
     "r" (rom_table), \
     "r" (cs_invert_mask_reg), \
     "r" (cs_check_mask_reg), \
-    "r" (gpioc_idr), \
-    "r" (gpioa_odr), \
-    "r" (gpioa_moder), \
+    "r" (addr_cs_idr), \
+    "r" (data_odr), \
+    "r" (data_moder), \
     "r" (data_output_mask), \
     "r" (data_input_mask) ACCESS_COUNT_ASM_INPUT
 #define ASM_CLOBBERS R_ADDR_CS, R_DATA, R_CS_TEST, "cc", "memory"
@@ -169,6 +169,24 @@
 #define MAIN_LOOP_ONE_SHOT_END_BRANCH(X)
 #endif // MAIN_LOOP_ONE_SHOT
 
+// Set up the GPIO hardware registers used by the assembly
+#if defined(STM32F4)
+// Addr and CS lines input data register - port C
+#define VAL_ADDR_CS_IDR  VAL_GPIOC_IDR
+// Data write register, port A 
+#define VAL_DATA_ODR     VAL_GPIOA_ODR
+// Data input/output mode register, port A 
+#define VAL_DATA_MODER   VAL_GPIOA_MODER
+#elif defined(RP235X)
+// Addr and CS lines input data register - use GPIO_IN - will read bottom 16 bits
+#define VAL_ADDR_CS_IDR  VAL_SIO_GPIO_IN
+// Data write register, we will write a byte, will be replicated across word.
+// This will make the status LED flicker!
+#define VAL_DATA_ODR     VAL_SIO_GPIO_OUT
+// Data input/output mode register, affects all inputs, but we use a mask
+#define VAL_DATA_MODER   VAL_SIO_GPIO_OE
+#endif // STM32F4/ RP235X
+
 // Pre-load registers.
 //
 // This is a macro so it's easy to put it just before each ASM block.
@@ -184,9 +202,9 @@
     register uint32_t data_input_mask asm(R_DATA_IN_MASK) = data_input_mask_val; \
     register uint32_t cs_invert_mask_reg asm(R_CS_INVERT_MASK) = cs_invert_mask; \
     register uint32_t cs_check_mask_reg asm(R_CS_CHECK_MASK) = cs_check_mask; \
-    register uint32_t gpioc_idr asm(R_GPIO_ADDR_CS_IDR) = VAL_GPIOC_IDR; \
-    register uint32_t gpioa_odr asm(R_GPIO_DATA_ODR) = VAL_GPIOA_ODR; \
-    register uint32_t gpioa_moder asm(R_GPIO_DATA_MODER) = VAL_GPIOA_MODER; \
+    register uint32_t addr_cs_idr asm(R_GPIO_ADDR_CS_IDR) = VAL_ADDR_CS_IDR; \
+    register uint32_t data_odr asm(R_GPIO_DATA_ODR) = VAL_DATA_ODR; \
+    register uint32_t data_moder asm(R_GPIO_DATA_MODER) = VAL_DATA_MODER; \
     register uint32_t rom_table asm(R_ROM_TABLE) = rom_table_val PRELOAD_ACCESS_COUNT
 
 // This is the default algorith for serve a single ROM image. It:
