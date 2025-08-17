@@ -35,6 +35,14 @@ static struct {
 
 void create_byte_demangler(json_config_t* config) {
     memcpy(byte_demangler.data_pins, config->mcu.pins.data, sizeof(byte_demangler.data_pins));
+    if (!strcmp(config->mcu.family, "rp2350")) {
+        for (int ii = 0; ii < NUM_DATA_LINES; ii++) {
+            // RP2350 uses a higher byte for data lines, but still expects to
+            // read a single byte at a time - the RP2350 hardware takes care
+            // of getting the value shifted. 
+            byte_demangler.data_pins[ii] = byte_demangler.data_pins[ii] % 8;
+        }
+    }
     byte_demangler.initialized = 1;
 }
 
