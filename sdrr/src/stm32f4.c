@@ -405,6 +405,7 @@ void check_config(
 }
 
 void platform_logging(void) {
+#if defined(BOOT_LOGGING)
     uint32_t idcode = DBGMCU_IDCODE;
     const char *idcode_mcu_variant;
     idcode = idcode & DBGMCU_IDCODE_DEV_ID_MASK; 
@@ -517,6 +518,8 @@ void platform_logging(void) {
 #if defined(MCO2)
     LOG("MCO2: %s - PC9", enabled);
 #endif // MCO2
+
+#endif // BOOT_LOGGING
 }
 
 // Sets up the MCO (clock output) on PA8, to the value provided

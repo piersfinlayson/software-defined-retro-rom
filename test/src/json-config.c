@@ -243,12 +243,12 @@ json_config_t* load_json_config(const char* hw_rev) {
             if (json_object_object_get_ex(pins_obj, "x1", &pin_obj)) {
                 config->mcu.pins.x1 = json_object_get_int(pin_obj);
             } else {
-                error = "x1";
+                // X1 is optional
             }
             if (json_object_object_get_ex(pins_obj, "x2", &pin_obj)) {
                 config->mcu.pins.x2 = json_object_get_int(pin_obj);
             } else {
-                error = "x2";
+                // X2 is optional
             }
             if (json_object_object_get_ex(pins_obj, "status", &pin_obj)) {
                 config->mcu.pins.status = json_object_get_int(pin_obj);

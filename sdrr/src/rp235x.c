@@ -310,6 +310,7 @@ void check_config(
 }
 
 void platform_logging(void) {
+#if defined(BOOT_LOGGING)
     LOG("%s", log_divider);
     LOG("Detected hardware info ...");
 
@@ -343,6 +344,8 @@ void platform_logging(void) {
 #define PLL_SYS_POSTDIV1  4
 #define PLL_SYS_POSTDIV2  1
     LOG("PLL values: %d/%d/%d/%d (refdiv/fbdiv/postdiv1/postdiv2)", PLL_SYS_REFDIV, PLL_SYS_FBDIV, PLL_SYS_POSTDIV1, PLL_SYS_POSTDIV2);
+
+#endif // BOOT_LOGGING
 }
 
 void setup_xosc(void) {
