@@ -74,6 +74,11 @@ typedef struct {
     uint8_t reserved2[4];
 
     // Chip select lines for supported variants
+    //
+    // x_jumper_pull is the direction of pull from the X1/X2 jumper on the
+    // board.  It is 1 if that jumper closing pulls it high, and 0 if it pulls
+    // it low.
+    //
     // Offset: 36
     // 16 x 1 byte = 16 bytes
     uint8_t cs1_2364;
@@ -86,7 +91,8 @@ typedef struct {
     uint8_t x2;
     uint8_t ce_23128;
     uint8_t oe_23128;
-    uint8_t reserved3[6];
+    uint8_t x_jumper_pull;
+    uint8_t reserved3[5];
 
     // Image select lines
     //

@@ -29,6 +29,7 @@
         "cs3": {
         "2316": 9
         },
+        "x_jumper_pull": 1,
         "sel": [0, 1, 2, 7],
         "sel_jumper_pull": 1,
         "status": 15

@@ -31,6 +31,9 @@
 #if !defined(TIMER_TEST) && !defined(TOGGLE_PA4)
 
 // Log function which can be called from functions potentially run from RAM
+#if defined(MAIN_LOOP_LOGGING) && defined(EXECUTE_FROM_RAM)
+#error "MAIN_LOOP_LOGGING cannot be used with EXECUTE_FROM_RAM"
+#endif // MAIN_LOOP && EXECUTE_FROM_RAM
 #if defined(MAIN_LOOP_LOGGING)
 ram_log_fn ROM_IMPL_LOG = do_log;
 #else // !MAIN_LOOP_LOGGING
@@ -42,93 +45,31 @@ ram_log_fn ROM_IMPL_DEBUG = do_log;
 #define ROM_IMPL_DEBUG(X, ...)
 #endif // DEBUG_LOGGING
 
+#if defined(COUNT_ROM_ACCESS) && defined(C_MAIN_LOOP)
+#error "COUNT_ROM_ACCESS is not supported by C_MAIN_LOOP"
+#endif
+
 // Pull in the RAM ROM image start/end locations from the linker
 extern uint32_t _ram_rom_image_start[];
 extern uint32_t _ram_rom_image_end[];
 
-#if defined(STM32F4)
-void __attribute__((section(".main_loop"), used)) main_loop(
-#ifndef EXECUTE_FROM_RAM
+
+// Do the fairly complex job of setting up the CS masks for use in the main
+// loop algorithm.
+//
+// This is platform agnostic - it merely requires that all CS and X lines share
+// the same GPIO port and hence the same register value can be read/tested to
+// check CS/X state. 
+static inline void __attribute__((always_inline)) setup_cs_masks(
     const sdrr_info_t *info,
-    const sdrr_rom_set_t *set
-#else // EXECUTE_FROM_RAM
-    sdrr_info_t *info,
-    sdrr_rom_set_t *set
-#endif // !EXECUTE_FROM_RAM
+    const sdrr_rom_set_t *set,
+    sdrr_serve_t serve_mode,
+    const sdrr_rom_info_t *rom,
+    uint32_t *check_mask,
+    uint32_t *invert_mask
 ) {
-#ifdef MAIN_LOOP_LOGGING
-#ifdef EXECUTE_FROM_RAM
-#error "MAIN_LOOP_LOGGING cannot be used with EXECUTE_FROM_RAM"
-#endif // EXECUTE_FROM_RAM
-    // Do a bunch of checking things are as we need them.  There's not much
-    // point in doing this until MAIN_LOOP_LOGGING is defined, as no-one
-    // will hear us if we scream ...
-    // Note that sdrr-gen should have got this stuff right.
-    ROM_IMPL_LOG("%s", log_divider);
-    ROM_IMPL_LOG("Entered main_loop");
-    if (info->pins->data_port != PORT_A) {
-        ROM_IMPL_LOG("!!! Data pins not using port A");
-    }
-    if (info->pins->addr_port != PORT_C) {
-        ROM_IMPL_LOG("!!! Address pins not using port C");
-    }
-    if (info->pins->cs_port != PORT_C) {
-        ROM_IMPL_LOG("!!! Chip select pins not using port C");
-    }
-    if (info->pins->rom_pins != 24) {
-        ROM_IMPL_LOG("!!! Have been told to emulate unsupported %d pin ROM", info->pins->rom_pins);
-    }
-    for (int ii = 0; ii < 13; ii++) {
-        if (info->pins->addr[ii] > 13) {
-            ROM_IMPL_LOG("!!! Address line A%d invalid", ii);
-        }
-    }
-    for (int ii = 0; ii < 8; ii++) {
-        if (info->pins->data[ii] > 7) {
-            ROM_IMPL_LOG("!!! ROM line D%d invalid", ii);
-        }
-    }
-    if (set->rom_count > 1) {
-        if (info->pins->x1 > 15) {
-            ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X1 invalid");
-        }
-        if (info->pins->x2 > 15) {
-            ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X2 invalid");
-        }
-        if (info->pins->x1 == info->pins->x2) {
-            ROM_IMPL_LOG("!!! Multi-ROM mode, but pin X1=X2");
-        }
-    }
-#endif
-
-    //
-    // Set up serving algorithm
-    //
-
-    // Set up serve mode
-    sdrr_serve_t serve_mode = set->serve;
-
-    // Warn if serve mode is incorrectly set for multiple ROM images
-    if ((set->rom_count > 1) && (serve_mode != SERVE_ADDR_ON_ANY_CS)) {
-        ROM_IMPL_LOG("Must be serving bank switched images");
-    } else if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
-        ROM_IMPL_LOG("!!! Single ROM image - wrong serve mode - defaulting");
-        serve_mode = SERVE_TWO_CS_ONE_ADDR;
-    }
-
-#ifndef EXECUTE_FROM_RAM
-    // We don't copy filenames over in the RAM case, so this won't work
-    for (int ii = 0; ii < set->rom_count; ii++) {
-        ROM_IMPL_DEBUG("Serve ROM #%d: %s via mode: %d", ii, set->roms[ii]->filename, serve_mode);
-    }
-#endif // EXECUTE_FROM_RAM
-
-    //
-    // Set up CS pin masks, using CS values from sdrr_info.
-    //
     uint32_t cs_invert_mask = 0;
-    uint32_t cs_check_mask;
-    const sdrr_rom_info_t *rom = set->roms[0];
+    uint32_t cs_check_mask; 
 
     if (serve_mode == SERVE_ADDR_ON_ANY_CS)
     {
@@ -216,84 +157,111 @@ void __attribute__((section(".main_loop"), used)) main_loop(
                 break;
         }
     }
-
-    //
-    // Set up the GPIOs
-    //
-
-    // Enable GPIO clocks for the ports with address and data lines
-    RCC_AHB1ENR |= (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN);
     
-    // Configure PA0-7 as inputs initially (00 in MODER), no pull-up/down
-    // Also PA10-12 are duplicate CS lines on some hw so set as inputs no
-    // PU/PD.
-    // We could theoretically check here that D0-7 uses PA0-7, but there's
-    // checks like this above, and in sdrr-gen, so little point.  It's
-    // required that they use 0-7 on a port, to avoid any bit shifting when
-    // applying the value.
-    GPIOA_MODER &= ~0x00FCFFFF; // Clear bits 0-15 (PA0-7, 10-12 as inputs)
-    GPIOA_PUPDR &= ~0x00FCFFFF; // Clear pull-up/down for PA0-7, 10-12)
-    GPIOA_OSPEEDR &= ~0xFFFF;   // Clear output speed for PA0-7
-    GPIOA_OSPEEDR |= 0xAAAA;    // Set PA0-7 speed to "fast", not "high" to
-                                // ensure V(OL) is max 0.4V
+    *check_mask = cs_check_mask;
+    *invert_mask = cs_invert_mask;
 
-    // Port C for address and CS lines - set all pins as inputs
-    GPIOC_MODER = 0;  // Set all pins as inputs
-    uint32_t gpioc_pupdr;
-    if (serve_mode != SERVE_ADDR_ON_ANY_CS) {
-        // Set pull-downs on PC14/15 only, so RAM lookup only takes 16KB.
-        // We checked the address lines are lines 0-13 above, and in sdrr-gen
-        // so this is reasonable.
-        gpioc_pupdr = 0xA0000000;
-    }
-    else {
-        // Hardware revision F has X1/X2 on the PCB, so up to 2 extra ROM chip
-        // select lines can be terminated on One ROM.  Set pull-ups or downs on
-        // these lines so they are default inactive, in case the user doesn't
-        // connect them.
-        //
-        // Note this introduces pull-ups/downs on the actual CS lines if they
-        // are connected.  However, they typically only serve the ROM we are
-        // emulating, come from a BCD IC or similar, and the pulls are weak -
-        // around 40K ohms.
-        uint32_t pull;
-        if (set->multi_rom_cs1_state == CS_ACTIVE_HIGH) {
-            pull = 0b10;  // Pull down
+    return;
+}
+
+// Sets the appropriate X1/X2 pull-ups or pull-downs based on the type of ROM
+// set being served.
+static inline void __attribute__((always_inline)) configure_x_pulls(
+    const sdrr_rom_set_t *set,
+    const sdrr_pins_t *pins,
+    sdrr_serve_t serve_mode
+) {
+    // Set the appropriate X1/X2 pulls.  This is a reasonably complex 
+    if (set->rom_count == 1) {
+        // We are serving a single ROM image.  This means we want X1/X2 set to
+        // low.
+        set_x_pulls(pins, 0, 0);
+    } else {
+        if (serve_mode != SERVE_ADDR_ON_ANY_CS) {
+            // We are serving from a dynamically selected bank of ROMs, using
+            // the X1/X2 pins.  We need to pull the X pins in the opposite
+            // direction to the jumper.
+            ROM_IMPL_LOG("Serving bank switched images");
+            if (pins->x_jumper_pull == 0) {
+                set_x_pulls(pins, 1, 1);
+            } else {
+                set_x_pulls(pins, 0, 0);
+            }
         } else {
-            pull = 0b01;  // Pull up
+            // Serving multiple ROM images simultaneously.  In this case we
+            // don't care about the board jumpers - they aren't being used.
+            // So always set the pulls to the opposite of multi-rom CS1 state
+            if (set->multi_rom_cs1_state == CS_ACTIVE_HIGH) {
+                set_x_pulls(pins, 0, 0);
+            } else {
+                set_x_pulls(pins, 1, 1);
+            }
         }
-        gpioc_pupdr = (pull << (info->pins->x1 * 2)) |
-                        (pull << (info->pins->x2 * 2));
     }
-    GPIOC_PUPDR = gpioc_pupdr;
+}
+
+#if defined(STM32F4)
+void __attribute__((section(".main_loop"), used)) main_loop(
+    const sdrr_info_t *info,
+    const sdrr_rom_set_t *set
+) {
+    ROM_IMPL_LOG("%s", log_divider);
+    ROM_IMPL_LOG("Entered main_loop");
+
+    // Set up serving algorithm
+    sdrr_serve_t serve_mode = set->serve;
+    if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
+        serve_mode = SERVE_TWO_CS_ONE_ADDR;
+    }
+
+#ifndef EXECUTE_FROM_RAM
+    // We don't copy filenames over in the RAM case, so this won't work - and
+    // neither does MAIN_LOOP_LOGGING
+    for (int ii = 0; ii < set->rom_count; ii++) {
+        ROM_IMPL_DEBUG("Serve ROM #%d: %s via mode: %d", ii, set->roms[ii]->filename, serve_mode);
+    }
+#endif // EXECUTE_FROM_RAM
 
     //
-    // Calculcate pre-load values for all registers
+    // Set up CS pin masks, using CS values from sdrr_info
     //
+    uint32_t cs_invert_mask;
+    uint32_t cs_check_mask;
+    const sdrr_rom_info_t *rom = set->roms[0];
+    setup_cs_masks(
+        info,
+        set,
+        serve_mode,
+        rom,
+        &cs_check_mask,
+        &cs_invert_mask
+    );
+
+    // Set up the GPIOs
+    main_loop_gpio_init();
+
+    // Configure the X1/X2 pull-ups or pull-downs
+    configure_x_pulls(
+        set,
+        info->pins,
+        serve_mode
+    );
+
+    // Calculate pre-load values for data input/output masks
     uint32_t data_output_mask_val;
     uint32_t data_input_mask_val;
-    if (info->mco_enabled) {
-        // PA8 is AF, PA0-7 are inputs
-        data_output_mask_val = 0x00025555;
-        data_input_mask_val = 0x00020000;
-    } else {
-        // PA0-7 are inputs
-        data_output_mask_val = 0x00005555;
-        data_input_mask_val = 0x00000000;
-    }
-
-    if (info->swd_enabled) {
-        // Ensure PA13/14 remain AF (SWD enabled)
-        data_output_mask_val |= 0x28000000;
-        data_input_mask_val |= 0x28000000;
-    }
+    setup_data_masks(
+        info,
+        &data_output_mask_val,
+        &data_input_mask_val
+    );
 
     // Set up the ROM table variables (the ROM is already in RAM by this point,
     // if RAM preloading is enabled).
     uint32_t rom_table_val = (uint32_t)sdrr_runtime_info.rom_table;
 
-#if defined(COUNT_ROM_ACCESS) && !defined(C_MAIN_LOOP)
     // If we are counting ROM accesses, set it up
+#if defined(COUNT_ROM_ACCESS) && !defined(C_MAIN_LOOP)
     sdrr_runtime_info.access_count = 0;  // Update from 0xFFFFFFFF to 0.
     sdrr_runtime_info.count_rom_access = 1;  // Flag as enabled
     uint32_t access_count_addr = (uint32_t)&sdrr_runtime_info.access_count;
@@ -512,13 +480,8 @@ void __attribute__((section(".main_loop"), used)) main_loop(
 }
 #elif defined(RP235X)
 void __attribute__((section(".main_loop"), used)) main_loop(
-#ifndef EXECUTE_FROM_RAM
     const sdrr_info_t *info,
     const sdrr_rom_set_t *set
-#else // EXECUTE_FROM_RAM
-    sdrr_info_t *info,
-    sdrr_rom_set_t *set
-#endif // !EXECUTE_FROM_RAM
 ) {
     (void)info;
     (void)set;

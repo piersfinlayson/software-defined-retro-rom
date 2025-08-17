@@ -7,6 +7,20 @@
 #include "include.h"
 #include "roms.h"
 
+// Internal function prototypes
+static void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q);
+static void setup_pll_src(uint8_t src);
+static void enable_pll(void);
+#if defined(DEBUG_LOGGING)
+static uint8_t get_hsi_cal(void);
+#endif // DEBUG_LOGGING
+static void set_clock(uint8_t clock);
+#if defined(HSI_TRIM)
+static void trim_hsi(uint8_t trim);
+#endif // HSI_TRIM
+static void set_bus_clks(void);
+static void set_flash_ws(void);
+
 void platform_specific_init(void) {
     // Nothing required
 }
@@ -261,16 +275,6 @@ void setup_gpio(void) {
 #endif // MCO2
 }
 
-// Enters bootloader mode.  This enables UART and SWD so the device can be
-// programmed.
-void enter_bootloader(void) {
-    // Set the stack pointer
-    asm volatile("msr msp, %0" : : "r" (*((uint32_t*)0x1FFFF000)));
-    
-    // Jump to the bootloader
-    ((void(*)())(*((uint32_t*)0x1FFFF004)))();
-}
-
 // Common setup for status LED output using PB15 (inverted logic: 0=on, 1=off)
 void setup_status_led(void) {
     if (sdrr_info.pins->status_port != PORT_B) {
@@ -305,6 +309,98 @@ void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
             status_led_off(pin);
             delay(off_time);
         }
+    }
+}
+
+// Enters bootloader mode.  This enables UART and SWD so the device can be
+// programmed.
+void enter_bootloader(void) {
+    // Set the stack pointer
+    asm volatile("msr msp, %0" : : "r" (*((uint32_t*)0x1FFFF000)));
+    
+    // Jump to the bootloader
+    ((void(*)())(*((uint32_t*)0x1FFFF004)))();
+}
+
+// Checks configuration before entering the main loop.
+void check_config(
+    const sdrr_info_t *info,
+    const sdrr_rom_set_t *set
+) {
+    // Currently only support emulating a 24 pin ROM
+    if (info->pins->rom_pins != 24) {
+        LOG("!!! Have been told to emulate unsupported %d pin ROM", info->pins->rom_pins);
+    }
+
+    // Check ports (banks on RP235X) are as expected
+    if (info->pins->data_port != PORT_A) {
+        LOG("!!! Data pins not using port A");
+    }
+    if (info->pins->addr_port != PORT_C) {
+        LOG("!!! Address pins not using port C");
+    }
+    if (info->pins->cs_port != PORT_C) {
+        LOG("!!! Chip select pins not using port C");
+    }
+    if (info->pins->cs_port != PORT_B) {
+        LOG("!!! Image select pins not using port B");
+    }
+
+    // We expect to use pins 0-12 for address lines
+    for (int ii = 0; ii < 13; ii++) {
+        uint8_t pin = info->pins->addr[ii];
+        if (pin > 13) {
+            LOG("!!! Address line A%d using invalid pin %d", ii, pin);
+        }
+    }
+
+    // We expect to use pins 0-7 for data lines
+    for (int ii = 0; ii < 8; ii++) {
+        uint8_t pin = info->pins->data[ii];
+        if (pin > 7) {
+            LOG("!!! ROM line D%d using invalid pin %d", ii, pin);
+        }
+    }
+
+    // Check X1/X2 pins
+    if (set->rom_count > 1) {
+        if (info->pins->x1 > 15) {
+            LOG("!!! Multi-ROM mode, but pin X1 invalid");
+        }
+        if (info->pins->x2 > 15) {
+            LOG("!!! Multi-ROM mode, but pin X2 invalid");
+        }
+        if (info->pins->x1 == info->pins->x2) {
+            LOG("!!! Multi-ROM mode, but pin X1=X2");
+        }
+    }
+
+    // Check CS pins
+    if (info->pins->cs1_2364 > 15) {
+        LOG("!!! CS1 pin for 2364 ROM invalid");
+    }
+    if (info->pins->cs1_2332 > 15) {
+        LOG("!!! CS1 pin for 2332 ROM invalid");
+    }
+    if (info->pins->cs1_2316 > 15) {
+        LOG("!!! CS1 pin for 2316 ROM invalid");
+    }
+    if (info->pins->cs2_2332 > 15) {
+        LOG("!!! CS2 pin for 2332 ROM invalid");
+    }
+    if (info->pins->cs2_2316 > 15) {
+        LOG("!!! CS2 pin for 2316 ROM invalid");
+    }
+    if (info->pins->cs3_2316 > 15) {
+        LOG("!!! CS3 pin for 2316 ROM invalid");
+    }
+
+    // Warn if serve mode is incorrectly set for multiple ROM images
+    if ((set->rom_count > 1) && (set->serve != SERVE_ADDR_ON_ANY_CS)) {
+        LOG("Must be serving bank switched images");
+    } else if ((set->rom_count == 1) && (set->serve == SERVE_ADDR_ON_ANY_CS)) {
+        // Correction is done in main_loop() using a local variable
+        LOG("!!! Single ROM image - wrong serve mode - will correct");
     }
 }
 
@@ -514,18 +610,6 @@ void enable_pll(void) {
 
     // Wait for PLL to be ready
     while (!(RCC_CR & RCC_CR_PLLRDY));
-}
-
-// Enables the HSE and waits for it to be ready.  If driving the PLL, or
-// SYSCLK directly, this must be done first.
-void enable_hse(void) {
-    // Enable HSE
-    uint32_t rcc_cr = RCC_CR;
-    rcc_cr |= RCC_CR_HSEON;  // Set HSEON bit
-    RCC_CR = rcc_cr;
-
-    // Wait for HSE to be ready
-    while (!(RCC_CR & RCC_CR_HSERDY));
 }
 
 // Get HSI calibration value

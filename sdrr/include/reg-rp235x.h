@@ -95,6 +95,7 @@
 #define PAD_OUTPUT_DISABLE  (1 << PAD_OD_BIT)
 #define PAD_PU              (1 << PAD_PUE_BIT)
 #define PAD_PD              (1 << PAD_PDE_BIT)
+#define PAD_INPUT_PD        ((1 << PAD_PDE_BIT) | (1 << PAD_IE_BIT))
 #define PAD_INPUT_PU        ((1 << PAD_PUE_BIT) | (1 << PAD_IE_BIT))
 
 // Crystal Oscillator Registers

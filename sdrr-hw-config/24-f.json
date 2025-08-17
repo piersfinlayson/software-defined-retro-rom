@@ -31,6 +31,7 @@
         },
         "x1": 14,
         "x2": 15,
+        "x_jumper_pull": 1,
         "sel": [0, 1, 2, 7],
         "sel_jumper_pull": 1,
         "status": 15

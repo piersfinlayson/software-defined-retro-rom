@@ -312,6 +312,9 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
             if pins.x2 != 0xFF {
                 println!("  Multi X2: P{}:{}", pins.cs_port, pins.x2);
             }
+            if pins.x_jumper_pull != 0xFF {
+                println!("  X1/2 Jumper Pull: P{}:{}", pins.cs_port, pins.x_jumper_pull);
+            }
             println!();
             println!("Image select pins:");
             if pins.sel0 != 0xFF {
@@ -335,7 +338,7 @@ fn print_sdrr_info(fw_data: &FirmwareData, args: &Args) {
             if pins.sel6 != 0xFF {
                 println!("  SEL6: P{}:{}", pins.sel_port, pins.sel6);
             }
-            println!("  Pin jumper pulls: {}", pins.sel_jumper_pull);
+            println!("  Pin jumper pull: {}", pins.sel_jumper_pull);
             println!();
             println!("Status LED pin:");
             if pins.status_port == SdrrMcuPort::None {

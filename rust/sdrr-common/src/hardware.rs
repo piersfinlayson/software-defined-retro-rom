@@ -103,6 +103,7 @@ pub struct McuPins {
     pub ce: HashMap<RomType, u8>,
     #[serde(default, deserialize_with = "deserialize_rom_map")]
     pub oe: HashMap<RomType, u8>,
+    pub x_jumper_pull: u8,
     pub sel: Vec<u8>,
     pub sel_jumper_pull: u8,
     pub status: u8,
@@ -281,6 +282,10 @@ impl HwConfig {
 
     pub fn sel_jumper_pull(&self) -> u8 {
         self.mcu.pins.sel_jumper_pull
+    }
+
+    pub fn x_jumper_pull(&self) -> u8 {
+        self.mcu.pins.x_jumper_pull
     }
 
     pub fn cs_pin_for_rom_in_set(&self, rom_type: &RomType, set_index: usize) -> u8 {

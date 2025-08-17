@@ -391,7 +391,8 @@ pub struct SdrrPins {
     pub x2: u8,
     pub ce_23128: u8,
     pub oe_23128: u8,
-    #[deku(pad_bytes_before = "6")]
+    pub x_jumper_pull: u8,
+    #[deku(pad_bytes_before = "5")]
     pub sel0: u8,
     pub sel1: u8,
     pub sel2: u8,

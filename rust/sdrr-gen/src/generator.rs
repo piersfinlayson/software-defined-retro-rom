@@ -651,7 +651,8 @@ fn generate_sdrr_config_implementation(
     writeln!(file, "    .x2 = {},", hw.pin_x2())?;
     writeln!(file, "    .ce_23128 = {},", hw.pin_ce(&RomType::Rom23128))?;
     writeln!(file, "    .oe_23128 = {},", hw.pin_oe(&RomType::Rom23128))?;
-    writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
+    writeln!(file, "    .x_jumper_pull = {},", hw.x_jumper_pull())?;
+    writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0}},")?;
     writeln!(
         file,
         "    .sel = {{ {}, {}, {}, {}, {}, {}, {} }},",

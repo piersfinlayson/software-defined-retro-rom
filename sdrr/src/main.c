@@ -171,15 +171,18 @@ int main(void) {
         setup_mco();
     }
 
-    // Startup - from a stable 5V supply to here - takes:
-    // - ~3ms    F411 100MHz BOOT_LOGGING=1
-    // - ~1.5ms  F411 100MHz BOOT_LOGGING=0
-
     // Setup status LED up now, so we don't need to call the function from the
     // main loop - which might be running from RAM.
     if (sdrr_info.status_led_enabled) {
         setup_status_led();
     }
+
+    // Do final checks before entering the main loop
+    check_config(&sdrr_info, set);
+
+    // Startup - from a stable 5V supply to here - takes:
+    // - ~3ms    F411 100MHz BOOT_LOGGING=1
+    // - ~1.5ms  F411 100MHz BOOT_LOGGING=0
 
     // Execute the main_loop
 #if !defined(MAIN_LOOP_LOGGING)
