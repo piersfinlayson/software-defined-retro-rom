@@ -153,66 +153,72 @@ json_config_t* load_json_config(const char* hw_rev) {
         }
     }
     
-    json_object* stm_obj;
-    if (json_object_object_get_ex(root, "stm", &stm_obj)) {
+    json_object* mcu_obj;
+    if (json_object_object_get_ex(root, "stm", &mcu_obj)) {
         json_object* family_obj;
-        if (json_object_object_get_ex(stm_obj, "family", &family_obj)) {
-            strncpy(config->stm.family, json_object_get_string(family_obj), MAX_FAMILY_LEN - 1);
+        if (json_object_object_get_ex(mcu_obj, "family", &family_obj)) {
+            strncpy(config->mcu.family, json_object_get_string(family_obj), MAX_FAMILY_LEN - 1);
         }
         
         json_object* ports_obj;
-        if (json_object_object_get_ex(stm_obj, "ports", &ports_obj)) {
+        if (json_object_object_get_ex(mcu_obj, "ports", &ports_obj)) {
             json_object* port_obj;
             if (json_object_object_get_ex(ports_obj, "data_port", &port_obj)) {
-                config->stm.ports.data_port = parse_port(json_object_get_string(port_obj));
+                config->mcu.ports.data_port = parse_port(json_object_get_string(port_obj));
             }
             if (json_object_object_get_ex(ports_obj, "addr_port", &port_obj)) {
-                config->stm.ports.addr_port = parse_port(json_object_get_string(port_obj));
+                config->mcu.ports.addr_port = parse_port(json_object_get_string(port_obj));
             }
             if (json_object_object_get_ex(ports_obj, "cs_port", &port_obj)) {
-                config->stm.ports.cs_port = parse_port(json_object_get_string(port_obj));
+                config->mcu.ports.cs_port = parse_port(json_object_get_string(port_obj));
             }
             if (json_object_object_get_ex(ports_obj, "sel_port", &port_obj)) {
-                config->stm.ports.sel_port = parse_port(json_object_get_string(port_obj));
+                config->mcu.ports.sel_port = parse_port(json_object_get_string(port_obj));
             }
             if (json_object_object_get_ex(ports_obj, "status_port", &port_obj)) {
-                config->stm.ports.status_port = parse_port(json_object_get_string(port_obj));
+                config->mcu.ports.status_port = parse_port(json_object_get_string(port_obj));
             }
         }
         
         json_object* pins_obj;
-        if (json_object_object_get_ex(stm_obj, "pins", &pins_obj)) {
+        if (json_object_object_get_ex(mcu_obj, "pins", &pins_obj)) {
             json_object* arr_obj;
             if (json_object_object_get_ex(pins_obj, "data", &arr_obj)) {
-                parse_int_array(arr_obj, config->stm.pins.data, NUM_DATA_LINES);
+                parse_int_array(arr_obj, config->mcu.pins.data, NUM_DATA_LINES);
             }
             if (json_object_object_get_ex(pins_obj, "addr", &arr_obj)) {
-                parse_int_array(arr_obj, config->stm.pins.addr, MAX_ADDR_LINES);
+                parse_int_array(arr_obj, config->mcu.pins.addr, MAX_ADDR_LINES);
             }
             if (json_object_object_get_ex(pins_obj, "sel", &arr_obj)) {
-                parse_int_array(arr_obj, config->stm.pins.sel, 4);
+                parse_int_array(arr_obj, config->mcu.pins.sel, 7);
             }
             
             json_object* cs_obj;
             if (json_object_object_get_ex(pins_obj, "cs1", &cs_obj)) {
-                parse_cs_config(cs_obj, &config->stm.pins.cs1);
+                parse_cs_config(cs_obj, &config->mcu.pins.cs1);
             }
             if (json_object_object_get_ex(pins_obj, "cs2", &cs_obj)) {
-                parse_cs_config(cs_obj, &config->stm.pins.cs2);
+                parse_cs_config(cs_obj, &config->mcu.pins.cs2);
             }
             if (json_object_object_get_ex(pins_obj, "cs3", &cs_obj)) {
-                parse_cs_config(cs_obj, &config->stm.pins.cs3);
+                parse_cs_config(cs_obj, &config->mcu.pins.cs3);
             }
             
             json_object* pin_obj;
             if (json_object_object_get_ex(pins_obj, "x1", &pin_obj)) {
-                config->stm.pins.x1 = json_object_get_int(pin_obj);
+                config->mcu.pins.x1 = json_object_get_int(pin_obj);
             }
             if (json_object_object_get_ex(pins_obj, "x2", &pin_obj)) {
-                config->stm.pins.x2 = json_object_get_int(pin_obj);
+                config->mcu.pins.x2 = json_object_get_int(pin_obj);
             }
             if (json_object_object_get_ex(pins_obj, "status", &pin_obj)) {
-                config->stm.pins.status = json_object_get_int(pin_obj);
+                config->mcu.pins.status = json_object_get_int(pin_obj);
+            }
+            if (json_object_object_get_ex(pins_obj, "sel_jumper_pull", &arr_obj)) {
+                config->mcu.pins.sel_jumper_pull = json_object_get_int(pin_obj);
+            }
+            if (json_object_object_get_ex(pins_obj, "x_jumper_pull", &arr_obj)) {
+                config->mcu.pins.x_jumper_pull = json_object_get_int(pin_obj);
             }
         }
     }

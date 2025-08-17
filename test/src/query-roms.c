@@ -17,14 +17,14 @@ static struct {
 
 void create_address_mangler(json_config_t* config) {
     // Assert CS1 is same for all ROM types
-    assert(config->stm.pins.cs1.pin_2364 == config->stm.pins.cs1.pin_2332);
-    assert(config->stm.pins.cs1.pin_2332 == config->stm.pins.cs1.pin_2316);
-    assert(config->stm.pins.cs1.pin_2364 != 255);
+    assert(config->mcu.pins.cs1.pin_2364 == config->mcu.pins.cs1.pin_2332);
+    assert(config->mcu.pins.cs1.pin_2332 == config->mcu.pins.cs1.pin_2316);
+    assert(config->mcu.pins.cs1.pin_2364 != 255);
     
-    memcpy(address_mangler.addr_pins, config->stm.pins.addr, sizeof(address_mangler.addr_pins));
-    address_mangler.cs1_pin = config->stm.pins.cs1.pin_2364;
-    address_mangler.x1_pin = config->stm.pins.x1;
-    address_mangler.x2_pin = config->stm.pins.x2;
+    memcpy(address_mangler.addr_pins, config->mcu.pins.addr, sizeof(address_mangler.addr_pins));
+    address_mangler.cs1_pin = config->mcu.pins.cs1.pin_2364;
+    address_mangler.x1_pin = config->mcu.pins.x1;
+    address_mangler.x2_pin = config->mcu.pins.x2;
     address_mangler.initialized = 1;
 }
 
@@ -34,7 +34,7 @@ static struct {
 } byte_demangler = {0};
 
 void create_byte_demangler(json_config_t* config) {
-    memcpy(byte_demangler.data_pins, config->stm.pins.data, sizeof(byte_demangler.data_pins));
+    memcpy(byte_demangler.data_pins, config->mcu.pins.data, sizeof(byte_demangler.data_pins));
     byte_demangler.initialized = 1;
 }
 
