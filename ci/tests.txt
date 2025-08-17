@@ -84,7 +84,7 @@ serve-algorithm-a-f401rb:SERVE_ALG=a,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 serve-algorithm-b-f401rb:SERVE_ALG=b,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Build with c main loop - not supported in production, but want to keep compiling
-c-main-loop-f405rg:EXTRA_C_FLAGS=-DC_MAIN_LOOP,HW_REV=f,MCU=f405rg,CONFIG=config/bank-1541.mk
+c-main-loop-f405rg:EXTRA_C_FLAGS=-DC_MAIN_LOOP,COUNT_ROM_ACCESS=0,HW_REV=f,MCU=f405rg,CONFIG=config/bank-1541.mk
 
 # Build without COUNT_ROM_ACCESS
 no-count-rom-access-f401rb:COUNT_ROM_ACCESS=0,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
