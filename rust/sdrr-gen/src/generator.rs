@@ -654,13 +654,16 @@ fn generate_sdrr_config_implementation(
     writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
     writeln!(
         file,
-        "    .sel = {{ {}, {}, {}, {} }},",
+        "    .sel = {{ {}, {}, {}, {}, {}, {}, {} }},",
         hw.pin_sel(0),
         hw.pin_sel(1),
         hw.pin_sel(2),
-        hw.pin_sel(3)
+        hw.pin_sel(3),
+        hw.pin_sel(4),
+        hw.pin_sel(5),
+        hw.pin_sel(6),
     )?;
-    writeln!(file, "    .reserved4 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .sel_jumper_pull = {},", hw.sel_jumper_pull())?;
     writeln!(file, "    .status = {},", hw.pin_status())?;
     writeln!(file, "    .reserved5 = {{0, 0, 0}},")?;
 

@@ -330,7 +330,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(
 #else
     ROM_IMPL_LOG("Begin serving data");
 #endif // MAIN_LOOP_ONE_SHOT
-    if ((info->status_led_enabled) && (info->pins->status <= 15)) {
+    if ((info->status_led_enabled) && (info->pins->status <= MAX_USED_GPIOS)) {
         status_led_on(info->pins->status);
     }
 
@@ -523,6 +523,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     (void)info;
     (void)set;
     LOG("RP235X main loop not implemented yet");
+    if ((info->status_led_enabled) && (info->pins->status <= MAX_USED_GPIOS)) {
+        status_led_on(info->pins->status);
+    }
     while (1);
 }
 #else 

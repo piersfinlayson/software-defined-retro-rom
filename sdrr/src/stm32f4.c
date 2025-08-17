@@ -100,10 +100,22 @@ void setup_clock(void) {
 // Set up the image select pins to be inputs with the appropriate pulls.
 uint32_t setup_sel_pins(uint32_t *sel_mask) {
     uint32_t num;
+    uint8_t pull;
 
     if (sdrr_info.pins->sel_port != PORT_B) {
         // sel_mask of 0 means invalid response
         LOG("!!! Sel port not B - not using");
+        return 0;
+    }
+
+    if (sdrr_info.pins->sel_jumper_pull == 0) {
+        // Jumper will pull down, so we pull up
+        pull = 0b01;
+    } else if (sdrr_info.pins->sel_jumper_pull == 1) {
+        // Jumper will pull up, so we pull down
+        pull = 0b10;
+    } else {
+        LOG("!!! Invalid sel pull %d", sdrr_info.pins->sel_jumper_pull);
         return 0;
     }
 
@@ -120,8 +132,8 @@ uint32_t setup_sel_pins(uint32_t *sel_mask) {
         // Pin is present, so set the mask
         if (pin < MAX_PORT_PINS) {
             sel_1bit_mask |= 1 << pin;
-            sel_2bit_mask |= (11 << (pin * 2));
-            pulls |= (10 << (pin * 2));
+            sel_2bit_mask |= (0b11 << (pin * 2));
+            pulls |= (pull << (pin * 2));
             num += 1;
         } else if (pin != INVALID_PIN) {
             LOG("!!! Sel pin %d >= %d - not using", pin, MAX_PORT_PINS);
@@ -151,10 +163,24 @@ uint32_t setup_sel_pins(uint32_t *sel_mask) {
 // On all STM32F4 boards to date, the SEL pins are pulled high by jumpers to
 // indicate a 1.
 uint32_t get_sel_value(uint32_t sel_mask) {
+    uint8_t invert;
     uint32_t gpio_value;
+
+    if (sdrr_info.pins->sel_jumper_pull == 0) {
+        // Closing the jumper produces a 0, so invert
+        invert = 1;
+    } else {
+        // Closing the jumper produces a 1, so don't invert
+        invert = 0;
+    }
 
     gpio_value = GPIOB_IDR;
     gpio_value = gpio_value & sel_mask;
+
+    if (invert) {
+        // If we are inverting, we need to flip the bits
+        gpio_value = ~gpio_value & sel_mask;
+    }
 
     return gpio_value;
 }

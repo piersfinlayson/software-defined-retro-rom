@@ -69,7 +69,7 @@ impl<'de> Deserialize<'de> for Port {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct StmPorts {
+pub struct McuPorts {
     pub data_port: Port,
     pub addr_port: Port,
     pub cs_port: Port,
@@ -88,7 +88,7 @@ pub struct Rom {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct StmPins {
+pub struct McuPins {
     pub data: Vec<u8>,
     pub addr: Vec<u8>,
     #[serde(default, deserialize_with = "deserialize_rom_map")]
@@ -104,18 +104,19 @@ pub struct StmPins {
     #[serde(default, deserialize_with = "deserialize_rom_map")]
     pub oe: HashMap<RomType, u8>,
     pub sel: Vec<u8>,
+    pub sel_jumper_pull: u8,
     pub status: u8,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Mcu {
-    #[serde(deserialize_with = "deserialize_stm_family")]
+    #[serde(deserialize_with = "deserialize_mcu_family")]
     pub family: McuFamily,
-    pub ports: StmPorts,
-    pub pins: StmPins,
+    pub ports: McuPorts,
+    pub pins: McuPins,
 }
 
-fn deserialize_stm_family<'de, D>(deserializer: D) -> Result<McuFamily, D::Error>
+fn deserialize_mcu_family<'de, D>(deserializer: D) -> Result<McuFamily, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -276,6 +277,10 @@ impl HwConfig {
 
     pub fn pin_sel(&self, sel: usize) -> u8 {
         self.mcu.pins.sel.get(sel).copied().unwrap_or(255)
+    }
+
+    pub fn sel_jumper_pull(&self) -> u8 {
+        self.mcu.pins.sel_jumper_pull
     }
 
     pub fn cs_pin_for_rom_in_set(&self, rom_type: &RomType, set_index: usize) -> u8 {
@@ -548,6 +553,9 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
         .entry(config.mcu.ports.status_port)
         .or_default()
         .push(("status", pin));
+    if config.mcu.pins.sel_jumper_pull > 1 {
+        bail!("Invalid sel_jumper_pull value - set to 0 for jumper pulling sel pins down to GND, 1 for jumper pulling sel pins up.")
+    }
 
     // Validate X1/X2 pins are fixed at 14/15 if provided
     if let Some(x1_pin) = config.mcu.pins.x1 {

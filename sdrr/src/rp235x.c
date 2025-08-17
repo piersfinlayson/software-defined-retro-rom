@@ -118,6 +118,18 @@ void setup_mco(void) {
 // Set up the image select pins to be inputs with the appropriate pulls.
 uint32_t setup_sel_pins(uint32_t *sel_mask) {
     uint32_t num;
+    uint32_t pull;
+
+    if (sdrr_info.pins->sel_jumper_pull == 0) {
+        // Jumper will pull down, so we pull up
+        pull = PAD_PU;
+    } else if (sdrr_info.pins->sel_jumper_pull == 1) {
+        // Jumper will pull up, so we pull down
+        pull = PAD_PD;
+    } else {
+        LOG("!!! Invalid sel pull %d", sdrr_info.pins->sel_jumper_pull);
+        return 0;
+    }
 
     *sel_mask = 0;
     num = 0;
@@ -125,7 +137,7 @@ uint32_t setup_sel_pins(uint32_t *sel_mask) {
         uint8_t pin = sdrr_info.pins->sel[ii];
         if (pin < MAX_USED_GPIOS) {
             // Enable pull-up
-            GPIO_PAD(pin) = PAD_PU;
+            GPIO_PAD(pin) = pull;
 
             // Set the pin in our bit mask
             *sel_mask |= (1 << pin);
@@ -153,10 +165,22 @@ uint32_t setup_sel_pins(uint32_t *sel_mask) {
 // On all RP2350 boards, the SEL pins are pulled low by jumpers to indicate
 // a 1, so reverse to the default STM32F4 behavior.
 uint32_t get_sel_value(uint32_t sel_mask) {
+    uint8_t invert;
     uint32_t gpio_value;
 
-    gpio_value = SIO_GPIO_IN;
-    gpio_value = ~gpio_value & sel_mask;
+    if (sdrr_info.pins->sel_jumper_pull == 0) {
+        // Closing the jumper produces a 0, so invert
+        invert = 1;
+    } else {
+        // Closing the jumper produces a 1, so don't invert
+        invert = 0;
+    }
+
+    gpio_value = SIO_GPIO_IN & sel_mask;
+    if (invert) {
+        // If we are inverting, we need to flip the bits
+        gpio_value = ~gpio_value;
+    }
 
     return gpio_value;
 }

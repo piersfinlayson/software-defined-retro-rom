@@ -89,11 +89,23 @@ typedef struct {
     uint8_t reserved3[6];
 
     // Image select lines
+    //
+    // Sel jumper pull is the direction of pull-up or pull-down when closing
+    // the jumper on this board type.  If 1, closing the jumper pulls it up.
+    // This is used by One ROM to decide what type of its own pulls to apply
+    // (the opposite).  Closing is always interpreted as a 1 by One ROM.
+    //
+    // Unused image select pins are set to 255.
+    //
+    // The order of pins in this array is significant - [0] is bit 0 of the
+    // interpreted value, [1] bit 1, etc.  If a pin is missing (255) mid
+    // array, the _next_ entry will be missing bit.
+    //
     // Offset: 52
-    // 8 x 4 bytes = 8 bytes
-#define MAX_IMG_SEL_PINS 4
+    // 8 bytes
+#define MAX_IMG_SEL_PINS 7
     uint8_t sel[MAX_IMG_SEL_PINS];
-    uint8_t reserved4[8-MAX_IMG_SEL_PINS];
+    uint8_t sel_jumper_pull;
 
     // Status LED line
     // Offset: 60
