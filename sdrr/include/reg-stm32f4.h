@@ -205,6 +205,9 @@
 #define IDCODE_F42_43   0x419
 #define IDCODE_F446     0x421
 
+#define MAX_PORT_PINS   16
+#define MAX_USED_GPIOS  MAX_PORT_PINS
+
 // Flash size - in KB
 #define FLASH_SIZE      (*(volatile uint16_t *)(0x1FFF7A22))
 

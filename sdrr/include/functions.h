@@ -33,9 +33,12 @@ extern void platform_specific_init(void);
 extern void setup_clock(void);
 extern void setup_gpio(void);
 extern void setup_mco(void);
-extern uint32_t check_sel_pins(uint32_t *sel_mask);
+extern uint32_t setup_sel_pins(uint32_t *sel_mask);
+extern uint32_t get_sel_value(uint32_t sel_mask);
+extern void disable_sel_pins(void);
 extern void setup_status_led(void);
 extern void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats);
+extern void enter_bootloader(void);
 extern void platform_logging(void);
 
 // Internal
@@ -49,9 +52,12 @@ extern void platform_specific_init(void);
 extern void setup_clock(void);
 extern void setup_gpio(void);
 extern void setup_mco(void);
-extern uint32_t check_sel_pins(uint32_t *sel_mask);
+extern uint32_t setup_sel_pins(uint32_t *sel_mask);
+extern uint32_t get_sel_value(uint32_t sel_mask);
+extern void disable_sel_pins(void);
 extern void setup_status_led(void);
 extern void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats);
+extern void enter_bootloader(void);
 extern void platform_logging(void);
 
 // Internal

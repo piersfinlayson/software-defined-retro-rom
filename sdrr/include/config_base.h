@@ -49,6 +49,7 @@ typedef enum {
 // port.  Valid numbers are 0-15 on the STM32, 0-29 on the RP2350.
 // 255 indicates a particular pin is present.
 // The index into the array is ROM Address x or Data x number.
+#define INVALID_PIN  255
 typedef struct {
     // SDRR MCU pin port locations
     // Offset: 0

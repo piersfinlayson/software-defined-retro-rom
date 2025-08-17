@@ -97,6 +97,306 @@ void setup_clock(void) {
     DEBUG("PLL->SYSCLK");
 }
 
+// Set up the image select pins to be inputs with the appropriate pulls.
+uint32_t setup_sel_pins(uint32_t *sel_mask) {
+    uint32_t num;
+
+    if (sdrr_info.pins->sel_port != PORT_B) {
+        // sel_mask of 0 means invalid response
+        LOG("!!! Sel port not B - not using");
+        return 0;
+    }
+
+    // Set the GPIO peripheral clock in case not already done
+    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
+
+    // Build masks to set pins as input with appropriate pulls
+    num = 0;
+    uint32_t sel_1bit_mask = 0;  // Input mask
+    uint32_t sel_2bit_mask = 0;  // PU/PD mask
+    uint32_t pulls = 0;          // Pull value
+    for (int ii = 0; ii < MAX_IMG_SEL_PINS; ii++) {
+        uint8_t pin = sdrr_info.pins->sel[ii];
+        // Pin is present, so set the mask
+        if (pin < MAX_PORT_PINS) {
+            sel_1bit_mask |= 1 << pin;
+            sel_2bit_mask |= (11 << (pin * 2));
+            pulls |= (10 << (pin * 2));
+            num += 1;
+        } else if (pin != INVALID_PIN) {
+            LOG("!!! Sel pin %d >= %d - not using", pin, MAX_PORT_PINS);
+        }
+    }
+    *sel_mask = sel_1bit_mask;
+
+    // Set pins as inputs with pulls
+    GPIOB_MODER &= ~sel_2bit_mask;
+    GPIOB_PUPDR &= ~sel_2bit_mask;  // Clear pulls for appropriate lines
+    GPIOB_PUPDR |= pulls;
+
+    // Short delay to allow the pull-downs to settle.
+    for(volatile int ii = 0; ii < 10; ii++);
+    
+    return num;
+}
+
+// Get the value of the sel pins.  If, on this board, the MCU pulls are low
+// (i.e. closing the jumpers pulls them up) we return the value as is, as
+// closed should indicate 1.  In the other case, where MCU pulls are high
+// (closing jumpers) pulls the pins low, we invert - so closed still indicates
+// 1.
+//
+// We will probably make this behaviour configurable soon.
+//
+// On all STM32F4 boards to date, the SEL pins are pulled high by jumpers to
+// indicate a 1.
+uint32_t get_sel_value(uint32_t sel_mask) {
+    uint32_t gpio_value;
+
+    gpio_value = GPIOB_IDR;
+    gpio_value = gpio_value & sel_mask;
+
+    return gpio_value;
+}
+
+void disable_sel_pins(void) {
+    uint32_t sel_2bit_mask;
+    
+    if (sdrr_info.pins->sel_port != PORT_B) {
+        return;
+    }
+
+    sel_2bit_mask = 0;
+    for (int ii = 0; ii < MAX_IMG_SEL_PINS; ii++) {
+        uint8_t pin = sdrr_info.pins->sel[ii];
+        if (pin < MAX_PORT_PINS) {
+            sel_2bit_mask |= (11 << (pin * 2));
+        }
+    }
+
+    // Clear the PU/PDs
+    GPIOB_PUPDR &= ~sel_2bit_mask;
+
+    // Disable port B
+    RCC_AHB1ENR &= ~RCC_AHB1ENR_GPIOBEN;
+}
+
+void setup_gpio(void) {
+    // Enable GPIO ports A, B, and C
+    RCC_AHB1ENR |= (1 << 0) | (1 << 1) | (1 << 2);
+
+    //
+    // GPIOA
+    //
+    uint32_t gpioa_moder = 0;
+    uint32_t gpioa_pupdr = 0;
+    uint32_t gpioa_ospeedr = 0x0000AAAA;    // PA0-7 fast speed, not high
+                                            // speed, to ensure V(OL) max 0.4V
+
+    if (sdrr_info.swd_enabled) {
+        gpioa_moder |= 0x28000000; // Set 13/14 as AF
+        gpioa_pupdr |= 0x24000000; // Set pull-up on PA13, down on PA14
+    }
+
+    if (sdrr_info.mco_enabled) {
+        gpioa_moder |= 0x00020000; // Set PA8 as AF
+        gpioa_ospeedr |= 0x00030000; // Set PA8 to very high speed
+    }
+    
+    GPIOA_MODER = gpioa_moder;
+    GPIOA_PUPDR = gpioa_pupdr;
+    GPIOA_OSPEEDR = gpioa_ospeedr;
+
+    //
+    // GPIOB and GPIOC
+    //
+
+    // Set PB0-2 and PB7 as inputs, with pull-downs.  HW rev D only uses
+    // PB0-2 but as PB7 isn't connected we can set it here as well.
+    // We do this early doors, so the internal pull-downs will have settled
+    // before we read the pins.
+    // TODO the code to set PU/PD should be retired (and then tested as the
+    // PU/PD is now done in check_sel_pins()).
+    GPIOB_MODER = 0;  // Set all GPIOs as inputs
+    GPIOB_PUPDR &= ~0x0000C03F;  // Clear pull-up/down for PB0-2 and PB7
+    GPIOB_PUPDR |= 0x0000802A;   // Set pull-downs on PB0-2 and PB7
+
+    GPIOC_MODER = 0;  // Set all GPIOs as inputs
+
+#if defined(MCO2)
+    uint32_t gpioc_moder = GPIOC_MODER;
+    gpioc_moder &= ~(0b11 << (9 * 2));  // Clear bits for PC9
+    gpioc_moder |= 0x00080000; // Set PC9 as AF
+    GPIOC_MODER = gpioc_moder;
+    GPIOC_OSPEEDR |= 0x000C0000; // Set PC9 to very high speed
+    GPIOC_OTYPER &= ~(0b1 << 9);  // Set as push-pull
+#else // !MCO2
+    GPIOC_PUPDR = 0; // No pull-up/down
+#endif // MCO2
+}
+
+// Enters bootloader mode.  This enables UART and SWD so the device can be
+// programmed.
+void enter_bootloader(void) {
+    // Set the stack pointer
+    asm volatile("msr msp, %0" : : "r" (*((uint32_t*)0x1FFFF000)));
+    
+    // Jump to the bootloader
+    ((void(*)())(*((uint32_t*)0x1FFFF004)))();
+}
+
+// Common setup for status LED output using PB15 (inverted logic: 0=on, 1=off)
+void setup_status_led(void) {
+    if (sdrr_info.pins->status_port != PORT_B) {
+        LOG("!!! Status port not B - not using");
+        return;
+    }
+    if (sdrr_info.pins->status > 15) {
+        LOG("!!! Status pin %d > 15 - not using", sdrr_info.pins->status);
+        return;
+    }
+    if (sdrr_info.status_led_enabled) {
+        RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN; // Enable GPIOB clock
+        
+        uint8_t pin = sdrr_info.pins->status;
+        GPIOB_MODER &= ~(0x3 << (pin * 2));  // Clear bits for PB15
+        GPIOB_MODER |= (0x1 << (pin * 2));   // Set as output
+        GPIOB_OSPEEDR |= (0x3 << (pin * 2)); // Set speed to high speed
+        GPIOB_OTYPER &= ~(0x1 << pin);       // Set as push-pull
+        GPIOB_PUPDR &= ~(0x3 << (pin * 2));  // No pull-up/down
+        
+        GPIOB_BSRR = (1 << pin); // Start with LED off (PB15 high)
+    }
+}
+
+// Blink pattern: on_time, off_time, repeat_count
+void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
+    if (sdrr_info.status_led_enabled && sdrr_info.pins->status_port == PORT_B && sdrr_info.pins->status <= 15) {
+        uint8_t pin = sdrr_info.pins->status;
+        for(uint8_t i = 0; i < repeats; i++) {
+            status_led_on(pin);
+            delay(on_time);
+            status_led_off(pin);
+            delay(off_time);
+        }
+    }
+}
+
+void platform_logging(void) {
+    uint32_t idcode = DBGMCU_IDCODE;
+    const char *idcode_mcu_variant;
+    idcode = idcode & DBGMCU_IDCODE_DEV_ID_MASK; 
+    switch (idcode) {
+        case IDCODE_F401XBC:
+            idcode_mcu_variant = "F401XBC";
+            break;
+        case IDCODE_F401XDE:
+            idcode_mcu_variant = "F401XDE";
+            break;
+        case IDCODE_F4X5:
+            idcode_mcu_variant = "F405/415";
+            break;
+        case IDCODE_F411XCE:
+            idcode_mcu_variant = "F411";
+            break;
+        case IDCODE_F42_43:
+            idcode_mcu_variant = "F42X/43X";
+            break;
+        case IDCODE_F446:
+            idcode_mcu_variant = "F446";
+            break;
+        default:
+            idcode_mcu_variant = "Unknown";
+            break;
+    }
+    LOG("%s", log_divider);
+    LOG("Detected hardware info ...");
+    LOG("ID Code: %s", idcode_mcu_variant);
+    uint16_t hw_flash_size = FLASH_SIZE;
+    LOG("Flash: %dKB", hw_flash_size);
+
+    LOG("%s", log_divider);
+    LOG("Firmware hardware info ...");
+    LOG("%s", mcu_variant);
+    int mismatch = 1;
+    switch (sdrr_info.mcu_line) {
+        case F401BC:
+            if (idcode == IDCODE_F401XBC) {
+                mismatch = 0;
+            }
+            break;
+
+        case F401DE:
+            if (idcode == IDCODE_F401XDE) {
+                mismatch = 0;
+            }
+            break;
+
+        case F405:
+            if (idcode == IDCODE_F4X5) {
+                mismatch = 0;
+            }
+            break;
+        
+        case F411:
+            if (idcode == IDCODE_F411XCE) {
+                mismatch = 0;
+            }
+            break;
+
+        case F446:
+            if (idcode == IDCODE_F446) {
+                mismatch = 0;
+            }
+            break;
+        default:
+            break;
+    }
+    if (mismatch) {
+        LOG("!!! MCU mismatch: actual %s, firmware expected %s", idcode_mcu_variant, mcu_variant);
+    }
+
+    LOG("PCB rev: %s", sdrr_info.hw_rev);
+    uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
+    uint32_t flash_kb = flash_bytes / 1024;
+    if (flash_bytes % 1024 != 0) {
+        flash_kb += 1;
+    }
+#if !defined(DEBUG_LOGGING)
+    LOG("%s size: %dKB", flash, MCU_FLASH_SIZE_KB);
+    LOG("%s used: %dKB", flash, flash_kb);
+#else // DEBUG_LOGGING
+    LOG("%s size: %dKB (%d bytes)", flash, MCU_FLASH_SIZE_KB, MCU_FLASH_SIZE);
+    LOG("%s used: %dKB %d bytes", flash, flash_kb, flash_bytes);
+#endif
+    if (hw_flash_size != MCU_FLASH_SIZE_KB) {
+        LOG("!!! Flash size mismatch: actual %dKB, firmware expected %dKB", hw_flash_size, MCU_FLASH_SIZE_KB);
+    }
+
+    uint32_t ram_size_bytes = (uint32_t)&_ram_size;
+    uint32_t ram_size_kb = ram_size_bytes / 1024;
+#if !defined(DEBUG_LOGGING)
+    LOG("RAM: %dKB", ram_size_kb);
+#else // DEBUG_LOGGING
+    LOG("RAM: %dKB (%d bytes)", ram_size_kb, ram_size_bytes);
+#endif
+
+    LOG("Target freq: %dMHz", TARGET_FREQ_MHZ);
+    LOG("%s: HSI", oscillator);
+#if defined(HSI_TRIM)
+    LOG("HSI Trim: 0x%X", HSI_TRIM);
+#endif // HSI_TRIM
+    LOG("PLL MNPQ: %d/%d/%d/%d", PLL_M, PLL_N, PLL_P, PLL_Q);
+    if (sdrr_info.mco_enabled) {
+        LOG("MCO: enabled - PA8");
+    } else {
+        LOG("MCO: disabled");
+    }
+#if defined(MCO2)
+    LOG("MCO2: %s - PC9", enabled);
+#endif // MCO2
+}
+
 // Sets up the MCO (clock output) on PA8, to the value provided
 void setup_mco(void) {
     uint8_t mco = RCC_CFGR_MCO1_PLL;
@@ -147,98 +447,6 @@ void setup_mco(void) {
         }
     }
 }
-
-uint32_t check_sel_pins(uint32_t *sel_mask) {
-    if (sdrr_info.pins->sel_port != PORT_B) {
-        // sel_mask of 0 means invalid response
-        LOG("!!! Sel port not B - not using");
-        *sel_mask = 0;
-        return 0;
-    }
-
-    // Set the GPIO peripheral clock
-    RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN;  // Port B
-
-    // Set sel port mask
-    uint32_t sel_1bit_mask = 0;
-    uint32_t sel_2bit_mask = 0;
-    uint32_t pull_downs = 0;
-    for (int ii = 0; ii < MAX_IMG_SEL_PINS; ii++) {
-        uint8_t pin = sdrr_info.pins->sel[ii];
-        if (pin < 255) {
-            // Pin is present, so set the mask
-            if (pin <= 15) {
-                sel_1bit_mask |= 1 << pin;
-                sel_2bit_mask |= (11 << (pin * 2));
-                pull_downs |= (10 << (pin * 2));
-            } else {
-                LOG("!!! Sel pin 15 < %d < 255 - not using", pin);
-            }
-        }
-    }
-
-    // Set pins as inputs
-    GPIOB_MODER &= ~sel_2bit_mask;  // Set sel pins as inputs
-    GPIOB_PUPDR &= ~sel_2bit_mask;  // Clear pull-up/down on sel inputs
-    GPIOB_PUPDR |= pull_downs;    // Set pull-down on sel inputs
-
-    // Add short delay to allow GPIOB to allow the pull-downs to settle.
-    for(volatile int i = 0; i < 10; i++);
-
-    // Read pins
-    uint32_t pins = GPIOB_IDR;
-
-    // Disable peripheral clock for port again.
-    RCC_AHB1ENR &= ~RCC_AHB1ENR_GPIOBEN;
-
-    // Return sel_mask as well as the value of the pins
-    *sel_mask = sel_1bit_mask;
-
-    // Store the value of the pins in sdrr_runtime_info
-    sdrr_runtime_info.image_sel = pins & sel_1bit_mask;
-
-    // Return the value of the pins
-    return (pins & sel_1bit_mask);
-}
-
-// Common setup for status LED output using PB15 (inverted logic: 0=on, 1=off)
-void setup_status_led(void) {
-    if (sdrr_info.pins->status_port != PORT_B) {
-        LOG("!!! Status port not B - not using");
-        return;
-    }
-    if (sdrr_info.pins->status > 15) {
-        LOG("!!! Status pin %d > 15 - not using", sdrr_info.pins->status);
-        return;
-    }
-    if (sdrr_info.status_led_enabled) {
-        RCC_AHB1ENR |= RCC_AHB1ENR_GPIOBEN; // Enable GPIOB clock
-        
-        uint8_t pin = sdrr_info.pins->status;
-        GPIOB_MODER &= ~(0x3 << (pin * 2));  // Clear bits for PB15
-        GPIOB_MODER |= (0x1 << (pin * 2));   // Set as output
-        GPIOB_OSPEEDR |= (0x3 << (pin * 2)); // Set speed to high speed
-        GPIOB_OTYPER &= ~(0x1 << pin);       // Set as push-pull
-        GPIOB_PUPDR &= ~(0x3 << (pin * 2));  // No pull-up/down
-        
-        GPIOB_BSRR = (1 << pin); // Start with LED off (PB15 high)
-    }
-}
-
-// Blink pattern: on_time, off_time, repeat_count
-void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
-    if (sdrr_info.status_led_enabled && sdrr_info.pins->status_port == PORT_B && sdrr_info.pins->status <= 15) {
-        uint8_t pin = sdrr_info.pins->status;
-        for(uint8_t i = 0; i < repeats; i++) {
-            GPIOB_BSRR = (1 << (pin + 16)); // LED on (PB15 low)
-            delay(on_time);
-            GPIOB_BSRR = (1 << pin);        // LED off (PB15 high)
-            delay(off_time);
-        }
-    }
-}
-
-
 
 // Sets up the PLL dividers/multiplier to the values provided
 void setup_pll_mul(uint8_t m, uint16_t n, uint8_t p, uint8_t q) {
@@ -388,173 +596,4 @@ void set_flash_ws(void) {
     while ((FLASH_ACR & FLASH_ACR_LATENCY_MASK) != wait_states);
 
     LOG("Set flash config: %d ws", wait_states);
-}
-
-void setup_gpio(void) {
-    // Enable GPIO ports A, B, and C
-    RCC_AHB1ENR |= (1 << 0) | (1 << 1) | (1 << 2);
-
-    //
-    // GPIOA
-    //
-    uint32_t gpioa_moder = 0;
-    uint32_t gpioa_pupdr = 0;
-    uint32_t gpioa_ospeedr = 0x0000AAAA;    // PA0-7 fast speed, not high
-                                            // speed, to ensure V(OL) max 0.4V
-
-    if (sdrr_info.swd_enabled) {
-        gpioa_moder |= 0x28000000; // Set 13/14 as AF
-        gpioa_pupdr |= 0x24000000; // Set pull-up on PA13, down on PA14
-    }
-
-    if (sdrr_info.mco_enabled) {
-        gpioa_moder |= 0x00020000; // Set PA8 as AF
-        gpioa_ospeedr |= 0x00030000; // Set PA8 to very high speed
-    }
-    
-    GPIOA_MODER = gpioa_moder;
-    GPIOA_PUPDR = gpioa_pupdr;
-    GPIOA_OSPEEDR = gpioa_ospeedr;
-
-    //
-    // GPIOB and GPIOC
-    //
-
-    // Set PB0-2 and PB7 as inputs, with pull-downs.  HW rev D only uses
-    // PB0-2 but as PB7 isn't connected we can set it here as well.
-    // We do this early doors, so the internal pull-downs will have settled
-    // before we read the pins.
-    // TODO the code to set PU/PD should be retired (and then tested as the
-    // PU/PD is now done in check_sel_pins()).
-    GPIOB_MODER = 0;  // Set all GPIOs as inputs
-    GPIOB_PUPDR &= ~0x0000C03F;  // Clear pull-up/down for PB0-2 and PB7
-    GPIOB_PUPDR |= 0x0000802A;   // Set pull-downs on PB0-2 and PB7
-
-    GPIOC_MODER = 0;  // Set all GPIOs as inputs
-
-#if defined(MCO2)
-    uint32_t gpioc_moder = GPIOC_MODER;
-    gpioc_moder &= ~(0b11 << (9 * 2));  // Clear bits for PC9
-    gpioc_moder |= 0x00080000; // Set PC9 as AF
-    GPIOC_MODER = gpioc_moder;
-    GPIOC_OSPEEDR |= 0x000C0000; // Set PC9 to very high speed
-    GPIOC_OTYPER &= ~(0b1 << 9);  // Set as push-pull
-#else // !MCO2
-    GPIOC_PUPDR = 0; // No pull-up/down
-#endif // MCO2
-}
-
-void platform_logging(void) {
-    uint32_t idcode = DBGMCU_IDCODE;
-    const char *idcode_mcu_variant;
-    idcode = idcode & DBGMCU_IDCODE_DEV_ID_MASK; 
-    switch (idcode) {
-        case IDCODE_F401XBC:
-            idcode_mcu_variant = "F401XBC";
-            break;
-        case IDCODE_F401XDE:
-            idcode_mcu_variant = "F401XDE";
-            break;
-        case IDCODE_F4X5:
-            idcode_mcu_variant = "F405/415";
-            break;
-        case IDCODE_F411XCE:
-            idcode_mcu_variant = "F411";
-            break;
-        case IDCODE_F42_43:
-            idcode_mcu_variant = "F42X/43X";
-            break;
-        case IDCODE_F446:
-            idcode_mcu_variant = "F446";
-            break;
-        default:
-            idcode_mcu_variant = "Unknown";
-            break;
-    }
-    LOG("%s", log_divider);
-    LOG("Detected hardware info ...");
-    LOG("ID Code: %s", idcode_mcu_variant);
-    uint16_t hw_flash_size = FLASH_SIZE;
-    LOG("Flash: %dKB", hw_flash_size);
-
-    LOG("%s", log_divider);
-    LOG("Firmware hardware info ...");
-    LOG("%s", mcu_variant);
-    int mismatch = 1;
-    switch (sdrr_info.mcu_line) {
-        case F401BC:
-            if (idcode == IDCODE_F401XBC) {
-                mismatch = 0;
-            }
-            break;
-
-        case F401DE:
-            if (idcode == IDCODE_F401XDE) {
-                mismatch = 0;
-            }
-            break;
-
-        case F405:
-            if (idcode == IDCODE_F4X5) {
-                mismatch = 0;
-            }
-            break;
-        
-        case F411:
-            if (idcode == IDCODE_F411XCE) {
-                mismatch = 0;
-            }
-            break;
-
-        case F446:
-            if (idcode == IDCODE_F446) {
-                mismatch = 0;
-            }
-            break;
-        default:
-            break;
-    }
-    if (mismatch) {
-        LOG("!!! MCU mismatch: actual %s, firmware expected %s", idcode_mcu_variant, mcu_variant);
-    }
-
-    LOG("PCB rev: %s", sdrr_info.hw_rev);
-    uint32_t flash_bytes = (uint32_t)(&_flash_end) - (uint32_t)(&_flash_start);
-    uint32_t flash_kb = flash_bytes / 1024;
-    if (flash_bytes % 1024 != 0) {
-        flash_kb += 1;
-    }
-#if !defined(DEBUG_LOGGING)
-    LOG("%s size: %dKB", flash, MCU_FLASH_SIZE_KB);
-    LOG("%s used: %dKB", flash, flash_kb);
-#else // DEBUG_LOGGING
-    LOG("%s size: %dKB (%d bytes)", flash, MCU_FLASH_SIZE_KB, MCU_FLASH_SIZE);
-    LOG("%s used: %dKB %d bytes", flash, flash_kb, flash_bytes);
-#endif
-    if (hw_flash_size != MCU_FLASH_SIZE_KB) {
-        LOG("!!! Flash size mismatch: actual %dKB, firmware expected %dKB", hw_flash_size, MCU_FLASH_SIZE_KB);
-    }
-
-    uint32_t ram_size_bytes = (uint32_t)&_ram_size;
-    uint32_t ram_size_kb = ram_size_bytes / 1024;
-#if !defined(DEBUG_LOGGING)
-    LOG("RAM: %dKB", ram_size_kb);
-#else // DEBUG_LOGGING
-    LOG("RAM: %dKB (%d bytes)", ram_size_kb, ram_size_bytes);
-#endif
-
-    LOG("Target freq: %dMHz", TARGET_FREQ_MHZ);
-    LOG("%s: HSI", oscillator);
-#if defined(HSI_TRIM)
-    LOG("HSI Trim: 0x%X", HSI_TRIM);
-#endif // HSI_TRIM
-    LOG("PLL MNPQ: %d/%d/%d/%d", PLL_M, PLL_N, PLL_P, PLL_Q);
-    if (sdrr_info.mco_enabled) {
-        LOG("MCO: enabled - PA8");
-    } else {
-        LOG("MCO: disabled");
-    }
-#if defined(MCO2)
-    LOG("MCO2: %s - PC9", enabled);
-#endif // MCO2
 }

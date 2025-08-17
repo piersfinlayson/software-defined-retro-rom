@@ -46,6 +46,38 @@ void setup_gpio(void) {
     // Take IO bank and pads bank out of reset
     RESET_RESET &= ~(RESET_IOBANK0 | RESET_PADS_BANK0);
     while (!(RESET_DONE & (RESET_IOBANK0 | RESET_PADS_BANK0)));
+
+    // Set all GPIO pins to SIOs, inputs, output disable, no pulls
+    for (int ii = 0; ii < MAX_USED_GPIOS; ii++) {
+        GPIO_CTRL(ii) = GPIO_CTRL_RESET;
+        GPIO_PAD(ii) = PAD_INPUT | PAD_OUTPUT_DISABLE;
+    }
+
+    // Go through the data pins, disabling the output disable and setting the
+    // drive strength.  We don't actually set as an output here.
+    // Set the drive strength to 8mA and slew rate to fast.
+    for (int ii = 0; ii < 8; ii++) {
+        uint8_t pin = sdrr_info.pins->data[ii];
+        if (pin < MAX_USED_GPIOS) {
+            GPIO_PAD(sdrr_info.pins->data[ii]) &= ~PAD_OUTPUT_DISABLE;
+            GPIO_PAD(sdrr_info.pins->data[ii]) |= PAD_DRIVE_8MA | PAD_SLEW_FAST;
+        } else {
+            LOG("!!! Data pins %d out of range", pin);
+        }
+    }
+
+    // If there's a status LED, set it up as an output pin, high (LED off).
+    if (sdrr_info.pins->status != INVALID_PIN) {
+        uint8_t pin = sdrr_info.pins->status;
+        if (pin < MAX_USED_GPIOS) {
+            GPIO_PAD(pin) &= ~(PAD_OUTPUT_DISABLE | PAD_INPUT);
+            GPIO_PAD(pin) = PAD_DRIVE_2MA;
+            SIO_GPIO_OUT_SET = (1 << pin);
+            SIO_GPIO_OE_SET = (1 << pin);
+        } else {
+            LOG("!!! Status LED pin %d out of range", pin);
+        }
+    }
 }
 
 // Set up the PLL with the generated values
@@ -83,40 +115,61 @@ void setup_mco(void) {
     LOG("!!! MCO not supported on RP235X");
 }
 
-// On all RP2350 boards, the SEL pins are pulled low by jumpers to indicate
-// a 1, so reverse to the default STM32F4 behavior.
-uint32_t check_sel_pins(uint32_t *sel_mask) {
-    // Ensure GPIO port is enabled
-    RESET_RESET &= ~(RESET_IOBANK0 | RESET_PADS_BANK0);
-    while (!(RESET_DONE & (RESET_IOBANK0 | RESET_PADS_BANK0)));
+// Set up the image select pins to be inputs with the appropriate pulls.
+uint32_t setup_sel_pins(uint32_t *sel_mask) {
+    uint32_t num;
 
-    uint32_t value;
     *sel_mask = 0;
-
-    // Setup the pins first.  Do this first to allow any pull-ups to settle
-    // before reading.
-    for (int ii = 0; ((ii < MAX_IMG_SEL_PINS) && (sdrr_info.pins->sel[ii] < 255)); ii++) {
+    num = 0;
+    for (int ii = 0; (ii < MAX_IMG_SEL_PINS); ii++) {
         uint8_t pin = sdrr_info.pins->sel[ii];
-        if (pin < 32) {
-            // Set the pin as SIO function - clear everything else
-            GPIO_CTRL(pin) = GPIO_FUNC_SIO;
-
-            // Enable as input and pull-up
-            GPIO_PAD(pin) = PAD_INPUT_PU;
+        if (pin < MAX_USED_GPIOS) {
+            // Enable pull-up
+            GPIO_PAD(pin) = PAD_PU;
 
             // Set the pin in our bit mask
             *sel_mask |= (1 << pin);
-        } else {
-            LOG("!!! Sel pin %d > 31 - not using", pin);
+
+            num += 1;
+        } else if (pin != INVALID_PIN) {
+            LOG("!!! Sel pin %d >= %d - not using", pin, MAX_USED_GPIOS);
         }
     }
 
-    // Read the pins
-    LOG("Reading SEL pins: mask 0x%08X", *sel_mask);
-    LOG("Reading SIO_GPIO_IN: 0x%08X", SIO_GPIO_IN);
-    value = SIO_GPIO_IN & *sel_mask;
+    // Short delay to allow the pulls to settle.
+    for(volatile int ii = 0; ii < 10; ii++);
 
-    return value;
+    return num;
+}
+
+// Get the value of the sel pins.  If, on this board, the MCU pulls are low
+// (i.e. closing the jumpers pulls them up) we return the value as is, as
+// closed should indicate 1.  In the other case, where MCU pulls are high
+// (closing jumpers) pulls the pins low, we invert - so closed still indicates
+// 1.
+//
+// We will probably make this behaviour configurable soon.
+//
+// On all RP2350 boards, the SEL pins are pulled low by jumpers to indicate
+// a 1, so reverse to the default STM32F4 behavior.
+uint32_t get_sel_value(uint32_t sel_mask) {
+    uint32_t gpio_value;
+
+    gpio_value = SIO_GPIO_IN;
+    gpio_value = ~gpio_value & sel_mask;
+
+    return gpio_value;
+}
+
+void disable_sel_pins(void) {
+    for (int ii = 0; (ii < MAX_IMG_SEL_PINS); ii++) {
+        uint8_t pin = sdrr_info.pins->sel[ii];
+        if (pin < MAX_USED_GPIOS) {
+            // Disable pulls
+            GPIO_PAD(pin) = ~(PAD_PU | PAD_PD);
+
+        }
+    }
 }
 
 void setup_status_led(void) {
@@ -128,6 +181,15 @@ void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
     (void)off_time;
     (void)repeats;
     LOG("!!! Blink pattern not supported on RP235X");
+}
+
+// Enters bootloader mode.
+void enter_bootloader(void) {
+    // Set the stack pointer
+    asm volatile("msr msp, %0" : : "r" (*((uint32_t*)0x1FFFF000)));
+    
+    // Jump to the bootloader
+    ((void(*)())(*((uint32_t*)0x1FFFF004)))();
 }
 
 void platform_logging(void) {

@@ -67,17 +67,35 @@
 #define GPIO_CTRL(pin)      (*(volatile uint32_t*)(IO_BANK0_BASE + GPIO_CTRL_OFFSET + pin*GPIO_SPACING))
 #define GPIO_READ(pin)      ((GPIO_STATUS(pin) >> GPIO_STATUS_INFROMPAD_BIT) & 1)
 
-#define GPIO_FUNC_SIO   5
+#define GPIO_CTRL_FUNC_SIO_BIT  5
+#define GPIO_CTRL_FUNC_SIO      (1 << GPIO_CTRL_FUNC_SIO_BIT)
+#define GPIO_CTRL_RESET         GPIO_CTRL_FUNC_SIO
 
-// PADS registers
+// Pads registers
 #define PAD_OFFSET_START    0x004
 #define PAD_SPACING         0x004
 #define GPIO_PAD(pin)       (*(volatile uint32_t*)(PADS_BANK0_BASE + PAD_OFFSET_START + pin*PAD_SPACING))  
 
-#define PAD_PUE_BIT     3   // Pull-up enable
-#define PAD_IE_BIT      6   // Input enable
-#define PAD_INPUT_PU    ((1 << PAD_PUE_BIT) | (1 << PAD_IE_BIT))
-#define PAD_FUNC_MASK   0b11111
+// Pad control bits
+#define PAD_SLEW_FAST_BIT   0
+#define PAD_PDE_BIT         2
+#define PAD_PUE_BIT         3
+#define PAD_DRIVE_BIT       4
+#define PAD_IE_BIT          6
+#define PAD_OD_BIT          7
+#define PAD_ISO             8
+#define PAD_DRIVE_MASK      0x3
+#define PAD_DRIVE_2MA       0x0
+#define PAD_DRIVE_4MA       0x1
+#define PAD_DRIVE_8MA       0x2
+#define PAD_DRIVE_12MA      0x3
+#define PAD_DRIVE(X)        ((X & PAD_DRIVE_MASK) << PAD_DRIVE_BIT)
+#define PAD_SLEW_FAST       (1 << PAD_SLEW_FAST_BIT)
+#define PAD_INPUT           (1 << PAD_IE_BIT)
+#define PAD_OUTPUT_DISABLE  (1 << PAD_OD_BIT)
+#define PAD_PU              (1 << PAD_PUE_BIT)
+#define PAD_PD              (1 << PAD_PDE_BIT)
+#define PAD_INPUT_PU        ((1 << PAD_PUE_BIT) | (1 << PAD_IE_BIT))
 
 // Crystal Oscillator Registers
 #define XOSC_CTRL       (*((volatile uint32_t *)(XOSC_BASE + 0x00)))
@@ -123,9 +141,16 @@
 // SIO Registers
 #define SIO_CPUID           (*((volatile uint32_t *)(SIO_BASE + 0x00)))
 #define SIO_GPIO_IN         (*((volatile uint32_t *)(SIO_BASE + 0x04)))
+#define SIO_GPIO_OUT_SET    (*((volatile uint32_t *)(SIO_BASE + 0x18)))
+#define SIO_GPIO_OUT_CLR    (*((volatile uint32_t *)(SIO_BASE + 0x20)))
+#define SIO_GPIO_OE_SET     (*((volatile uint32_t *)(SIO_BASE + 0x38)))
+#define SIO_GPIO_OE_CLR     (*((volatile uint32_t *)(SIO_BASE + 0x40)))
 
 // RAM Size
 #define RP2350_RAM_SIZE_KB  520
+
+// Maximum number of used GPIOs - those exposed on the QFN60 RP2350A
+#define MAX_USED_GPIOS      29
 
 // Boot block structure
 typedef struct {

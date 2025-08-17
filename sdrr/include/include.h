@@ -149,4 +149,12 @@ extern uint32_t _flash_start;
 extern uint32_t _flash_end;
 extern uint32_t _ram_size;
 
+#if defined(STM32F4)
+#include "stm32f4_inlines.h"
+#endif // STM32F4
+
+#if defined(RP235X)
+#include "rp235x_inlines.h"
+#endif // RP235X
+
 #endif // SDRR_INCLUDE_H

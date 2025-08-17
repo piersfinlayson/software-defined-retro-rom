@@ -37,19 +37,54 @@ void gpio_init(void) {
 #endif // RP2350/STM32F4
 }
 
-// Enters bootloader mode.  This enables UART and SWD so the device can be
-// programmed.
-void enter_bootloader(void) {
-    LOG("Entering bootloader");
+// This function checks the state of the image select pins, and returns an
+// integer value, as if the sel pins control bit 0, 1, 2, 3, etc in order of
+// that integer.  The first sel pin in the array is bit 0, the second bit 1, 
+// etc.
+uint32_t check_sel_pins(uint32_t *sel_mask) {
+    uint32_t num_sel_pins;
+    uint32_t orig_sel_mask, gpio_value, sel_value;
 
-    // Pause to allow the log to be received
-    for (int ii = 0; ii < 100000000; ii++);
+    // Setup the pins first.  Do this first to allow any pull-ups to settle
+    // before reading.
+    num_sel_pins = setup_sel_pins(&orig_sel_mask);
+    if (num_sel_pins == 0) {
+        LOG("No image select pins");
+        disable_sel_pins();
+        *sel_mask = 0;
+        return 0;
+    }
 
-    // Set the stack pointer
-    asm volatile("msr msp, %0" : : "r" (*((uint32_t*)0x1FFFF000)));
-    
-    // Jump to the bootloader
-    ((void(*)())(*((uint32_t*)0x1FFFF004)))();
+    // Read the actual GPIO value, masked appropriately
+    gpio_value = get_sel_value(orig_sel_mask);
+
+    (void)num_sel_pins;  // In case unused - no DEBUG logging 
+    DEBUG("Read SIO_GPIO_IN: 0x%08X, %d Sel pins, mask 0x%08X", gpio_value, num_sel_pins, orig_sel_mask);
+
+    disable_sel_pins();
+
+    // Now turn the GPIO value into a SEL value, with the bits consecutive
+    // starting from bit 0, based on which pin the SEL value is.  At the same
+    // time we have to update sel_mask, to match.  This gives us an integer
+    // which can be used as an index into the rom set
+    *sel_mask = 0;
+    sel_value = 0;
+    for (int ii = 0; ii < MAX_IMG_SEL_PINS; ii++) {
+        uint8_t pin = sdrr_info.pins->sel[ii];
+        if (pin < MAX_USED_GPIOS) {
+            if (gpio_value & (1 << pin)) {
+                sel_value |= (1 << ii);
+            }
+            *sel_mask |= (1 << ii);
+        }
+    }
+
+    LOG("Final Sel pin value: %d mask: 0x%08X", sel_value, *sel_mask);
+
+    // Store the value of the pins in sdrr_runtime_info
+    sdrr_runtime_info.image_sel = sel_value;
+
+    return sel_value;
 }
 
 // Check whether we shoud enter the device's bootloader and, if so, enter it.
@@ -63,12 +98,19 @@ void check_enter_bootloader(void) {
     uint32_t sel_pins, sel_mask;
     sel_pins = check_sel_pins(&sel_mask);
 
+    LOG("Checking whether to enter bootloader");
+
     if (sel_mask == 0) {
         // Failure - no sel pins
         return;
     }
     if ((sel_pins & sel_mask) == sel_mask) {
         // SEL pins are all high - enter the bootloader
+        LOG("Entering bootloader");
+
+        // Pause to allow the log to be received
+        for (int ii = 0; ii < 100000000; ii++);
+
         enter_bootloader();
     }
 }
@@ -93,19 +135,21 @@ int main(void) {
     // Platform specific initialization
     platform_specific_init();
 
-    // Check if we should enter bootloader mode as the first thing we do
-    if (sdrr_info.bootloader_capable) {
-        check_enter_bootloader();
-    }
+    // Initialize GPIOs.  Do it now before checking bootloader mode.
+    gpio_init();
 
     // Enable logging
     if (sdrr_info.boot_logging_enabled) {
         LOG_INIT();
     }
 
-    // Initialize clock and GPIO
+    // Check if we should enter bootloader mode as the first thing we do
+    if (sdrr_info.bootloader_capable) {
+        check_enter_bootloader();
+    }
+
+    // Initialize clock
     clock_init();
-    gpio_init();
 
     sdrr_runtime_info.rom_set_index = get_rom_set_index();
     const sdrr_rom_set_t *set = rom_set + sdrr_runtime_info.rom_set_index;

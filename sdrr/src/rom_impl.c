@@ -331,7 +331,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     ROM_IMPL_LOG("Begin serving data");
 #endif // MAIN_LOOP_ONE_SHOT
     if ((info->status_led_enabled) && (info->pins->status <= 15)) {
-        GPIOB_BSRR = (1 << (info->pins->status + 16));
+        status_led_on(info->pins->status);
     }
 
 #if !defined(C_MAIN_LOOP)
