@@ -6,6 +6,18 @@ All notables changes between versions are documented in this file.
 
 The RP2350 release.
 
+### Changes
+
+- Added RP2350 support.
+  - Hardware rev A.
+- Added STM32F4 24-pin rev G hardware configuration.
+- Added hardware configuration to specify whether the image select jumpers and X1/X2 pins are pulled high or low when the PCB jumper is closed, to allow for different PCB designs.
+- Added support for up to 7 image select jumpers.
+
+### Fixes
+
+- It is likely that the 4th image select pin on revs E/F didn't work properly - this has been fixed.
+
 ## v0.3.1 - 2025-08-16
 
 The project has been renamed One ROM (To Rule Them All).

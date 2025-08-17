@@ -1,5 +1,5 @@
 {
-  "description": "One ROM 28-pin rev a",
+  "description": "One ROM STM32F4 28-pin rev A",
   "rom": {
     "pins": {
       "quantity": 28

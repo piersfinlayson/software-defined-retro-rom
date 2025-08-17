@@ -1,5 +1,5 @@
 {
-  "description": "One ROM STM32F4 24-pin rev E",
+  "description": "One ROM STM32F4 24-pin rev G",
   "rom": {
     "pins": {
       "quantity": 24
@@ -29,9 +29,11 @@
         "cs3": {
         "2316": 9
         },
-        "x_jumper_pull": 1,
-        "sel": [0, 1, 2, 7],
-        "sel_jumper_pull": 1,
+        "x1": 14,
+        "x2": 15,
+        "x_jumper_pull": 0,
+        "sel": [7, 6, 2, 1, 0],
+        "sel_jumper_pull": 0,
         "status": 15
     }
   }
