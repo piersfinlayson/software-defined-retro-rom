@@ -173,7 +173,7 @@ impl HwConfig {
 
         // Create pin maps for quick access
         let num_phys_addr_pins = if config.rom.pins.quantity == 24 {
-            config.mcu.family.max_valid_addr_pin() // 24-pin ROMs have maximum 13 address lines + 1 CS
+            config.mcu.family.max_valid_addr_pin()+1 // 24-pin ROMs have maximum 13 address lines + 1 CS
         } else if config.rom.pins.quantity == 28 {
             16 // 28 pin ROMs have 14 address lines + 2 CS
         } else {
@@ -190,7 +190,7 @@ impl HwConfig {
         config.phys_pin_to_addr_map = Vec::new();
         config.phys_pin_to_addr_map.resize_with(num_phys_addr_pins as usize, || None);
         for (addr_line, &phys_pin) in config.mcu.pins.addr.iter().enumerate() {
-            if phys_pin < config.mcu.family.max_valid_addr_pin() {
+            if phys_pin <= config.mcu.family.max_valid_addr_pin() {
                 config.phys_pin_to_addr_map[phys_pin as usize] = Some(addr_line);
             }
         }
