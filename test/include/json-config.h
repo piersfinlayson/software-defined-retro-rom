@@ -19,11 +19,11 @@ typedef struct {
 } json_rom_config_t;
 
 typedef struct {
-    sdrr_stm_port_t data_port;
-    sdrr_stm_port_t addr_port;
-    sdrr_stm_port_t cs_port;
-    sdrr_stm_port_t sel_port;
-    sdrr_stm_port_t status_port;
+    sdrr_mcu_port_t data_port;
+    sdrr_mcu_port_t addr_port;
+    sdrr_mcu_port_t cs_port;
+    sdrr_mcu_port_t sel_port;
+    sdrr_mcu_port_t status_port;
 } stm_ports_t;
 
 typedef struct {

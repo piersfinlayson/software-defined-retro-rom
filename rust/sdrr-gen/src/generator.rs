@@ -231,7 +231,11 @@ fn generate_roms_implementation_file(
         let num_roms = rom_set.roms.len();
         writeln!(file, "#define ROM_SET_{}_ROM_COUNT  {}", ii, num_roms)?;
         if num_roms == 1 {
-            writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE", ii)?;
+            match config.mcu_variant.family() {
+                McuFamily::Rp2350 => writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE_RP235X", ii)?,
+                McuFamily::Stm32F4 => writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE_STM32F4", ii)?,
+            }
+            
         } else {
             writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_SET_IMAGE_SIZE", ii)?;
         }
@@ -321,7 +325,10 @@ fn generate_roms_implementation_file(
     for rom_set in rom_sets {
         // Determine image size based on number of ROMs in the set
         let image_size = if rom_set.roms.len() == 1 {
-            16384
+            match config.hw.mcu.family {
+                McuFamily::Stm32F4 => 16384,
+                McuFamily::Rp2350 => 65536,
+            }
         } else {
             // Multi-ROM/banked sets: combined 64KB image
             65536
@@ -383,6 +390,7 @@ fn generate_roms_implementation_file(
             write!(file, "0x{:02x}, ", byte)?;
         }
 
+        writeln!(file)?;
         writeln!(file, "}};")?;
         writeln!(file)?;
     }

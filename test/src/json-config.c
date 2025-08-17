@@ -42,7 +42,7 @@ static char* normalize_filename(const char* hw_rev) {
     return normalized;
 }
 
-static sdrr_stm_port_t parse_port(const char* port_str) {
+static sdrr_mcu_port_t parse_port(const char* port_str) {
     if (!port_str) return PORT_NONE;
     switch (port_str[0]) {
         case 'A': return PORT_A;
