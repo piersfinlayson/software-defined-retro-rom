@@ -339,10 +339,6 @@ void platform_logging(void) {
     LOG("Flash configured RAM: %dKB (%d bytes)", MCU_RAM_SIZE_KB, MCU_RAM_SIZE);
 
     LOG("Target freq: %dMHz", TARGET_FREQ_MHZ);
-    #define PLL_SYS_REFDIV    1
-#define PLL_SYS_FBDIV     50
-#define PLL_SYS_POSTDIV1  4
-#define PLL_SYS_POSTDIV2  1
     LOG("PLL values: %d/%d/%d/%d (refdiv/fbdiv/postdiv1/postdiv2)", PLL_SYS_REFDIV, PLL_SYS_FBDIV, PLL_SYS_POSTDIV1, PLL_SYS_POSTDIV2);
 
 #endif // BOOT_LOGGING
