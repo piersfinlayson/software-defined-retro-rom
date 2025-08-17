@@ -270,14 +270,19 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     // Now log current state, and items we're going to load to registers.
     ROM_IMPL_DEBUG("%s", log_divider);
     ROM_IMPL_DEBUG("Register locations and values:");
+#if defined(STM32F4)
+    // It would be better to put this in the platform specific calls above,
+    // but those are in platform specific files with no access t
+    // ROM_IMPL_DEBUG
     ROM_IMPL_DEBUG("GPIOA_MODER: 0x%08X", GPIOA_MODER);
     ROM_IMPL_DEBUG("GPIOA_PUPDR: 0x%08X", GPIOA_PUPDR);
     ROM_IMPL_DEBUG("GPIOA_OSPEEDR: 0x%08X", GPIOA_OSPEEDR);
     ROM_IMPL_DEBUG("GPIOC_MODER: 0x%08X", GPIOC_MODER);
     ROM_IMPL_DEBUG("GPIOC_PUPDR: 0x%08X", GPIOC_PUPDR);
-    ROM_IMPL_DEBUG("VAL_GPIOA_ODR: 0x%08X", VAL_GPIOA_ODR);
-    ROM_IMPL_DEBUG("VAL_GPIOA_MODER: 0x%08X", VAL_GPIOA_MODER);
-    ROM_IMPL_DEBUG("VAL_GPIOC_IDR: 0x%08X", VAL_GPIOC_IDR);
+#endif // STM32F4
+    ROM_IMPL_DEBUG("VAL_DATA_MODER: 0x%08X", VAL_DATA_MODER);
+    ROM_IMPL_DEBUG("VAL_DATA_ODR: 0x%08X", VAL_DATA_ODR);
+    ROM_IMPL_DEBUG("VAL_ADDR_CS_IDR: 0x%08X", VAL_ADDR_CS_IDR);
     ROM_IMPL_DEBUG("CS check mask: 0x%08X", cs_check_mask);
     ROM_IMPL_DEBUG("CS invert mask: 0x%08X", cs_invert_mask);
     ROM_IMPL_DEBUG("Data output mask: 0x%08X", data_output_mask_val);
