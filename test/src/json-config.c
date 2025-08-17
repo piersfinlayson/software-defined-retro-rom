@@ -140,8 +140,13 @@ json_config_t* load_json_config(const char* hw_rev) {
     json_object* desc_obj;
     if (json_object_object_get_ex(root, "description", &desc_obj)) {
         config->description = strdup(json_object_get_string(desc_obj));
+    } else {
+        printf("Failed to parse JSON configuration - no description entry\n");
+        return NULL;
     }
     
+    char *error = NULL;
+
     json_object* rom_obj;
     if (json_object_object_get_ex(root, "rom", &rom_obj)) {
         json_object* pins_obj;
@@ -149,15 +154,21 @@ json_config_t* load_json_config(const char* hw_rev) {
             json_object* quantity_obj;
             if (json_object_object_get_ex(pins_obj, "quantity", &quantity_obj)) {
                 config->rom.pin_count = json_object_get_int(quantity_obj);
+            } else {
+                error = "quantity";
             }
+        } else {
+            error = "pins";
         }
     }
     
     json_object* mcu_obj;
-    if (json_object_object_get_ex(root, "stm", &mcu_obj)) {
+    if (json_object_object_get_ex(root, "mcu", &mcu_obj)) {
         json_object* family_obj;
         if (json_object_object_get_ex(mcu_obj, "family", &family_obj)) {
             strncpy(config->mcu.family, json_object_get_string(family_obj), MAX_FAMILY_LEN - 1);
+        } else {
+            error = "family";
         }
         
         json_object* ports_obj;
@@ -165,19 +176,31 @@ json_config_t* load_json_config(const char* hw_rev) {
             json_object* port_obj;
             if (json_object_object_get_ex(ports_obj, "data_port", &port_obj)) {
                 config->mcu.ports.data_port = parse_port(json_object_get_string(port_obj));
+            } else {
+                error = "data_port";
             }
             if (json_object_object_get_ex(ports_obj, "addr_port", &port_obj)) {
                 config->mcu.ports.addr_port = parse_port(json_object_get_string(port_obj));
+            } else {
+                error = "addr_port";
             }
             if (json_object_object_get_ex(ports_obj, "cs_port", &port_obj)) {
                 config->mcu.ports.cs_port = parse_port(json_object_get_string(port_obj));
+            } else {
+                error = "cs_port";
             }
             if (json_object_object_get_ex(ports_obj, "sel_port", &port_obj)) {
                 config->mcu.ports.sel_port = parse_port(json_object_get_string(port_obj));
+            } else {
+                error = "sel_port";
             }
             if (json_object_object_get_ex(ports_obj, "status_port", &port_obj)) {
                 config->mcu.ports.status_port = parse_port(json_object_get_string(port_obj));
+            } else {
+                error = "status_port";
             }
+        } else {
+            error = "ports";
         }
         
         json_object* pins_obj;
@@ -185,44 +208,76 @@ json_config_t* load_json_config(const char* hw_rev) {
             json_object* arr_obj;
             if (json_object_object_get_ex(pins_obj, "data", &arr_obj)) {
                 parse_int_array(arr_obj, config->mcu.pins.data, NUM_DATA_LINES);
+            } else {
+                error = "data";
             }
             if (json_object_object_get_ex(pins_obj, "addr", &arr_obj)) {
                 parse_int_array(arr_obj, config->mcu.pins.addr, MAX_ADDR_LINES);
+            } else {
+                error = "addr";
             }
             if (json_object_object_get_ex(pins_obj, "sel", &arr_obj)) {
                 parse_int_array(arr_obj, config->mcu.pins.sel, 7);
+            } else {
+                error = "sel";
             }
             
             json_object* cs_obj;
             if (json_object_object_get_ex(pins_obj, "cs1", &cs_obj)) {
                 parse_cs_config(cs_obj, &config->mcu.pins.cs1);
+            } else {
+                error = "cs1";
             }
             if (json_object_object_get_ex(pins_obj, "cs2", &cs_obj)) {
                 parse_cs_config(cs_obj, &config->mcu.pins.cs2);
+            } else {
+                error = "cs2";
             }
             if (json_object_object_get_ex(pins_obj, "cs3", &cs_obj)) {
                 parse_cs_config(cs_obj, &config->mcu.pins.cs3);
+            } else {
+                error = "cs3";
             }
             
             json_object* pin_obj;
             if (json_object_object_get_ex(pins_obj, "x1", &pin_obj)) {
                 config->mcu.pins.x1 = json_object_get_int(pin_obj);
+            } else {
+                error = "x1";
             }
             if (json_object_object_get_ex(pins_obj, "x2", &pin_obj)) {
                 config->mcu.pins.x2 = json_object_get_int(pin_obj);
+            } else {
+                error = "x2";
             }
             if (json_object_object_get_ex(pins_obj, "status", &pin_obj)) {
                 config->mcu.pins.status = json_object_get_int(pin_obj);
+            } else {
+                error = "status";
             }
-            if (json_object_object_get_ex(pins_obj, "sel_jumper_pull", &arr_obj)) {
+            if (json_object_object_get_ex(pins_obj, "sel_jumper_pull", &pin_obj)) {
                 config->mcu.pins.sel_jumper_pull = json_object_get_int(pin_obj);
+            } else {
+                error = "sel_jumper_pull";
             }
-            if (json_object_object_get_ex(pins_obj, "x_jumper_pull", &arr_obj)) {
+            if (json_object_object_get_ex(pins_obj, "x_jumper_pull", &pin_obj)) {
                 config->mcu.pins.x_jumper_pull = json_object_get_int(pin_obj);
+            } else {
+                error = "x_jumper_pull";
             }
+        } else {
+            error = "pins";
         }
+    } else {
+        error = "mcu";
     }
-    
+
+    if (error != NULL) {
+        printf("Failed to parse JSON configuration - no \"%s\"\n", error);
+        free(config);
+        return NULL;
+    }
+
     json_object_put(root);
     return config;
 }

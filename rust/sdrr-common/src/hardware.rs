@@ -328,7 +328,7 @@ fn validate_pin_number(mcu: &Mcu, pin: u8, pin_name: &str, config_name: &str) ->
 
     if !mcu.family.valid_pin_num(pin) || pin == 255 {
         bail!(
-            "{}: invalid pin number {} for {}, must valid or 255 if pin not exposed",
+            "{}: invalid pin number {} for {}, must be valid or 255 if pin not exposed",
             config_name,
             pin,
             pin_name,
