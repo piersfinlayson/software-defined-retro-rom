@@ -1,114 +1,127 @@
 # Test combinations for build system validation
-# Format: test_name:STM=variant,VAR1=val1,VAR2=val2,CONFIG=config/file.mk
+# Format: test_name:MCU=variant,VAR1=val1,VAR2=val2,CONFIG=config/file.mk
 # Lines starting with # are ignored
 #
-# STM variant is required for each test
+# MCU variant is required for each test
 # CONFIG is optional - if not specified, no config is passed to make
 # Other environment variables are optional
 
 # All variants without config (uses Makefile default)
-no-config-f401rb:STM=f401rb
-no-config-f401rc:STM=f401rc
-no-config-f411rc:STM=f411rc
-no-config-f411re:STM=f411re
-no-config-f405rg:STM=f405rg
-no-config-f405rg:STM=f446rc
-no-config-f446re:STM=f446re
+no-config-f401rb:MCU=f401rb
+no-config-f401rc:MCU=f401rc
+no-config-f411rc:MCU=f411rc
+no-config-f411re:MCU=f411re
+no-config-f405rg:MCU=f405rg
+no-config-f405rg:MCU=f446rc
+no-config-f446re:MCU=f446re
+no-config-rp2350:HW_REV=p24-a,MCU=rp2350
 
 # Use test config, one of each STM32F4 variant
-basic-f401rb:STM=f401rb,CONFIG=config/test-sdrr-0.mk
-basic-f411re:STM=f411re,CONFIG=config/test-sdrr-0.mk
-basic-f405rg:STM=f405rg,CONFIG=config/test-sdrr-0.mk
-basic-f446re:STM=f446re,CONFIG=config/test-sdrr-0.mk
-
-# Test each config (except those requiring licenses and not sets)
-test-1541-f411re:STM=f401re,CONFIG=config/1541.mk
-test-2040-f411re:STM=f411re,CONFIG=config/2040.mk
-test-4040-f411re:STM=f411re,CONFIG=config/4040.mk
-test-c64-no-destestmax-f411re:STM=f411re,CONFIG=config/c64-no-destestmax.mk
-test-ieee-diag-f411re:STM=f411re,CONFIG=config/ieee-diag.mk
-test-pet-4-40-50-f411re:STM=f411re,CONFIG=config/pet-4-40-50.mk
-test-vic20-pal-f411re:STM=f411re,CONFIG=config/vic20-pal.mk
-test-vic20-ntsc-f411re:STM=f411re,CONFIG=config/vic20-ntsc.mk
-
-# Test third party configs
-test-3p-ti994a-f411re:STM=f411re,CONFIG=config/third-party/ti994a.mk
-test-3p-coco2-f411re:STM=f411re,CONFIG=config/third-party/coco2.mk
-
-# Test old config set letters
-test-hw-rev-D:HW_REV=d,STM=f411re,CONFIG=config/test-sdrr-0.mk
-test-hw-rev-E:HW_REV=e,STM=f411re,CONFIG=config/test-sdrr-0.mk
-test-hw-rev-F:HW_REV=f,STM=f411re,CONFIG=config/test-sdrr-0.mk
-
-# Test each set config - HW_REV=24-f only
-test-set-c64-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-c64.mk
-test-set-vic20-pal-f411re:HW_REV=24-f,STM=f411re,CONFIG=config/set-vic20-pal.mk
-
-# Test each bank switching config
-bank-1541-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-1541.mk
-bank-c64-char-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-c64-char.mk
-bank-vic20-char-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-vic20-char.mk
-bank-c64-char-fun-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-c64-char-fun.mk
-bank-vic20-char-fun-f405rg:STM=f405rg,HW_REV=f,CONFIG=config/bank-vic20-char-fun.mk
-
-# Test different hardware revisions
-hw-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-hw-rev-e:HW_REV=24-e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-hw-rev-f:HW_REV=24-f,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+basic-f401rb:MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+basic-f411re:MCU=f411re,CONFIG=config/test-sdrr-0.mk
+basic-f405rg:MCU=f405rg,CONFIG=config/test-sdrr-0.mk
+basic-f446re:MCU=f446re,CONFIG=config/test-sdrr-0.mk
 
 # Enable MCO, one of each STM32F4 variant
-mco-f401rb:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-mco-f411re:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-mco-f405rg:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-mco-f446re:MCO=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+mco-f401rb:MCO=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+mco-f411re:MCO=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+mco-f405rg:MCO=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+mco-f446re:MCO=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Disable BOOT_LOGGGING
-no-boot-logging-f401rb:BOOT_LOGGING=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+no-boot-logging-f401rb:BOOT_LOGGING=0,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+no-boot-logging-rp2350:BOOT_LOGGING=0,HW_REV=p24-a,MCU=rp2350,CONFIG=config/test-sdrr-0.mk
 
 # Disable BOOT_LOGGGING and SWD
-no-boot-logging-no-swd-f401rb:BOOT_LOGGING=0,SWD=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+no-boot-logging-no-swd-f401rb:BOOT_LOGGING=0,SWD=0,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # PCB revisions
-pcb-rev-d:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-pcb-rev-e:HW_REV=24-d,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-d:HW_REV=24-d,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-e:HW_REV=24-e,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-f:HW_REV=24-f,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-g:HW_REV=24-g,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-pa:HW_REV=p24-a,MCU=rp2350,CONFIG=config/test-sdrr-0.mk
 
 # Enable DEBUG_LOGGING
-debug-logging-f401rb:DEBUG_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+debug-logging-f401rb:DEBUG_LOGGING=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+debug-logging-rp2350:DEBUG_LOGGING=1,HW_REV=p24-a,MCU=rp2350,CONFIG=config/test-sdrr-0.mk
 
 # Enable MAIN_LOOP_LOGGING
-main-loop-logging-f401rb:MAIN_LOOP_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+main-loop-logging-f401rb:MAIN_LOOP_LOGGING=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+main-loop-logging-rp2350:MAIN_LOOP_LOGGING=1,HW_REV=p24-a,MCU=rp2350,CONFIG=config/test-sdrr-0.mk
 
 # Enable MAIN_LOOP_ONE_SHOT
-main-loop-one-shot-f401rb:MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-main-loop-one-shot-debug-f401rb:DEBUG_LOGGING=1,MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+main-loop-one-shot-f401rb:MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+main-loop-one-shot-debug-f401rb:DEBUG_LOGGING=1,MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+main-loop-one-shot-rp2350:MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,HW_REV=p24-a,MCU=rp2350,CONFIG=config/test-sdrr-0.mk
+main-loop-one-shot-debug-rp2350:DEBUG_LOGGING=1,MAIN_LOOP_ONE_SHOT=1,MAIN_LOOP_LOGGING=1,HW_REV=p24-a,MCU=rp2350,CONFIG=config/test-sdrr-0.mk
 
 # DISABLE_PRELOAD_TO_RAM
-disable-preload-to-ram-f401rb:DISABLE_PRELOAD_TO_RAM=1,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+disable-preload-to-ram-f401rb:DISABLE_PRELOAD_TO_RAM=1,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+disable-preload-to-ram-rp2350:DISABLE_PRELOAD_TO_RAM=1,MCU=rp2350,HW_REV=p24-a,CONFIG=config/test-sdrr-0.mk
 
-# Disable status LED, PCB revision E
-disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=24-e,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+# Disable status LED
+disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=24-e,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+disable-status-led-f401rb:DISABLE_STATUS_LED=1,HW_REV=24-f,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+disable-status-led-rp2350:DISABLE_STATUS_LED=1,HW_REV=p24-a,MCU=rp2350,CONFIG=config/test-sdrr-0.mk
 
 # Custom frequencies
-freq-50hz-f401rb:FREQ=50,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-freq-92hz-f411re:FREQ=92,STM=f411re,CONFIG=config/test-sdrr-0.mk
-freq-130hz-f405rg:FREQ=130,STM=f405rg,CONFIG=config/test-sdrr-0.mk
-freq-170hz-f446re:FREQ=160,STM=f446re,CONFIG=config/test-sdrr-0.mk
+freq-50mhz-f401rb:FREQ=50,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+freq-92mhz-f411re:FREQ=92,MCU=f411re,CONFIG=config/test-sdrr-0.mk
+freq-130mhz-f405rg:FREQ=130,MCU=f405rg,CONFIG=config/test-sdrr-0.mk
+freq-170mhz-f446re:FREQ=160,MCU=f446re,CONFIG=config/test-sdrr-0.mk
+freq-100mhz-rp2350:FREQ=100,MCU=rp2350,HW_REV=p24-a,CONFIG=config/test-sdrr-0.mk
 
 # Overclocking
-overclock-f401rb:OVERCLOCK=1,FREQ=100,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-overclock-f411re:OVERCLOCK=1,FREQ=110,STM=f411re,CONFIG=config/test-sdrr-0.mk
-overclock-f405rg:OVERCLOCK=1,FREQ=250,STM=f405rg,CONFIG=config/test-sdrr-0.mk
-overclock-f446re:OVERCLOCK=1,FREQ=400,STM=f446re,CONFIG=config/test-sdrr-0.mk
+overclock-f401rb:OVERCLOCK=1,FREQ=100,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+overclock-f411re:OVERCLOCK=1,FREQ=110,MCU=f411re,CONFIG=config/test-sdrr-0.mk
+overclock-f405rg:OVERCLOCK=1,FREQ=250,MCU=f405rg,CONFIG=config/test-sdrr-0.mk
+overclock-f446re:OVERCLOCK=1,FREQ=400,MCU=f446re,CONFIG=config/test-sdrr-0.mk
+overclock-rp2350:OVERCLOCK=1,FREQ=300,MCU=rp2350,HW_REV=p24-a,CONFIG=config/test-sdrr-0.mk
 
 # Build with different serve algorithms
-serve-algorithm-a-f401rb:SERVE_ALG=a,STM=f401rb,CONFIG=config/test-sdrr-0.mk
-serve-algorithm-b-f401rb:SERVE_ALG=b,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+serve-algorithm-a-f401rb:SERVE_ALG=a,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+serve-algorithm-b-f401rb:SERVE_ALG=b,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Build with c main loop - not supported in production, but want to keep compiling
-c-main-loop-f405rg:EXTRA_C_FLAGS=-DC_MAIN_LOOP,HW_REV=f,STM=f405rg,CONFIG=config/bank-1541.mk
+c-main-loop-f405rg:EXTRA_C_FLAGS=-DC_MAIN_LOOP,HW_REV=f,MCU=f405rg,CONFIG=config/bank-1541.mk
 
 # Build without COUNT_ROM_ACCESS
-no-count-rom-access-f401rb:COUNT_ROM_ACCESS=0,STM=f401rb,CONFIG=config/test-sdrr-0.mk
+no-count-rom-access-f401rb:COUNT_ROM_ACCESS=0,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # Build with DISABLE_CCM
-disable-ccm-f405rg:EXTRA_C_FLAGS=-DDISABLE_CCM,STM=f405rg,CONFIG=config/test-sdrr-0.mk
+disable-ccm-f405rg:EXTRA_C_FLAGS=-DDISABLE_CCM,MCU=f405rg,CONFIG=config/test-sdrr-0.mk
+
+# Build with EXECUTE_FROM_RAM
+execute-from-ram-f401rb:EXTRA_C_FLAGS=-DEXECUTE_FROM_RAM,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+execute-from-ram-rp2350:EXTRA_C_FLAGS=-DEXECUTE_FROM_RAM,MCU=rp2350,HW_REV=p24-a,CONFIG=config/test-sdrr-0.mk
+
+# Test each config (except those requiring licenses and not sets)
+test-1541-f411re:MCU=f401re,CONFIG=config/1541.mk
+test-2040-f411re:MCU=f411re,CONFIG=config/2040.mk
+test-4040-f411re:MCU=f411re,CONFIG=config/4040.mk
+test-c64-no-destestmax-f411re:MCU=f411re,CONFIG=config/c64-no-destestmax.mk
+test-ieee-diag-f411re:MCU=f411re,CONFIG=config/ieee-diag.mk
+test-pet-4-40-50-f411re:MCU=f411re,CONFIG=config/pet-4-40-50.mk
+test-vic20-pal-f411re:MCU=f411re,CONFIG=config/vic20-pal.mk
+test-vic20-ntsc-rp2350:HW_REV=p24-a,MCU=rp2350,CONFIG=config/vic20-ntsc.mk
+
+# Test third party configs
+test-3p-ti994a-f411re:MCU=f411re,CONFIG=config/third-party/ti994a.mk
+test-3p-coco2-f411re:MCU=f411re,CONFIG=config/third-party/coco2.mk
+
+# Test old config set letters
+test-hw-rev-D:HW_REV=d,MCU=f411re,CONFIG=config/test-sdrr-0.mk
+test-hw-rev-E:HW_REV=e,MCU=f411re,CONFIG=config/test-sdrr-0.mk
+test-hw-rev-F:HW_REV=f,MCU=f411re,CONFIG=config/test-sdrr-0.mk
+
+# Test each set config - HW_REV=24-f only
+test-set-c64-f411re:HW_REV=24-f,MCU=f411re,CONFIG=config/set-c64.mk
+test-set-vic20-pal-rp2350:HW_REV=p24-a,MCU=rp2350,CONFIG=config/set-vic20-pal.mk
+
+# Test each bank switching config
+bank-1541-f405rg:MCU=f405rg,HW_REV=f,CONFIG=config/bank-1541.mk
+bank-c64-char-f405rg:MCU=f405rg,HW_REV=f,CONFIG=config/bank-c64-char.mk
+bank-vic20-char-f405rg:MCU=f405rg,HW_REV=f,CONFIG=config/bank-vic20-char.mk
+bank-c64-char-fun-f405rg:MCU=f405rg,HW_REV=f,CONFIG=config/bank-c64-char-fun.mk
+bank-vic20-char-fun-f405rg:HW_REV=p24-a,MCU=rp2350,CONFIG=config/bank-vic20-char-fun.mk

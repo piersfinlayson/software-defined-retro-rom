@@ -413,7 +413,7 @@ fn validate_config(name: &str, config: &HwConfig) -> Result<()> {
     // Validate pins consistent within pin arrays
     validate_pin_array(&config.mcu, &config.mcu.pins.data, "data", name, 8)?;
     validate_pin_array(&config.mcu, &config.mcu.pins.addr, "addr", name, 16)?;
-    validate_pin_array(&config.mcu, &config.mcu.pins.sel, "sel", name, 4)?;
+    validate_pin_array(&config.mcu, &config.mcu.pins.sel, "sel", name, 7)?;
 
     // Validate values in pin arrays are within valid ranges, with minimum
     // numbers

@@ -368,6 +368,9 @@ void __attribute__((section(".main_loop"), used)) main_loop(
             break;
     }
 #else // C_MAIN_LOOP
+#if defined(RP235X)
+#error "C main loop not supported on RP235X"
+#endif
     uint16_t addr_cs_lines;
     uint8_t data_byte;
     uint32_t cs_check;

@@ -367,7 +367,19 @@ ifneq ($(SUPPRESS_OUTPUT),1)
   $(info One ROM Makefile env settings:)
 endif
 
-# MCU
+# MCU - handle deprecated STM variable
+ifneq ($(MCU),)
+  ifneq ($(STM),)
+    $(error Cannot set both MCU and STM - STM is deprecated, use MCU instead)
+  endif
+else ifneq ($(STM),)
+ifneq ($(SUPPRESS_OUTPUT),1)
+  $(warning STM variable is deprecated, use MCU instead)
+endif
+  MCU := $(STM)
+endif
+
+# Sort out binary prefix
 ifneq ($(MCU),)
   MCU_PREFIX=
   ifneq ($(filter f%,$(MCU)),)
@@ -692,7 +704,7 @@ info-detail: sdrr-info firmware
 firmware: gen
 	@echo "=========================================="
 	@echo "Building One ROM firmware for:"
-	@echo "- MCU variant: STM32$(shell echo $(STM) | tr '[:lower:]' '[:upper:]')"
+	@echo "- MCU variant: $(shell echo $(MCU) | tr '[:lower:]' '[:upper:]')"
 	@echo "- HW revision: $(HW_REV)"
 	@echo "-----"
 	@GEN_OUTPUT_DIR=$(GEN_OUTPUT_DIR) EXTRA_C_FLAGS="$(EXTRA_C_FLAGS)" make --no-print-directory -C sdrr

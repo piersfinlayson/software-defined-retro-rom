@@ -6,6 +6,12 @@ All notables changes between versions are documented in this file.
 
 The RP2350 release.
 
+Instead of building with `STM=<mcu variant> make`, you now need to use `MCU`:
+
+```bash
+MCU=<mcu variant> make
+```
+
 ### Changes
 
 - Added RP2350 support.

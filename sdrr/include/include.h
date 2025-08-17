@@ -98,6 +98,14 @@ extern const sdrr_info_t sdrr_info;
 #error "DEBUG_LOGGING requires BOOT_LOGGING to be defined"
 #endif // DEBUG_LOGGING/BOOT_LOGGING
 
+#if !defined(SWD) && defined(RP235X)
+#error "SWD being disabled is not supported on RP235X"
+#endif // !defined(SWD) && defined(RP235X)
+
+#if defined(MCO) && defined(RP235X)
+#error "MCO is not supported on RP235X"
+#endif // !defined(SWD) && defined(RP235X)
+
 //
 // Set up clocking configuration for the internal and external oscillators
 //
