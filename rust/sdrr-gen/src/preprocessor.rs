@@ -217,9 +217,12 @@ impl RomSet {
             } else {
                 // Banked mode: use top 2 bits (14,15) to select ROM
                 assert!(address < 65536, "Address out of bounds for banked ROM set");
-                let bank = (address >> 14) & 3; // Get bank
+                let x1_pin = hw.pin_x1();
+                let x2_pin = hw.pin_x2();
+                let bank = ((address >> x1_pin) & 1) | (((address >> x2_pin) & 1) << 1);
+                let mask = !(1 << x1_pin) & !(1 << x2_pin);
+                let masked_address = address & mask;
                 let rom_index = bank % self.roms.len(); // Wrap around
-                let masked_address = address & 0x3FFF; // Remove top 2 bits
                 (rom_index, masked_address)
             };
 
