@@ -199,6 +199,11 @@ impl HwConfig {
         config.phys_pin_to_data_map = [0; 8];
         for (data_line, &phys_pin) in config.mcu.pins.data.iter().enumerate() {
             if phys_pin <= config.mcu.family.max_valid_data_pin() {
+                // We modulo 8 the physical pin as on eSTM32F4 we are limited
+                // to pins 0-1 for the data lines, and on RP2350, we pretend
+                // we're on pins 0-7, as we write the 8-bit value to the GPIO
+                // output register, causing it to replicate across all 4 bytes,
+                // meaning it gets applied to the correct pins anyway.
                 config.phys_pin_to_data_map[phys_pin as usize % 8] = data_line;
             } else {
                 bail!("Missing data pin {} in config {}", phys_pin, config.name);
