@@ -342,7 +342,7 @@ void check_config(
     if (info->pins->cs_port != PORT_C) {
         LOG("!!! Chip select pins not using port C");
     }
-    if (info->pins->cs_port != PORT_B) {
+    if (info->pins->sel_port != PORT_B) {
         LOG("!!! Image select pins not using port B");
     }
 
@@ -373,6 +373,9 @@ void check_config(
         if (info->pins->x1 == info->pins->x2) {
             LOG("!!! Multi-ROM mode, but pin X1=X2");
         }
+        if (info->pins->x_jumper_pull > 1) {
+            LOG("!!! X jumper pull value invalid");
+        }
     }
 
     // Check CS pins
@@ -395,10 +398,14 @@ void check_config(
         LOG("!!! CS3 pin for 2316 ROM invalid");
     }
 
+    // Check sel jumper pull value
+    if (info->pins->sel_jumper_pull > 1) {
+        LOG("!!! Sel jumper pull value invalid");
+    }
+
+
     // Warn if serve mode is incorrectly set for multiple ROM images
-    if ((set->rom_count > 1) && (set->serve != SERVE_ADDR_ON_ANY_CS)) {
-        LOG("Must be serving bank switched images");
-    } else if ((set->rom_count == 1) && (set->serve == SERVE_ADDR_ON_ANY_CS)) {
+    if ((set->rom_count == 1) && (set->serve == SERVE_ADDR_ON_ANY_CS)) {
         // Correction is done in main_loop() using a local variable
         LOG("!!! Single ROM image - wrong serve mode - will correct");
     }

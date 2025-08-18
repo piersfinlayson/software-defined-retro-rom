@@ -215,7 +215,7 @@ impl RomSet {
                 }
                 (0, address)
             } else {
-                // Banked mode: use top 2 bits (14,15) to select ROM
+                // Banked mode: use X1/X2 to select ROM
                 assert!(address < 65536, "Address out of bounds for banked ROM set");
                 let x1_pin = hw.pin_x1();
                 let x2_pin = hw.pin_x2();
