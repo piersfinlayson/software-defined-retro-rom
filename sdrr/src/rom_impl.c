@@ -210,7 +210,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     // Set up serving algorithm
     sdrr_serve_t serve_mode = set->serve;
     if ((set->rom_count == 1) && (serve_mode == SERVE_ADDR_ON_ANY_CS)) {
-        serve_mode = SERVE_ADDR_ON_CS;
+        serve_mode = SERVE_DEFAULT_1_ROM;
     }
 
 #ifndef EXECUTE_FROM_RAM

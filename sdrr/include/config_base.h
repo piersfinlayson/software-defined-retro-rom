@@ -264,6 +264,7 @@ typedef enum {
     // multiple ROM images on hardware revision F.
     SERVE_ADDR_ON_ANY_CS,
 } sdrr_serve_t;
+#define SERVE_DEFAULT_1_ROM  SERVE_ADDR_ON_CS
 
 // ROM information structure
 typedef struct {
