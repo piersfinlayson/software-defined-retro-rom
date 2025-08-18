@@ -270,7 +270,6 @@ void check_config(
         if (info->pins->x1 == info->pins->x2) {
             LOG("!!! Multi-ROM mode, but pin X1=X2");
         }
-
         if (info->pins->x_jumper_pull > 1) {
             LOG("!!! X jumper pull value invalid");
         }
