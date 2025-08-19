@@ -6,6 +6,10 @@
 
 #include "include.h"
 
+#if !defined(RP235X) && !defined(STM32F4)
+    #error "Unsupported MCU line - please define RP235X or STM32F4"
+#endif // !RP2350 && !STM32F4
+
 const char sdrr_build_date[] = __DATE__ " " __TIME__;
 
 sdrr_runtime_info_t sdrr_runtime_info __attribute__((section(".sdrr_runtime_info"))) = {
@@ -18,24 +22,6 @@ sdrr_runtime_info_t sdrr_runtime_info __attribute__((section(".sdrr_runtime_info
     .rom_table = NULL,
     .rom_table_size = 0,
 };
-
-// Sets up the system registers, clock and logging as required
-void clock_init(void) {
-    // Set up the clock
-#if defined(RP235X) || defined(STM32F4)
-    setup_clock();
-#else // !RP235X && !STM32F4
-    #error "Unsupported MCU line - please define RP235X or STM32F4"
-#endif // RP2350/STM32F4
-}
-
-void gpio_init(void) {
-#if defined(RP235X) || defined(STM32F4)
-    setup_gpio();
-#else // !RP235X && !STM32F4
-    #error "Unsupported MCU line - please define RP235X or STM32F4"
-#endif // RP2350/STM32F4
-}
 
 // This function checks the state of the image select pins, and returns an
 // integer value, as if the sel pins control bit 0, 1, 2, 3, etc in order of
@@ -136,7 +122,8 @@ int main(void) {
     platform_specific_init();
 
     // Initialize GPIOs.  Do it now before checking bootloader mode.
-    gpio_init();
+    DEBUG("Setting up GPIO");
+    setup_gpio();
 
     // Enable logging
     if (sdrr_info.boot_logging_enabled) {
@@ -149,7 +136,7 @@ int main(void) {
     }
 
     // Initialize clock
-    clock_init();
+    setup_clock();
 
     sdrr_runtime_info.rom_set_index = get_rom_set_index();
     const sdrr_rom_set_t *set = rom_set + sdrr_runtime_info.rom_set_index;

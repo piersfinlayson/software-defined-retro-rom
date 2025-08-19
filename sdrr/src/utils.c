@@ -47,13 +47,13 @@ void log_init(void) {
     LOG("ROM emulation: %d pin ROM", sdrr_info.pins->rom_pins);
     
     // Data pins
-    LOG("Data pins D[0-7]: P%s%d,%d,%d,%d,%d,%d,%d,%d", 
+    LOG("Data pins D[0-7]: P%s:%d,%d,%d,%d,%d,%d,%d,%d", 
         port_names[sdrr_info.pins->data_port],
         sdrr_info.pins->data[0], sdrr_info.pins->data[1], sdrr_info.pins->data[2], sdrr_info.pins->data[3],
         sdrr_info.pins->data[4], sdrr_info.pins->data[5], sdrr_info.pins->data[6], sdrr_info.pins->data[7]);
     
     // Address pins
-    LOG("Addr pins A[0-15]: P%s%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", 
+    LOG("Addr pins A[0-15]: P%s:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", 
         port_names[sdrr_info.pins->addr_port],
         sdrr_info.pins->addr[0], sdrr_info.pins->addr[1], sdrr_info.pins->addr[2], sdrr_info.pins->addr[3],
         sdrr_info.pins->addr[4], sdrr_info.pins->addr[5], sdrr_info.pins->addr[6], sdrr_info.pins->addr[7],
@@ -61,17 +61,17 @@ void log_init(void) {
         sdrr_info.pins->addr[12], sdrr_info.pins->addr[13], sdrr_info.pins->addr[14], sdrr_info.pins->addr[15]);
     
     // Chip select pins
-    LOG("CS pins - 2364: P%s%d 2332: P%s%d,%d 2316: P%s%d,%d,%d X1: P%s%d X2: P%s%d", 
+    LOG("CS pins - 2364: P%s:%d 2332: P%s:%d,%d 2316: P%s:%d,%d,%d X1: P%s:%d X2: P%s:%d", 
         port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2364,
         port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2332, sdrr_info.pins->cs2_2332,
         port_names[sdrr_info.pins->cs_port], sdrr_info.pins->cs1_2316, sdrr_info.pins->cs2_2316, sdrr_info.pins->cs3_2316,
         port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x1, port_names[sdrr_info.pins->cs_port], sdrr_info.pins->x2);
     
     // Select and status pins
-    LOG("Sel pins: P%s%d,%d,%d,%d", port_names[sdrr_info.pins->sel_port], 
+    LOG("Sel pins: P%s:%d,%d,%d,%d", port_names[sdrr_info.pins->sel_port], 
         sdrr_info.pins->sel[0], sdrr_info.pins->sel[1], 
         sdrr_info.pins->sel[2], sdrr_info.pins->sel[3]);
-    LOG("Status pin: P%s%d", port_names[sdrr_info.pins->status_port], sdrr_info.pins->status);
+    LOG("Status LED pin: P%s:%d", port_names[sdrr_info.pins->status_port], sdrr_info.pins->status);
 
     LOG("%s", log_divider);
     LOG("ROM info ...");

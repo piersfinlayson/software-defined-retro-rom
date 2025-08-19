@@ -158,7 +158,7 @@
 #define RP2350_RAM_SIZE_KB  520
 
 // Maximum number of used GPIOs - those exposed on the QFN60 RP2350A
-#define MAX_USED_GPIOS      29
+#define MAX_USED_GPIOS      30
 
 // Boot block structure
 typedef struct {

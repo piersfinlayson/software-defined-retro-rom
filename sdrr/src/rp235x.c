@@ -35,6 +35,7 @@ void platform_specific_init(void) {
     RESET_RESET |= RESET_JTAG;
     RESET_RESET &= ~RESET_JTAG;
     while (!(RESET_DONE & RESET_JTAG));
+    DEBUG("JTAG reset complete");
 }
 
 void setup_clock(void) {
@@ -45,8 +46,6 @@ void setup_clock(void) {
 }
 
 void setup_gpio(void) {
-    LOG("Setting up GPIO");
-
     // Take IO bank and pads bank out of reset
     RESET_RESET &= ~(RESET_IOBANK0 | RESET_PADS_BANK0);
     while (!(RESET_DONE & (RESET_IOBANK0 | RESET_PADS_BANK0)));
@@ -201,7 +200,7 @@ void disable_sel_pins(void) {
 }
 
 void setup_status_led(void) {
-    LOG("!!! Status LED not supported on RP235X");
+    // No-op - done in setup_gpio()
 }
 
 void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
@@ -333,7 +332,7 @@ void platform_logging(void) {
     if ((MCU_RAM_SIZE_KB != RP2350_RAM_SIZE_KB) || (MCU_RAM_SIZE != RP2350_RAM_SIZE_KB * 1024)) {
         LOG("!!! RAM size mismatch: actual %dKB (%d bytes), firmware expected: %dKB (%d bytes)", MCU_RAM_SIZE_KB, MCU_RAM_SIZE, RP2350_RAM_SIZE_KB, RP2350_RAM_SIZE_KB * 1024);
     } else {
-        LOG("Firmware configured RAM size: %dKB (default)");
+        LOG("Firmware configured RAM size: %dKB (default)", MCU_RAM_SIZE_KB);
     }
     LOG("Flash configured RAM: %dKB (%d bytes)", MCU_RAM_SIZE_KB, MCU_RAM_SIZE);
 

@@ -549,7 +549,7 @@ impl McuVariant {
             McuVariant::F401RE => "#define MCU_VARIANT    \"F401RE\"",
             McuVariant::F401RB => "#define MCU_VARIANT    \"F401RB\"",
             McuVariant::F401RC => "#define MCU_VARIANT    \"F401RC\"",
-            McuVariant::Rp2350 => "#define MCU_VARIANT    \"Rp2350\"",
+            McuVariant::Rp2350 => "#define MCU_VARIANT    \"RP2350\"",
         }
     }
 

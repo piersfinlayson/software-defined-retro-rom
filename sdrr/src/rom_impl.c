@@ -302,7 +302,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(
 #else
     ROM_IMPL_LOG("Begin serving data");
 #endif // MAIN_LOOP_ONE_SHOT
-    if ((info->status_led_enabled) && (info->pins->status <= MAX_USED_GPIOS)) {
+    if ((info->status_led_enabled) && (info->pins->status < MAX_USED_GPIOS)) {
         status_led_on(info->pins->status);
     }
 
@@ -477,7 +477,7 @@ void __attribute__((section(".main_loop"), used)) main_loop(
     }
 #endif // !C_MAIN_LOOP
 
-    if ((info->status_led_enabled) && (info->pins->status <= MAX_USED_GPIOS)) {
+    if ((info->status_led_enabled) && (info->pins->status < MAX_USED_GPIOS)) {
         status_led_off(info->pins->status);
     }
 #if defined(MAIN_LOOP_ONE_SHOT)
