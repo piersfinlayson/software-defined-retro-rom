@@ -16,9 +16,14 @@ MCU=<mcu variant> make
 
 - Added RP2350 support.
   - Hardware rev A.
-- Added STM32F4 24-pin rev G hardware configuration.
+  - Includes single ROM images, dynamically bank switched, and multi-ROM sets.
+  - Includes image select jumpers, status LED.
+  - Features not supported includes: C main loop, MCO output.
+- Added STM32F4 24-pin PCB rev G hardware configuration.
 - Added hardware configuration to specify whether the image select jumpers and X1/X2 pins are pulled high or low when the PCB jumper is closed, to allow for different PCB designs.
 - Added support for up to 7 image select jumpers.
+- Change MCO (and MCO2) divider to be /5 (previous value was /4).  Makes it easier to measure the clock speed of an overclocked STM32F4.
+- Substantially refactored platform specific code to break out platform agnostic code - significant work to `sdrr/src/main.c`, `utils.c` and `rom_impl.c`. 
 
 ### Fixes
 
