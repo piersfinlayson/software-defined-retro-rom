@@ -79,7 +79,7 @@ uint32_t check_sel_pins(uint32_t *sel_mask) {
         }
     }
 
-    LOG("Final Sel pin value: %d mask: 0x%08X", sel_value, *sel_mask);
+    LOG("Sel pin value: %d mask: 0x%08X", sel_value, *sel_mask);
 
     // Store the value of the pins in sdrr_runtime_info
     sdrr_runtime_info.image_sel = sel_value;
