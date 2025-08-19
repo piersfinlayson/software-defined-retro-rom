@@ -66,6 +66,6 @@ The STM32F4 microcontroller was chosen for a number of key reasons:
 ### Additional functionality
 
 - An SWD port is exposed, to allow One ROM programming and debug tracing using RTT.  This port includes the NRST (STM32 reset) pin and a 5V input to externally power the device using programming.  **Do not** externally power One ROM when it is installed in a retro system, as this may damage One ROM, 5v source or the retro system.
-- The STM32F4 MCO1 pin is exposed, and MCO1 can be configured, using the Makefile, to expose PLL/4.  As the STM32F4 is clocked from the PLL, this shows what frequency the STM32F4 is running at (actually it shows 1/4 of that frequency).  This is not recommended to be used in production, as such a high frequency signal may cause interference with other components in the retro system, but it is useful for debugging purposes.
+- The STM32F4 MCO1 pin is exposed, and MCO1 can be configured, using the Makefile, to expose PLL/4.  As the STM32F4 is clocked from the PLL, this shows what frequency the STM32F4 is running at (actually it shows 1/5 of that frequency).  This is not recommended to be used in production, as such a high frequency signal may cause interference with other components in the retro system, but it is useful for debugging purposes.
 - A status LED is exposed from hardware revision E onwards to show when the device has successfully booted and is ready to serve ROM images.
 - 2.54mm (0.1") pin spacing is used for the ROM bank select jumpers and programming pins, for ease of use.

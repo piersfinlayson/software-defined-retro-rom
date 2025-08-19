@@ -559,14 +559,14 @@ void setup_mco(void) {
     if ((mco & 0b11) == RCC_CFGR_MCO1_PLL) {
         LOG("MCO1: PLL/4");
         rcc_cfgr &= ~(0b111 << 24); // Clear MCO1 pre-scaler bits
-        rcc_cfgr |= (0b110 << 24);  // Set MCO1 pre-scaler to /4
+        rcc_cfgr |= (0b111 << 24);  // Set MCO1 pre-scaler to /5
     }
 #if defined(MCO2)
     rcc_cfgr &= ~RCC_CFGR_MCO2_MASK;  // Clear MCO2 bits
     rcc_cfgr |= (0b00 << 30);  // Set MCO2 to SYSCLK
     LOG("MCO2: SYSCLK/4");
-    rcc_cfgr &= ~(0b111 << 27); // Clear MCO7 pre-scaler bits
-    rcc_cfgr |= (0b110 << 27);  // Set MCO7 pre-scaler to /4
+    rcc_cfgr &= ~(0b111 << 27); // Clear MCO2 pre-scaler bits
+    rcc_cfgr |= (0b111 << 27);  // Set MCO2 pre-scaler to /5
 #endif // MCO2
     RCC_CFGR = rcc_cfgr;
 
