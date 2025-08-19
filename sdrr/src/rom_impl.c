@@ -564,7 +564,7 @@ void* preload_rom_image(const sdrr_rom_set_t *set) {
     // processed before embedding in the flash.
     memcpy(img_dst, img_src, img_size);
 
-    LOG("ROM %s preloaded to RAM 0x%08X size %d bytes", set->roms[0]->filename, (uint32_t)_ram_rom_image_start, img_size);
+    LOG("ROM %s preloaded to RAM 0x%08X size %d bytes", set->roms[0]->filename, (uint32_t)img_dst, img_size);
     LOG("Set ROM count: %d, Serving algorithm: %d, multi-ROM CS1 state: %s",
         set->rom_count, set->serve, cs_values[set->multi_rom_cs1_state]);
 

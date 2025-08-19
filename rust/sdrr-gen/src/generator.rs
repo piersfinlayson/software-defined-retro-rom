@@ -40,7 +40,7 @@ pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
             }
             OutType::GenMk => generate_makefile_fragment(&filename, config)?,
             OutType::LinkerLd => generate_linker_script(&filename, config)?,
-            OutType::PlatformLd => generate_platform_ld_script(&filename, config)?,
+            OutType::PlatformBootBlockLd => generate_platform_ld_script(&filename, config)?,
         }
     }
     Ok(())
@@ -798,6 +798,8 @@ fn generate_makefile_fragment(filename: &Path, config: &Config) -> Result<()> {
 fn generate_linker_script(filename: &Path, config: &Config) -> Result<()> {
     let mut file = create_file(&config.output_dir, filename, FileType::Linker)?;
 
+    writeln!(file, "INCLUDE \"common_vars.ld\"")?;
+    writeln!(file)?;
     writeln!(file, "MEMORY")?;
     writeln!(file, "{{")?;
     match config.mcu_variant.family() {
@@ -830,13 +832,22 @@ fn generate_linker_script(filename: &Path, config: &Config) -> Result<()> {
     }
     writeln!(file, "}}")?;
     writeln!(file)?;
+
+    match config.mcu_variant.family() {
+        McuFamily::Rp2350 => {
+            writeln!(file, "_Ram_Rom_Image_Start = ORIGIN(RAM) + 0x10000;")?;
+        }
+        McuFamily::Stm32F4 => {
+            writeln!(file, "_Ram_Rom_Image_Start = ORIGIN(RAM) + _Sdrr_Runtime_Info_Size;")?;
+        }
+    }
     if config.mcu_variant.ram_kb() > 72 {
         writeln!(file, "_Ram_Rom_Image_Size = 0x10000;  /* 64 KB */")?;
     } else {
         writeln!(file, "_Ram_Rom_Image_Size = 0x04000;  /* 16 KB */")?;
     }
     writeln!(file)?;
-    writeln!(file, "INCLUDE common.ld")?;
+    writeln!(file, "INCLUDE \"common.ld\"")?;
 
     Ok(())
 }

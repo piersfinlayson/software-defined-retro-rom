@@ -29,7 +29,7 @@ const SDRR_CONFIG_H_FILE: &str = "sdrr_config.h";
 const SDRR_CONFIG_C_FILE: &str = "sdrr_config.c";
 const GEN_MK_FILE: &str = "generated.mk";
 const LINKER_LD_FILE: &str = "linker.ld";
-const PLATFORM_LD_FILE: &str = "platform.ld";
+const PLATFORM_BOOT_BLOCK_LD_FILE: &str = "platform_boot_block.ld";
 
 // Directory for ROM images
 const IMAGE_DIR: &str = "images";
@@ -45,7 +45,7 @@ pub enum OutType {
     SdrrConfigC,
     GenMk,
     LinkerLd,
-    PlatformLd,
+    PlatformBootBlockLd,
 }
 
 static OUT_FILES: LazyLock<HashMap<OutType, String>> = LazyLock::new(|| {
@@ -56,7 +56,7 @@ static OUT_FILES: LazyLock<HashMap<OutType, String>> = LazyLock::new(|| {
     map.insert(OutType::SdrrConfigC, SDRR_CONFIG_C_FILE.to_string());
     map.insert(OutType::GenMk, GEN_MK_FILE.to_string());
     map.insert(OutType::LinkerLd, LINKER_LD_FILE.to_string());
-    map.insert(OutType::PlatformLd, PLATFORM_LD_FILE.to_string());
+    map.insert(OutType::PlatformBootBlockLd, PLATFORM_BOOT_BLOCK_LD_FILE.to_string());
     map
 });
 
