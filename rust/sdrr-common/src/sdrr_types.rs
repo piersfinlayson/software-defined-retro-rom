@@ -211,7 +211,7 @@ impl McuProcessor {
                 | McuProcessor::F401DE
                 | McuProcessor::F405
                 | McuProcessor::F411
-                | McuProcessor::F446 => 800,
+                | McuProcessor::F446 => 1000,
             }
         }
     }
