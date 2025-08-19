@@ -181,7 +181,7 @@
 
 // Flash configuration values
 #if defined(STM32F405)
-#define FLASH_ACR_LATENCY_MASK  (0x0F << 0) // Latency mask
+#define FLASH_ACR_LATENCY_MASK  (0x07 << 0) // Latency mask
 #else // !STM32F405
 #define FLASH_ACR_LATENCY_MASK  (0x0F << 0) // Latency mask
 #endif // STM32F405
