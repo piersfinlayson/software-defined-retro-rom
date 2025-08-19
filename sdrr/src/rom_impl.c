@@ -171,7 +171,7 @@ static inline void __attribute__((always_inline)) configure_x_pulls(
     const sdrr_pins_t *pins,
     sdrr_serve_t serve_mode
 ) {
-    // Set the appropriate X1/X2 pulls.  This is a reasonably complex 
+    // Set the appropriate X1/X2 pulls.
     if (set->rom_count == 1) {
         // We are serving a single ROM image.  This means we want X1/X2 set to
         // low.

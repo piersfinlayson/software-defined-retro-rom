@@ -40,23 +40,35 @@ static inline void __attribute__((always_inline)) set_x_pulls(
     uint8_t x2_pull
 ) {
     uint32_t gpioc_pupdr = GPIOC_PUPDR;
+    uint8_t x1_pin;
+    uint8_t x2_pin;
 
-    if (pins->x1 < MAX_USED_GPIOS) {
-        gpioc_pupdr &= ~(GPIO_PULL_MASK << (pins->x1 * 2));
-        if (x1_pull) {
-            gpioc_pupdr |= (GPIO_PU_BITS << (pins->x1 * 2));
-        } else {
-            gpioc_pupdr |= (GPIO_PD_BITS << (pins->x1 * 2));
-        }
+    // If this STM32F4 board doesn't have any X pins configured, assume X1 and
+    // X2 are at 14/15 - this is important so we only address the 16KB image in
+    // the single ROM case (all a board with no X pins suppports)
+    if (pins->x1 >= MAX_USED_GPIOS) {
+        x1_pin = 14;
+    } else {
+        x1_pin = pins->x1;
+    }
+    if (pins->x2 >= MAX_USED_GPIOS) {
+        x2_pin = 15;
+    } else {
+        x2_pin = pins->x2;
     }
 
-    if (pins->x2 < MAX_USED_GPIOS) {
-        gpioc_pupdr &= ~(GPIO_PULL_MASK << (pins->x2 * 2));
-        if (x2_pull) {
-            gpioc_pupdr |= (GPIO_PU_BITS << (pins->x2 * 2));
-        } else {
-            gpioc_pupdr |= (GPIO_PD_BITS << (pins->x2 * 2));
-        }
+    gpioc_pupdr &= ~(GPIO_PULL_MASK << (x1_pin * 2));
+    if (x1_pull) {
+        gpioc_pupdr |= (GPIO_PU_BITS << (x1_pin * 2));
+    } else {
+        gpioc_pupdr |= (GPIO_PD_BITS << (x1_pin * 2));
+    }
+
+    gpioc_pupdr &= ~(GPIO_PULL_MASK << (x2_pin * 2));
+    if (x2_pull) {
+        gpioc_pupdr |= (GPIO_PU_BITS << (x2_pin * 2));
+    } else {
+        gpioc_pupdr |= (GPIO_PD_BITS << (x2_pin * 2));
     }
 
     GPIOC_PUPDR = gpioc_pupdr;
