@@ -363,7 +363,7 @@ typedef struct sdrr_runtime_info_t {
     // 4 bytes
     void *rom_table;
 
-    // Length of the ROM table SDRR is servig in bytes.
+    // Length of the ROM table SDRR is serving in bytes.
     // Initialized to 0.
     // Offset: 16
     // 4 bytes
