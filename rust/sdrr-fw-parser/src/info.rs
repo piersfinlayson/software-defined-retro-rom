@@ -73,6 +73,9 @@ pub struct SdrrInfo {
 
     /// Parse errors encountered during parsing
     pub parse_errors: Vec<ParseError>,
+
+    /// Extra information
+    pub extra_info: Option<SdrrExtraInfo>,
 }
 
 impl SdrrInfo {
@@ -304,6 +307,15 @@ impl SdrrInfo {
     }
 }
 
+/// Extra information about this One ROM
+///
+/// Reflects `sdrr_extra_info` from `sdrr/include/config_base.h`
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct SdrrExtraInfo {
+    /// Pointer to the RTT control block in RAM
+    pub rtt_ptr: u32,
+}
+
 /// Information about a set of ROMs in an SDRR firmware
 ///
 /// If individual ROMs are being servd, there is a set for each ROM image.
@@ -316,7 +328,7 @@ impl SdrrInfo {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SdrrRomSet {
     /// Pointer to the ROM image data in the firmware.
-    pub(crate) data_ptr: u32,
+    pub data_ptr: u32,
 
     /// The size of the ROM image data in bytes.
     ///

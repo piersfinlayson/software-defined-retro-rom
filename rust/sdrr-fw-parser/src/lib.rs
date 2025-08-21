@@ -53,7 +53,7 @@ use core::fmt;
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
 
-pub use info::{Sdrr, SdrrInfo, SdrrPins, SdrrRomInfo, SdrrRomSet, SdrrRuntimeInfo};
+pub use info::{Sdrr, SdrrInfo, SdrrPins, SdrrRomInfo, SdrrRomSet, SdrrRuntimeInfo, SdrrExtraInfo};
 pub use types::{
     SdrrAddress, SdrrCsSet, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrMcuPort,
     McuLine, McuStorage,
@@ -408,6 +408,21 @@ impl<R: Reader> Parser<R> {
             }
         };
 
+        // Parse extra info
+        let extra_info = match parsing::read_extra_info(
+            &mut self.reader,
+            header.extra_ptr,
+            self.base_flash_address,
+        )
+        .await
+        {
+            Ok(info) => Some(info),
+            Err(e) => {
+                parse_errors.push(ParseError::new("Extra Info", e));
+                None
+            }
+        };
+
         // Parse ROM sets with error collection
         let rom_sets = match parsing::read_rom_sets(
             &mut self.reader,
@@ -459,6 +474,7 @@ impl<R: Reader> Parser<R> {
             pins,
             boot_config: header.boot_config,
             parse_errors,
+            extra_info,
         })
     }
 

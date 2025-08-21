@@ -12,7 +12,7 @@ use static_assertions::const_assert_eq;
 use crate::Reader;
 use crate::{MAX_VERSION_MAJOR, MAX_VERSION_MINOR, MAX_VERSION_PATCH};
 use crate::{SdrrCsState, SdrrRomType, SdrrServe, McuLine, McuStorage};
-use crate::{SdrrPins, SdrrRomInfo, SdrrRomSet};
+use crate::{SdrrPins, SdrrRomInfo, SdrrRomSet, SdrrExtraInfo};
 
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::String, vec, vec::Vec};
@@ -99,15 +99,42 @@ pub(crate) struct SdrrInfoHeader {
     pub pins_ptr: u32,
     #[deku(bytes = "4")]
     pub boot_config: [u8; 4],
+    pub extra_ptr: u32,
+    pub _post: [u8; 4],
 }
 
 impl SdrrInfoHeader {
     // Cannot assert this against SdrrInfoHeader size, as contains Vecs, which
     // increase its size.
-    const SDRR_INFO_HEADER_SIZE: usize = 56;
+    const SDRR_INFO_HEADER_SIZE: usize = 64;
 
     pub(crate) const fn size() -> usize {
         Self::SDRR_INFO_HEADER_SIZE
+    }
+}
+
+// Used internally to construct SdrrExtraInfo
+//
+// Reflects `sdrr_extra_info_t` from `sdrr/include/config_base.h`
+#[derive(Debug, DekuRead, DekuWrite)]
+pub(crate) struct SdrrExtraInfoHeader {
+    #[deku(endian = "little")]
+    pub rtt_ptr: u32,
+
+    pub _post: [u8; 252],
+}
+
+impl SdrrExtraInfoHeader {
+    // Cannot assert this against SdrrExtraInfoHeader size, as contains Vecs, which
+    // increase its size.
+    const EXTRA_INFO_HEADER_SIZE: usize = 256;
+
+    pub(crate) const fn size() -> usize {
+        const_assert_eq!(
+            core::mem::size_of::<SdrrExtraInfoHeader>(),
+            SdrrExtraInfoHeader::EXTRA_INFO_HEADER_SIZE
+        );
+        Self::EXTRA_INFO_HEADER_SIZE
     }
 }
 
@@ -224,7 +251,7 @@ pub(crate) fn parse_and_validate_header(data: &[u8]) -> Result<SdrrInfoHeader, S
         return Err("Header data too small".into());
     }
 
-    let (_, header) = SdrrInfoHeader::from_bytes((data, 0))
+    let (_, mut header) = SdrrInfoHeader::from_bytes((data, 0))
         .map_err(|e| format!("Failed to parse header: {}", e))?;
 
     // Validate version
@@ -243,6 +270,12 @@ pub(crate) fn parse_and_validate_header(data: &[u8]) -> Result<SdrrInfoHeader, S
             MAX_VERSION_MINOR,
             MAX_VERSION_PATCH
         ));
+    }
+
+    if header.major_version == 0 && header.minor_version < 4 {
+        // Extra info and _post fields are invalid - re-initialize them.
+        header.extra_ptr = 0xFFFFFFFF;
+        header._post = [0xFF; 4];
     }
 
     Ok(header)
@@ -283,6 +316,29 @@ pub(crate) async fn read_string_at_ptr<R: Reader>(
     }
 
     String::from_utf8(result).map_err(|_| "Invalid UTF-8 string".into())
+}
+
+pub(crate) async fn read_extra_info<R: Reader>(
+    reader: &mut R,
+    ptr: u32,
+    base_addr: u32,
+) -> Result<SdrrExtraInfo, String> {
+    if ptr < base_addr {
+        return Err(format!("Invalid pointer: 0x{:08X}", ptr));
+    }
+
+    let mut buf = [0u8; SdrrExtraInfoHeader::size()];
+    reader
+        .read(ptr, &mut buf)
+        .await
+        .map_err(|_| format!("Failed to read extra info at 0x{:08X}", ptr))?;
+
+    let (_, header) = SdrrExtraInfoHeader::from_bytes((&buf, 0))
+        .map_err(|e| format!("Failed to parse extra info: {}", e))?;
+
+    Ok(SdrrExtraInfo {
+        rtt_ptr: header.rtt_ptr,
+    })
 }
 
 /// Read ROM sets from firmware

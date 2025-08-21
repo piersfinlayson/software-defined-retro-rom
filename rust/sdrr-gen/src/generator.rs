@@ -616,6 +616,7 @@ fn generate_sdrr_config_implementation(
     writeln!(file, "#include \"sdrr_config.h\"")?;
     writeln!(file, "#include \"config_base.h\"")?;
     writeln!(file, "#include \"roms.h\"")?;
+    writeln!(file, "#include \"SEGGER_RTT.h\"")?;
     writeln!(file)?;
 
     let hw = &config.hw;
@@ -678,6 +679,18 @@ fn generate_sdrr_config_implementation(
 
     writeln!(file, "}};")?;
     writeln!(file)?;
+
+    // Extra info structure, introduced in v0.4.0
+    writeln!(file, "// Extra info")?;
+    writeln!(file, "static const sdrr_extra_info_t sdrr_extra_info = {{")?;
+    writeln!(file, "    .rtt = &_SEGGER_RTT,")?;
+    writeln!(file, "    ._post = {{")?;
+    for _ in 0..31 {
+        writeln!(file, "        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,")?;
+    }
+    writeln!(file, "        0xff, 0xff, 0xff, 0xff, ")?;
+    writeln!(file, "    }},")?;
+    writeln!(file, "}};")?;
 
     // Hardware revision string
     writeln!(file, "// Hardware revision string - {}", hw.description)?;
@@ -772,6 +785,7 @@ fn generate_sdrr_config_implementation(
 
     // Boot configuration - reserved for future use, set to 0xff
     writeln!(file, "    .boot_config = {{0xff, 0xff, 0xff, 0xff}},")?;
+    writeln!(file, "    .extra = &sdrr_extra_info,")?;
 
     writeln!(file, "}};")?;
 

@@ -125,6 +125,15 @@ typedef struct {
 // Forward declarations
 struct sdrr_rom_set_t;
 
+// Extra information stored in flash
+typedef struct {
+    // Pointer to RTT control block
+    const void *rtt;
+
+    // Padding to make 256 bytes long
+    uint8_t _post[252];
+} sdrr_extra_info_t;
+
 // Main SDRR information data structure
 typedef struct {
     // Magic bytes to identify the firmware and structure
@@ -215,7 +224,17 @@ typedef struct {
     // 4 bytes
     const uint8_t boot_config[4];
 
-    // Length: 56
+    // 56 bytes to here
+
+    // v0.4.0 beyond here
+    
+    // Pointer to RTT control block
+    const sdrr_extra_info_t *extra;
+
+    // 4 further bytes
+    uint8_t _post[4];
+
+    // Length: 64
 } sdrr_info_t;
 
 // ROM image sizes by type (F1 family)
