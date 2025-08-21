@@ -63,9 +63,9 @@ void setup_gpio(void) {
         uint8_t pin = sdrr_info.pins->data[ii];
         if (pin < MAX_USED_GPIOS) {
             GPIO_PAD(sdrr_info.pins->data[ii]) &= ~PAD_OUTPUT_DISABLE;
-            GPIO_PAD(sdrr_info.pins->data[ii]) |= PAD_DRIVE_8MA | PAD_SLEW_FAST;
+            GPIO_PAD(sdrr_info.pins->data[ii]) |= PAD_DRIVE(PAD_DRIVE_8MA) | PAD_SLEW_FAST;
         } else {
-            LOG("!!! Data pins %d out of range", pin);
+            LOG("!!! Data pin %d out of range", pin);
         }
     }
 
@@ -74,12 +74,14 @@ void setup_gpio(void) {
         uint8_t pin = sdrr_info.pins->status;
         if (pin < MAX_USED_GPIOS) {
             GPIO_PAD(pin) &= ~(PAD_OUTPUT_DISABLE | PAD_INPUT);
-            GPIO_PAD(pin) = PAD_DRIVE_2MA;
-            SIO_GPIO_OUT_SET = (1 << pin);
+            GPIO_PAD(pin) |= PAD_DRIVE(PAD_DRIVE_4MA);
             SIO_GPIO_OE_SET = (1 << pin);
+            SIO_GPIO_OUT_SET = (1 << pin);
         } else {
             LOG("!!! Status LED pin %d out of range", pin);
         }
+    } else {
+        DEBUG("No status LED pin defined");
     }
 }
 

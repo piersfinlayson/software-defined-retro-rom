@@ -67,8 +67,7 @@
 #define GPIO_CTRL(pin)      (*(volatile uint32_t*)(IO_BANK0_BASE + GPIO_CTRL_OFFSET + pin*GPIO_SPACING))
 #define GPIO_READ(pin)      ((GPIO_STATUS(pin) >> GPIO_STATUS_INFROMPAD_BIT) & 1)
 
-#define GPIO_CTRL_FUNC_SIO_BIT  5
-#define GPIO_CTRL_FUNC_SIO      (1 << GPIO_CTRL_FUNC_SIO_BIT)
+#define GPIO_CTRL_FUNC_SIO      0x05
 #define GPIO_CTRL_RESET         GPIO_CTRL_FUNC_SIO
 
 // Pads registers

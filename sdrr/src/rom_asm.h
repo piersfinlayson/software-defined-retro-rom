@@ -123,11 +123,25 @@
 
 // Sets the data lines as outputs using the hardware register and pre-loaded
 // mask
+#if defined(STM32F4)
 #define SET_DATA_OUT    "strh " R_DATA_OUT_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#elif defined(RP235X)
+// This has to be a full word write, as the RP235X SIO_GPIO_OE register is a
+// single 32-bit register that controls all GPIOs, and the data lines are
+// pins 16-23, at least on rev A.
+#define SET_DATA_OUT    "str  " R_DATA_OUT_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#endif // STM32F4/RP235X
 
 // Sets the data lines as inputs using the hardware register and pre-loaded
 // mask
+#if defined(STM32F4)
 #define SET_DATA_IN     "strh " R_DATA_IN_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#elif defined(RP235X)
+// This has to be a full word write, as the RP235X SIO_GPIO_OE register is a
+// single 32-bit register that controls all GPIOs, and the data lines are
+// pins 16-23, at least on rev A.
+#define SET_DATA_IN     "str  " R_DATA_IN_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#endif // STM32F4/RP235X
 
 // Branches if zero flag set
 #define BEQ(X)          "beq " #X"%=" "\n"
