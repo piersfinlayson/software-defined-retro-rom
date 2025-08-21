@@ -171,22 +171,36 @@ int main(void) {
     // - ~3ms    F411 100MHz BOOT_LOGGING=1
     // - ~1.5ms  F411 100MHz BOOT_LOGGING=0
 
+// Check for incompatible options
+#if defined(EXECUTE_FROM_RAM) && defined(XIP_CACHE_PIN)
+#error "EXECUTE_FROM_RAM and XIP_CACHE_PIN cannot be defined at the same time"
+#endif
+
+#if !defined(PRELOAD_TO_RAM)
+#if defined(EXECUTE_FROM_RAM)
+// PRELOAD_TO_RAM is for the ROM image, EXECUTE_FROM_RAM is main_loop()
+#error "PRELOAD_TO_RAM must be defined when EXECUTE_FROM_RAM is enabled"
+#endif // EXECUT_FROM_RAM
+#if defined(XIP_CACHE_PIN)
+#error "XIP_CACHE_PIN cannot be defined when EXECUTE_FROM_RAM is enabled"
+#endif // XIP_CACHE_PIN
+#endif // PRELOAD_TO_RAM
+
+
+#if !defined(EXECUTE_FROM_RAM) && !defined(XIP_CACHE_PIN)
     // Execute the main_loop
 #if !defined(MAIN_LOOP_LOGGING)
     LOG("Start main loop - logging ends");
 #endif // !MAIN_LOOP_LOGGING
-
-#if !defined(EXECUTE_FROM_RAM)
     main_loop(&sdrr_info, set);
-#else // EXECUTE_FROM_RAM
-#ifndef PRELOAD_TO_RAM
-#error "PRELOAD_TO_RAM must be defined when EXECUTE_FROM_RAM is enabled"
-#endif // !PRELOAD_TO_RAM
+#endif
 
+#if defined(EXECUTE_FROM_RAM) || defined(XIP_CACHE_PIN)
     // We need to set up a copy of some of sdrr_info and linked to data, in
     // order for main_loop() to be able to access it.  If we don't do this,
     // main_loop() will try to access the original sdrr_info, which is in
-    // flash, and it will use relative addressing, which won't work.
+    // flash, and it will use relative addressing, which won't work when 
+    // executing from RAM, or is sub-optimal, if using XIP cache pinning.
 
     // Set up addresses to copy sdrr_info and related data to
 
@@ -226,13 +240,62 @@ int main(void) {
     memcpy(rom_set, set, sizeof(sdrr_rom_set_t));
     DEBUG("Copied sdrr_rom_set to RAM at 0x%08X", (uint32_t)rom_set);
     ptr += sizeof(sdrr_rom_set_t);
+#endif // EXECUTE_FROM_RAM || XIP_CACHE_PIN
 
+#if defined(XIP_CACHE_PIN)
+    // Start and end of main_loop section in FLASH - these are variables
+    // from the linker effectively located at these locations on flash, so we
+    // need to use & to get the actual addresses.
+    extern uint32_t _main_loop_start;
+    extern uint32_t _main_loop_end;
+
+    // Get as addresses
+    uint32_t main_loop_start_addr = (uint32_t)&_main_loop_start;
+    uint32_t main_loop_end_addr = (uint32_t)&_main_loop_end;
+
+    // Get offset from start of flash main_loop() is located at, and its
+    // length
+    uint32_t offset = main_loop_start_addr - FLASH_BASE;
+    uint32_t length = main_loop_end_addr - main_loop_start_addr;
+
+    // "Read" the main_loop so it gets loads into the cache 
+    volatile uint32_t *code_ptr = (volatile uint32_t *)main_loop_start_addr;
+    for (uint32_t ii = 0; ii < length; ii += 4) {
+        volatile uint32_t dummy = code_ptr[ii/4];
+        (void)dummy;
+    }
+
+    // Pin both ways to ensure we have it.
+    // - 0x7 is used to "pin" these 8 bytes
+    // - 0x2000 (bit 13) is used to indicate way 1
+    // Doesn't matter what we write.
+    for (uint32_t ii = 0; ii < length; ii += 8) {
+        *(volatile uint32_t *)(XIP_BASE + offset + ii + 0x7) = 0;      // way 0
+        *(volatile uint32_t *)(XIP_BASE + offset + ii + 0x2007) = 0;   // way 1
+    }
+
+    LOG("Finished pinning main_loop to XIP cache");
+    DEBUG("Cached 0x%08X bytes from 0x%08X", length, main_loop_start_addr);
+
+    // Execute the main_loop
+#if !defined(MAIN_LOOP_LOGGING)
+    LOG("Start main loop - logging ends");
+#endif // !MAIN_LOOP_LOGGING
+    main_loop(info, rom_set);
+#endif // XIP_CACHE_PIN
+
+#if defined(EXECUTE_FROM_RAM)
     // The main loop function was copied to RAM in the ResetHandler
     extern uint32_t _ram_func_start;
     void (*ram_func)(const sdrr_info_t *, const sdrr_rom_set_t *set) = (void(*)(const sdrr_info_t *, const sdrr_rom_set_t *set))((uint32_t)&_ram_func_start | 1);
-    DEBUG("Executing main_loop from RAM at 0x%08X", (uint32_t)ram_func);
+    LOG("Executing main_loop from RAM at 0x%08X", (uint32_t)ram_func);
+#if !defined(MAIN_LOOP_LOGGING)
+    LOG("Start main loop - logging ends");
+#endif // !MAIN_LOOP_LOGGING
     ram_func(info, rom_set);
-#endif // !EXECUTE_FROM_RAM
+#endif // EXECUTE_FROM_RAM
+
+    LOG("!!! Unreachable code reached - main_loop() returned or never executed");
 
     return 0;
 }

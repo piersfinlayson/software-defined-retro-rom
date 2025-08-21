@@ -12,6 +12,8 @@
 #endif // RP235X
 
 // Register base addresses
+#define FLASH_BASE      0x10000000
+#define XIP_BASE        0x18000000
 #define SYSINFO_BASE    0x40000000
 #define CLOCKS_BASE     0x40010000
 #define RESETS_BASE     0x40020000

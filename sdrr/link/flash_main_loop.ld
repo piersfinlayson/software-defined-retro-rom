@@ -1,20 +1,22 @@
 /* main_loop() has its own section, so it can be copied to RAM, if so */
-/* configured */
+/* configured.  We use 8 byte alignment in case we need to do XIP cache */
+/* pinning on the RP2350 */
 .text :
 {
-    . = ALIGN(4);
+    . = ALIGN(8);
     _text_start = .;
-    *(.text)
-    *(.text*)
 
     /* Mark the beginning and end of the main loop so it can be copied */
     /* to RAM at runtime */
-    . = ALIGN(4);
+    . = ALIGN(8);
     _main_loop_start = .;
     KEEP(*(.main_loop));
-    . = ALIGN(4);
+    . = ALIGN(8);
     _main_loop_end = .;
 
-    . = ALIGN(4);
+    *(.text)
+    *(.text*)
+
+    . = ALIGN(8);
     _text_end = .;
 } >FLASH
