@@ -61,7 +61,7 @@
 // Assembly Outputs, Input, and Clobbers
 #if defined(MAIN_LOOP_ONE_SHOT)
 #define ASM_OUTPUTS \
-                "=r" (addr_cs),
+                "=r" (addr_cs), \
                 "=r" (byte)
 #else // !MAIN_LOOP_ONE_SHOT
 #define ASM_OUTPUTS
