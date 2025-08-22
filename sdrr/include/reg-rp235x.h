@@ -11,6 +11,18 @@
 #error "RP235X family not defined"
 #endif // RP235X
 
+// Using Winbond W25Q16JV 2MB (16MBit)
+#define MAX_FLASH_CLOCK_FREQ_MHZ 133
+#define FLASH_SIZE_KB 2048
+#if FLASH_SIZE_KB != MCU_FLASH_SIZE_KB
+#error "Flash size mismatch"
+#endif
+
+#define RP2350_RAM_SIZE_KB 520
+#if MCU_RAM_SIZE_KB != RP2350_RAM_SIZE_KB
+#error "RAM size mismatch"
+#endif
+
 // Register base addresses
 #define FLASH_BASE      0x10000000
 #define XIP_CACHE_BASE  0x18000000
@@ -22,8 +34,10 @@
 #define XOSC_BASE       0x40048000  
 #define PLL_SYS_BASE    0x40050000
 #define PLL_USB_BASE    0x40058000
+#define ADC_BASE        0x400a0000
 #define XIP_CTRL_BASE   0x400c8000
 #define XIP_QMI_BASE    0x400d0000
+#define POWMAN_BASE     0x40100000
 #define OTP_BASE        0x40120000
 #define SIO_BASE        0xD0000000
 #define SCB_BASE        0xE000ED00
@@ -41,6 +55,7 @@
 #define CLOCK_REF_SELECTED      (*((volatile uint32_t *)(CLOCKS_BASE + 0x38)))
 #define CLOCK_SYS_CTRL          (*((volatile uint32_t *)(CLOCKS_BASE + 0x3C)))
 #define CLOCK_SYS_SELECTED      (*((volatile uint32_t *)(CLOCKS_BASE + 0x44)))
+#define CLOCK_ADC_CTRL          (*((volatile uint32_t *)(CLOCKS_BASE + 0x6C)))
 
 #define CLOCK_REF_SRC_XOSC      0x02
 #define CLOCK_REF_SRC_SEL_MASK  0b1111
@@ -49,15 +64,20 @@
 #define CLOCK_SYS_SRC_AUX           (1 << 0)
 #define CLOCK_SYS_AUXSRC_PLL_SYS    (0x0 << 5)
 
+#define CLOCK_ADC_ENABLE    (1 << 11)
+#define CLOCK_ADC_ENABLED   (1 << 28)
+
 // Reset registers
 #define RESET_RESET     (*((volatile uint32_t *)(RESETS_BASE + 0x00)))
 #define RESET_WDSEL     (*((volatile uint32_t *)(RESETS_BASE + 0x04)))
 #define RESET_DONE      (*((volatile uint32_t *)(RESETS_BASE + 0x08)))
 
+#define RESET_ADC           (1 << 0)
 #define RESET_IOBANK0       (1 << 6)
 #define RESET_PADS_BANK0    (1 << 9)
 #define RESET_JTAG          (1 << 8)
 #define RESET_PLL_SYS       (1 << 14)
+#define RESET_PLL_USB       (1 << 15)
 #define RESET_SYSINFO       (1 << 21)
 
 // GPIO registers
@@ -138,9 +158,31 @@
 #define PLL_PWR_VCOPD       (1 << 5)    // VCO power down
 
 // PLL Post divider bits
-#define PLL_SYS_PRIM_POSTDIV1(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 16)
-#define PLL_SYS_PRIM_POSTDIV2(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 12)
+#define PLL_PRIM_POSTDIV1(X)    (((X) & PLL_PRIM_POSTDIV_MASK) << 16)
+#define PLL_PRIM_POSTDIV2(X)    (((X) & PLL_PRIM_POSTDIV_MASK) << 12)
 #define PLL_PRIM_POSTDIV_MASK   0x7
+
+// USB PLL Registers
+#define PLL_USB_CS          (*((volatile uint32_t *)(PLL_USB_BASE + 0x00)))
+#define PLL_USB_PWR         (*((volatile uint32_t *)(PLL_USB_BASE + 0x04)))
+#define PLL_USB_FBDIV_INT   (*((volatile uint32_t *)(PLL_USB_BASE + 0x08)))
+#define PLL_USB_PRIM        (*((volatile uint32_t *)(PLL_USB_BASE + 0x0C)))
+
+
+// ADC Registers
+#define ADC_CS              (*((volatile uint32_t *)(ADC_BASE + 0x00)))
+#define ADC_RESULT          (*((volatile uint32_t *)(ADC_BASE + 0x04)))
+
+#define ADC_RESULT_MASK       0xFFF
+
+#define ADC_CS_AINSEL_MASK   0b1111
+#define ADC_CS_AINSEL_SHIFT  12
+#define ADC_CS_AINSEL(X)     (((X) & ADC_CS_AINSEL_MASK) << ADC_CS_AINSEL_SHIFT)
+#define ADC_CS_TS           4
+#define ADC_CS_READY        (1 << 8)
+#define ADC_CS_START_ONCE   (1 << 2)
+#define ADC_CS_TS_EN        (1 << 1)
+#define ADC_CS_EN           (1 << 0)
 
 // XIP_CTRL Registers
 #define XIP_CTRL_CTRL       (*((volatile uint32_t *)(XIP_CTRL_BASE + 0x00)))
@@ -150,6 +192,44 @@
 
 // XIP_QMI Registers
 #define XIP_QMI_M0_TIMING   (*((volatile uint32_t *)(XIP_QMI_BASE + 0x0C)))
+
+#define XIP_QMI_M0_CLKDIV_MASK   0xFF
+#define XIP_QMI_M0_CLKDIV_SHIFT  0
+
+// Power Manager Registers
+#define POWMAN_VREG_CTRL    (*((volatile uint32_t *)(POWMAN_BASE + 0x04)))
+#define POWMAN_VREG_STATUS  (*((volatile uint32_t *)(POWMAN_BASE + 0x08)))
+#define POWMAN_VREG         (*((volatile uint32_t *)(POWMAN_BASE + 0x0C)))
+
+#define POWMAN_PASSWORD     (0x5AFE << 16)
+
+#define POWMAN_VREG_CTRL_UNLOCK (1 << 13)
+#define POWMAN_VREG_CTRL_DISABLE_VOLTAGE_LIMIT (1 << 8)
+#define HT_TH_100       0x0
+#define HT_TH_105       0x1
+#define HT_TH_110       0x2
+#define HT_TH_115       0x3
+#define HT_TH_120       0x4
+#define HT_TH_125       0x5
+#define HT_TH_135       0x6
+#define HT_TH_150       0x7
+#define HT_TH_SHIFT     4
+#define HT_TH_MASK      0b111
+#define POWMAN_VREG_CTRL_HT_TH(X)   (((X) & HT_TH_MASK) << HT_TH_SHIFT)
+
+#define VREG_MASK       0b11111
+#define VREG_SHIFT      4
+#define VREG_1_10V      0b01011
+#define VREG_1_15V      0b01100
+#define VREG_1_20V      0b01101
+#define VREG_1_25V      0b01110
+#define VREG_1_30V      0b01111
+#define VREG_1_35V      0b10000
+#define VREG_1_40V      0b10001
+#define VREG_1_50V      0b10010
+#define VREG_1_60V      0b10011
+#define POWMAN_VREG_VOLTAGE(X)   (((X) & VREG_MASK) << VREG_SHIFT)
+#define POWMAN_VREG_UPDATE (1 << 15)
 
 // SIO Registers
 #define SIO_CPUID           (*((volatile uint32_t *)(SIO_BASE + 0x00)))

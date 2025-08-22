@@ -10,6 +10,12 @@
 // Internal function prototypes
 static void setup_xosc(void);
 static void setup_pll(void);
+static void setup_usb_pll(void);
+static void setup_qmi(void);
+static void setup_vreg(void);
+static void setup_adc(void);
+static void final_checks(void);
+uint16_t get_temp(void);
 
 // RP2350 firmware needs a special boot block so the bootloader will load it.
 // See datasheet S5.9.5 and ../include/reg-rp235x.h.
@@ -42,7 +48,10 @@ void setup_clock(void) {
     LOG("Setting up clock");
 
     setup_xosc();
+    setup_qmi();
+    setup_vreg();
     setup_pll();
+    final_checks();
 }
 
 void setup_gpio(void) {
@@ -85,6 +94,100 @@ void setup_gpio(void) {
     }
 }
 
+// Reconfigure flash (QMI) speed if required
+void setup_qmi(void) {
+#if TARGET_FREQ_MHZ > (MAX_FLASH_CLOCK_FREQ_MHZ * 256)
+#error "Flash divider > 256 not supported by the hardware"
+#endif
+    if (TARGET_FREQ_MHZ > MAX_FLASH_CLOCK_FREQ_MHZ) {
+        DEBUG("Target clock speed exceeds max flash speed %dMHz vs %dHz", TARGET_FREQ_MHZ, MAX_FLASH_CLOCK_FREQ_MHZ);
+
+        // Calculate the divider
+        uint8_t divider = TARGET_FREQ_MHZ / MAX_FLASH_CLOCK_FREQ_MHZ;
+        if (TARGET_FREQ_MHZ % MAX_FLASH_CLOCK_FREQ_MHZ) {
+            divider += 1;
+        }
+
+        uint32_t m0 = XIP_QMI_M0_TIMING;
+        DEBUG("Current QMI M0 TIMING: 0x%08X", m0);
+
+        m0 &= ~XIP_QMI_M0_CLKDIV_MASK;
+        m0 |= (divider & XIP_QMI_M0_CLKDIV_MASK) << XIP_QMI_M0_CLKDIV_SHIFT;
+
+        LOG("Updating M0 clock divider to %d", divider);
+
+        DEBUG("Updating QMI M0 TIMING: 0x%08X", m0);
+
+        XIP_QMI_M0_TIMING = m0;
+    }
+}
+
+void setup_vreg(void) {
+    uint32_t vreg_ctrl = POWMAN_VREG_CTRL;
+    uint32_t vreg = POWMAN_VREG;
+    DEBUG("Current VREG_CTRL: 0x%08X", vreg_ctrl);
+    DEBUG("Current VREG_STATUS: 0x%08X", POWMAN_VREG_STATUS);
+    DEBUG("Current VREG: 0x%08X", vreg);
+
+    if (TARGET_FREQ_MHZ > 300) {
+        uint8_t voltage;
+        uint8_t high_temp = HT_TH_100;
+        uint8_t unlimited_voltage = 0;
+        if (TARGET_FREQ_MHZ <= 330) {
+            voltage = VREG_1_15V;
+        } else if (TARGET_FREQ_MHZ <= 360) {
+            voltage = VREG_1_20V;
+        } else if (TARGET_FREQ_MHZ <= 390) {
+            voltage = VREG_1_25V;
+        } else if (TARGET_FREQ_MHZ <= 420) {
+            voltage = VREG_1_30V;
+        } else {
+            unlimited_voltage = 1;
+            if (TARGET_FREQ_MHZ <= 450) {
+                LOG("!!! Setting voltage to 1.40V !!!");
+                voltage = VREG_1_40V;
+            } else if (TARGET_FREQ_MHZ <= 480) {
+                LOG("!!! Setting voltage to 1.50V !!!");
+                voltage = VREG_1_50V;
+            } else {
+                // Seems good to around 540
+#if TARGET_FREQ_MHZ > 540
+#error "Current max is 540MHz with 1.6V"
+#endif
+                LOG("!!! Setting voltage to 1.60V !!!");
+                voltage = VREG_1_60V;
+            }
+        }
+
+        DEBUG("Unlocking VREG");
+        vreg_ctrl |= POWMAN_PASSWORD |
+                POWMAN_VREG_CTRL_UNLOCK;
+        POWMAN_VREG_CTRL = vreg_ctrl;
+
+        if (unlimited_voltage) {
+            LOG("!!! Disabling voltage limit for >420MHz operation !!!");
+            vreg_ctrl |= POWMAN_VREG_CTRL_DISABLE_VOLTAGE_LIMIT;
+            POWMAN_VREG_CTRL = vreg_ctrl;
+        }
+
+        DEBUG("Setting VREG high temp to %d", high_temp);
+        vreg_ctrl &= ~(HT_TH_MASK << HT_TH_SHIFT);
+        vreg_ctrl |= POWMAN_PASSWORD |
+                        POWMAN_VREG_CTRL_HT_TH(high_temp);
+        POWMAN_VREG_CTRL = vreg_ctrl;
+        DEBUG("Current VREG_CTRL: 0x%08X", POWMAN_VREG_CTRL);
+
+        DEBUG("Setting VREG voltage to %d", voltage);
+        vreg &= ~(VREG_MASK << VREG_SHIFT);
+        vreg |= POWMAN_VREG_VOLTAGE(voltage) | POWMAN_PASSWORD;
+        POWMAN_VREG = vreg;
+
+        while (POWMAN_VREG & POWMAN_VREG_UPDATE);
+
+        LOG("Set voltage regulator - POWMAN_VREG: 0x%08X", POWMAN_VREG);
+    } 
+}
+
 // Set up the PLL with the generated values
 void setup_pll(void) {
     // Release PLL_SYS from reset
@@ -105,8 +208,8 @@ void setup_pll(void) {
     while (!(PLL_SYS_CS & PLL_CS_LOCK));
 
     // Set post dividers and power up everything
-    PLL_SYS_PRIM = PLL_SYS_PRIM_POSTDIV1(PLL_SYS_POSTDIV1) |
-                     PLL_SYS_PRIM_POSTDIV2(PLL_SYS_POSTDIV2);
+    PLL_SYS_PRIM = PLL_PRIM_POSTDIV1(PLL_SYS_POSTDIV1) |
+                     PLL_PRIM_POSTDIV2(PLL_SYS_POSTDIV2);
 
     // Power up post dividers
     PLL_SYS_PWR = 0;
@@ -114,6 +217,83 @@ void setup_pll(void) {
     // Switch to the PLL
     CLOCK_SYS_CTRL = CLOCK_SYS_SRC_AUX | CLOCK_SYS_AUXSRC_PLL_SYS;
     while ((CLOCK_SYS_SELECTED & (1 << 1)) == 0);
+}
+
+void setup_usb_pll(void) {
+    DEBUG("Setting up USB PLL");
+
+    // Release PLL_USB from reset
+    RESET_RESET &= ~RESET_PLL_USB;
+    while (!(RESET_DONE & RESET_PLL_USB));
+
+    // Power down the PLL, set the feedback divider
+    PLL_USB_PWR = PLL_PWR_PD | PLL_PWR_VCOPD;
+
+    // For 48MHz: 12MHz × 40 ÷ 10 ÷ 1 = 48MHz
+    PLL_USB_FBDIV_INT = 40;
+    PLL_USB_CS = PLL_CS_REFDIV(1);
+
+    // Power up VCO (keep post-dividers powered down)
+    PLL_USB_PWR = PLL_PWR_POSTDIVPD;
+
+    // Wait for lock
+    while (!(PLL_USB_CS & PLL_CS_LOCK));
+
+    // Set post dividers: 40 × 12MHz = 480MHz → ÷10 ÷1 = 48MHz
+    PLL_USB_PRIM = PLL_PRIM_POSTDIV1(10) | PLL_PRIM_POSTDIV2(1);
+
+    // Power up
+    PLL_USB_PWR = 0;
+}
+
+void setup_adc(void) {
+        DEBUG("Setting up ADC");
+
+        // Route USB PLL to ADC (USB is the default source so no need to set)
+        CLOCK_ADC_CTRL |= CLOCK_ADC_ENABLE;
+        while (!(CLOCK_ADC_CTRL & CLOCK_ADC_ENABLED));
+        DEBUG("ADC clock enabled");
+
+        // Take ADC out of reset
+        RESET_RESET &= ~(RESET_ADC);
+        while (!(RESET_DONE & RESET_ADC));
+
+        // Enable ADC and temperature sensor
+        DEBUG("ADC out of reset");
+        ADC_CS |= ADC_CS_TS_EN | ADC_CS_EN;
+        while (!(ADC_CS & ADC_CS_READY));          
+
+        DEBUG("ADC ready");
+}
+
+uint16_t get_temp(void) {
+    // Start a conversion
+    ADC_CS |= ADC_CS_AINSEL(ADC_CS_TS);
+    ADC_CS |= ADC_CS_START_ONCE;
+
+    // Wait for it to complete
+    while (!(ADC_CS & ADC_CS_READY));
+
+    // Return the result
+    return (uint16_t)(ADC_RESULT & ADC_RESULT_MASK);
+}
+
+void final_checks(void) {
+    if (TARGET_FREQ_MHZ > 300) {
+        DEBUG("!!!Extreme overlocking - enabling and reading temp sensor");
+
+        // USB clock required for ADC
+        setup_usb_pll();
+
+        // Set up ADC
+        setup_adc();
+
+        // Take a reading
+        uint16_t temp = get_temp();
+        (void)temp;  // In case not logged
+
+        LOG("!!! Temperature sensor reading: 0x%03X", temp);
+    }
 }
 
 void setup_mco(void) {
