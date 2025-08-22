@@ -190,7 +190,7 @@ impl McuProcessor {
             McuProcessor::F405 => 100,
             McuProcessor::F411 => 100,
             McuProcessor::F446 => 100,
-            McuProcessor::Rp2350 => 400,
+            McuProcessor::Rp2350 => 750,
         }
     }
 
