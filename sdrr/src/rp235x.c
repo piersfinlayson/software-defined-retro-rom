@@ -163,11 +163,13 @@ void setup_vreg(void) {
         vreg_ctrl |= POWMAN_PASSWORD |
                 POWMAN_VREG_CTRL_UNLOCK;
         POWMAN_VREG_CTRL = vreg_ctrl;
+        while (!(POWMAN_VREG_CTRL & POWMAN_VREG_CTRL_UNLOCK));
 
         if (unlimited_voltage) {
             LOG("!!! Disabling voltage limit for >420MHz operation !!!");
             vreg_ctrl |= POWMAN_VREG_CTRL_DISABLE_VOLTAGE_LIMIT;
             POWMAN_VREG_CTRL = vreg_ctrl;
+            while (!(POWMAN_VREG_CTRL & POWMAN_VREG_CTRL_DISABLE_VOLTAGE_LIMIT));
         }
 
         DEBUG("Setting VREG high temp to %d", high_temp);
@@ -178,13 +180,19 @@ void setup_vreg(void) {
         DEBUG("Current VREG_CTRL: 0x%08X", POWMAN_VREG_CTRL);
 
         DEBUG("Setting VREG voltage to %d", voltage);
+        while (POWMAN_VREG & POWMAN_VREG_UPDATE);
         vreg &= ~(VREG_MASK << VREG_SHIFT);
         vreg |= POWMAN_VREG_VOLTAGE(voltage) | POWMAN_PASSWORD;
         POWMAN_VREG = vreg;
-
         while (POWMAN_VREG & POWMAN_VREG_UPDATE);
 
         LOG("Set voltage regulator - POWMAN_VREG: 0x%08X", POWMAN_VREG);
+
+        for (volatile int ii = 0; ii < 5000; ii++) {
+            // Wait a bit for the voltage to stabilise
+            // 2,000 loops is too few at 540MHz, 5,000 seems like enough
+            // Not required if DEBUG logging is on
+        }
     } 
 }
 
