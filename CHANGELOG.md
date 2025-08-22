@@ -4,25 +4,32 @@ All notables changes between versions are documented in this file.
 
 ## v0.4.0 - 2025-??-??
 
-The RP2350 release.
+**The RP2350 release.**
 
-Instead of building with `STM=<mcu variant> make`, you now need to use `MCU`:
+This version contains the first RP2350 PCB revision, and mostly complete firmware support.
 
-```bash
-MCU=<mcu variant> make
-```
+Should you use the new RP2350 hardware revision A?  Only limited testing of the RP2350 One ROM has been done so far, but it has performed well.  You may want to order and test small quantities of RP2350 based boards for now, as there is some risk of a design issue coming to light.  However, the hardware appears solid in early testing, so it is likely most issues can be overcome by firmware changes - and it is expected that the RP2350 revision A will continue to be supported in future releases, even should another variant be released.
+
+Other notable changes:
+
+- Instead of building with `STM=<mcu variant> make`, you now need to use `MCU`:
+
+  ```bash
+  MCU=<mcu_variant> make
+  ```
 
 ### Changes
 
 - Added RP2350 support.
   - Hardware rev A.
   - Includes single ROM images, dynamically bank switched, and multi-ROM sets.
-  - Includes image select jumpers, status LED.
-  - Features not supported includes: C main loop, MCO output.
+  - Includes image select jumpers, status LED, overclocking.
+  - Features not supported include: C main loop, MCO output.
+  - For the gory details of supporting the RP2350, see [RP2350](docs/RP2350.md).
 - Added STM32F4 24-pin PCB rev G hardware configuration.
-- Added hardware configuration to specify whether the image select jumpers and X1/X2 pins are pulled high or low when the PCB jumper is closed, to allow for different PCB designs.
-- Added support for up to 7 image select jumpers.
-- Change MCO (and MCO2) divider to be /5 (previous value was /4).  Makes it easier to measure the clock speed of an overclocked STM32F4.
+- Added hardware and firmware configuration to specify whether the image select jumpers and X1/X2 pins are pulled high or low when the PCB jumper is closed, to allow for different PCB designs.
+- Added firmware support for up to 7 image select jumpers.
+- Change STM32 MCO (and MCO2) divider to be /5 (previous value was /4).  Makes it easier to measure the clock speed of an overclocked STM32F4.
 - Substantially refactored platform specific code to break out platform agnostic code - significant work to `sdrr/src/main.c`, `utils.c` and `rom_impl.c`. 
 
 ### Fixes

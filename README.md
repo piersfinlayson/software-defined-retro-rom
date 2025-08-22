@@ -4,6 +4,8 @@
 
 The most flexible ROM replacement for your retro computer. It is highly configurable and low-cost.  Get them fabbed at JLC for under $5 each in a quantity of 10 or more.
 
+Based on a Raspberry Pi RP2350 or STM32F4 microcontroller.
+
 One ROM emulates any system's 2364, 2332 and 2316 ROMs, with any chip select configuration, and can serve different images to multiple ROM sockets simultaneously.
 
 Replaces failed ROMs in Commodore 64s, VIC-20s, PETs, disk drives.
@@ -12,7 +14,7 @@ One ROM was formerly known as Software Defined Retro ROM (SDRR).
 
 ## Key Features
 
-💰 Based on **[$2 microcontroller](docs/STM32-SELECTION.md)**.
+💰 Based on sub-$2 microcontrollers.  [**Choose from Raspberry Pi or STM flavours**]((docs/MCU-SELECTION.md)).
 
 ⚡ **[Fast](docs/STM32-SELECTION.md)** enough for PETs, VIC-20s, C64s, 1541s, IEEE drives, etc. Support faster systems with higher end microcontroller.
 
