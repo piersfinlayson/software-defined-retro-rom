@@ -13,7 +13,7 @@
 
 // Register base addresses
 #define FLASH_BASE      0x10000000
-#define XIP_BASE        0x18000000
+#define XIP_CACHE_BASE  0x18000000
 #define SYSINFO_BASE    0x40000000
 #define CLOCKS_BASE     0x40010000
 #define RESETS_BASE     0x40020000
@@ -22,6 +22,8 @@
 #define XOSC_BASE       0x40048000  
 #define PLL_SYS_BASE    0x40050000
 #define PLL_USB_BASE    0x40058000
+#define XIP_CTRL_BASE   0x400c8000
+#define XIP_QMI_BASE    0x400d0000
 #define OTP_BASE        0x40120000
 #define SIO_BASE        0xD0000000
 #define SCB_BASE        0xE000ED00
@@ -139,6 +141,15 @@
 #define PLL_SYS_PRIM_POSTDIV1(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 16)
 #define PLL_SYS_PRIM_POSTDIV2(X) (((X) & PLL_PRIM_POSTDIV_MASK) << 12)
 #define PLL_PRIM_POSTDIV_MASK   0x7
+
+// XIP_CTRL Registers
+#define XIP_CTRL_CTRL       (*((volatile uint32_t *)(XIP_CTRL_BASE + 0x00)))
+#define XIP_CTRL_STATUS     (*((volatile uint32_t *)(XIP_CTRL_BASE + 0x08)))
+#define XIP_CTRL_CTR_HIT    (*((volatile uint32_t *)(XIP_CTRL_BASE + 0x0C)))
+#define XIP_CTRL_CTR_ACC    (*((volatile uint32_t *)(XIP_CTRL_BASE + 0x10)))
+
+// XIP_QMI Registers
+#define XIP_QMI_M0_TIMING   (*((volatile uint32_t *)(XIP_QMI_BASE + 0x0C)))
 
 // SIO Registers
 #define SIO_CPUID           (*((volatile uint32_t *)(SIO_BASE + 0x00)))

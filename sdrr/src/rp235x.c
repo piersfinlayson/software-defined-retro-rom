@@ -209,7 +209,7 @@ void blink_pattern(uint32_t on_time, uint32_t off_time, uint8_t repeats) {
     (void)on_time;
     (void)off_time;
     (void)repeats;
-    LOG("!!! Blink pattern not supported on RP235X");
+    LOG("!!! Blink pattern not supported on RP235X: %d, %d, %d", on_time, off_time, repeats);
 }
 
 // Enters bootloader mode.

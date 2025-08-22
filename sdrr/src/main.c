@@ -172,8 +172,8 @@ int main(void) {
     // - ~1.5ms  F411 100MHz BOOT_LOGGING=0
 
 // Check for incompatible options
-#if defined(EXECUTE_FROM_RAM) && defined(XIP_CACHE_PIN)
-#error "EXECUTE_FROM_RAM and XIP_CACHE_PIN cannot be defined at the same time"
+#if defined(EXECUTE_FROM_RAM) && defined(XIP_CACHE_WARM)
+#error "EXECUTE_FROM_RAM and XIP_CACHE_WARM cannot be defined at the same time"
 #endif
 
 #if !defined(PRELOAD_TO_RAM)
@@ -181,21 +181,23 @@ int main(void) {
 // PRELOAD_TO_RAM is for the ROM image, EXECUTE_FROM_RAM is main_loop()
 #error "PRELOAD_TO_RAM must be defined when EXECUTE_FROM_RAM is enabled"
 #endif // EXECUT_FROM_RAM
-#if defined(XIP_CACHE_PIN)
-#error "XIP_CACHE_PIN cannot be defined when EXECUTE_FROM_RAM is enabled"
-#endif // XIP_CACHE_PIN
+#if defined(XIP_CACHE_WARM)
+#error "XIP_CACHE_WARM cannot be defined when EXECUTE_FROM_RAM is enabled"
+#endif // XIP_CACHE_WARM
 #endif // PRELOAD_TO_RAM
 
 
-#if !defined(EXECUTE_FROM_RAM) && !defined(XIP_CACHE_PIN)
+#if !defined(EXECUTE_FROM_RAM) && !defined(XIP_CACHE_WARM)
     // Execute the main_loop
 #if !defined(MAIN_LOOP_LOGGING)
     LOG("Start main loop - logging ends");
 #endif // !MAIN_LOOP_LOGGING
+    //XIP_QMI_M0_TIMING &= ~0x04;
+    //XIP_QMI_M0_TIMING |= 0x01;
     main_loop(&sdrr_info, set);
 #endif
 
-#if defined(EXECUTE_FROM_RAM) || defined(XIP_CACHE_PIN)
+#if defined(EXECUTE_FROM_RAM) || defined(XIP_CACHE_WARM)
     // We need to set up a copy of some of sdrr_info and linked to data, in
     // order for main_loop() to be able to access it.  If we don't do this,
     // main_loop() will try to access the original sdrr_info, which is in
@@ -240,14 +242,14 @@ int main(void) {
     memcpy(rom_set, set, sizeof(sdrr_rom_set_t));
     DEBUG("Copied sdrr_rom_set to RAM at 0x%08X", (uint32_t)rom_set);
     ptr += sizeof(sdrr_rom_set_t);
-#endif // EXECUTE_FROM_RAM || XIP_CACHE_PIN
+#endif // EXECUTE_FROM_RAM || XIP_CACHE_WARM
 
-#if defined(XIP_CACHE_PIN)
+#if defined(XIP_CACHE_WARM)
     // Start and end of main_loop section in FLASH - these are variables
     // from the linker effectively located at these locations on flash, so we
     // need to use & to get the actual addresses.
     extern uint32_t _main_loop_start;
-    extern uint32_t _main_loop_end;
+    //extern uint32_t _main_loop_end;
 
     // Get as addresses
     uint32_t main_loop_start_addr = (uint32_t)&_main_loop_start;
@@ -265,24 +267,15 @@ int main(void) {
         (void)dummy;
     }
 
-    // Pin both ways to ensure we have it.
-    // - 0x7 is used to "pin" these 8 bytes
-    // - 0x2000 (bit 13) is used to indicate way 1
-    // Doesn't matter what we write.
-    for (uint32_t ii = 0; ii < length; ii += 8) {
-        *(volatile uint32_t *)(XIP_BASE + offset + ii + 0x7) = 0;      // way 0
-        *(volatile uint32_t *)(XIP_BASE + offset + ii + 0x2007) = 0;   // way 1
-    }
+    DEBUG("Warming 0x%08X bytes from 0x%08X, offset: 0x%08X", length, main_loop_start_addr, offset);
 
-    LOG("Finished pinning main_loop to XIP cache");
-    DEBUG("Cached 0x%08X bytes from 0x%08X", length, main_loop_start_addr);
-
+    LOG("Finished warming up main_loop %d bytes in XIP cache", length);
     // Execute the main_loop
 #if !defined(MAIN_LOOP_LOGGING)
     LOG("Start main loop - logging ends");
 #endif // !MAIN_LOOP_LOGGING
     main_loop(info, rom_set);
-#endif // XIP_CACHE_PIN
+#endif // XIP_CACHE_WARM
 
 #if defined(EXECUTE_FROM_RAM)
     // The main loop function was copied to RAM in the ResetHandler
