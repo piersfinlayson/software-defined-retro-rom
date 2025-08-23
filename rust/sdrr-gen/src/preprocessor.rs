@@ -219,7 +219,13 @@ impl RomSet {
                 assert!(address < 65536, "Address out of bounds for banked ROM set");
                 let x1_pin = hw.pin_x1();
                 let x2_pin = hw.pin_x2();
-                let bank = ((address >> x1_pin) & 1) | (((address >> x2_pin) & 1) << 1);
+                let bank = if hw.x_jumper_pull() == 1 {
+                    ((address >> x1_pin) & 1) | (((address >> x2_pin) & 1) << 1)
+                } else {
+                    // Invert the logic if the jumpers pull to GND
+                    (!((address >> x1_pin)) & 1) | ((!((address >> x2_pin) & 1)) << 1)
+
+                };  
                 let mask = !(1 << x1_pin) & !(1 << x2_pin);
                 let masked_address = address & mask;
                 let rom_index = bank % self.roms.len(); // Wrap around
