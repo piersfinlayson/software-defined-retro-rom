@@ -42,7 +42,7 @@ setup_video:
     sta $D018
 
     ; set border color
-    lda #$0B
+    lda #$00
     sta $D020
     
     ; set background color
