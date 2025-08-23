@@ -119,7 +119,15 @@
 
 // Stores the data byte from the CPU register to the data lines hardware output
 // register
+#if defined(STM32F4)
 #define STORE_TO_DATA   "strb " R_DATA ", [" R_GPIO_DATA_ODR "]\n"
+#elif defined(RP235X)
+#define STORE_TO_DATA   "strb " R_DATA ", [" R_GPIO_DATA_ODR "]\n"
+// Use coprocessor.  This is not used, even in the RP_USE_CP case, as it will
+// always be less performance than a direct SIO write, due to the lsl overhead
+//#define STORE_TO_DATA   "lsl " R_DATA ", " R_DATA ", #16\n"
+//                        "mcr p0, #0, " R_DATA ", c0, c0\n"
+#endif // STM32F4/RP235X
 
 // Sets the data lines as outputs using the hardware register and pre-loaded
 // mask
@@ -129,7 +137,11 @@
 // This has to be a full word write, as the RP235X SIO_GPIO_OE register is a
 // single 32-bit register that controls all GPIOs, and the data lines are
 // pins 16-23, at least on rev A.
+#if !defined(RP_USE_CP)
 #define SET_DATA_OUT    "str  " R_DATA_OUT_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#else // RP_USE_CP
+#define SET_DATA_OUT    "mcr p0, #0, " R_DATA_OUT_MASK ", c0, c4\n"
+#endif // RP_USE_CP
 #endif // STM32F4/RP235X
 
 // Sets the data lines as inputs using the hardware register and pre-loaded
@@ -140,7 +152,11 @@
 // This has to be a full word write, as the RP235X SIO_GPIO_OE register is a
 // single 32-bit register that controls all GPIOs, and the data lines are
 // pins 16-23, at least on rev A.
+#if !defined(RP_USE_CP)
 #define SET_DATA_IN     "str  " R_DATA_IN_MASK ", [" R_GPIO_DATA_MODER "]\n"
+#else // RP_USE_CP
+#define SET_DATA_IN     "mcr p0, #0, " R_DATA_IN_MASK ", c0, c4\n"
+#endif // RP_USE_CP
 #endif // STM32F4/RP235X
 
 // Branches if zero flag set

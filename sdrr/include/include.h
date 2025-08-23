@@ -27,9 +27,12 @@
 //                          // that support CCM RAM
 // #define C_MAIN_LOOP 1    // Disable assembly main loop, use less performant
 //                          // C main loop
-// define DUMB_C_MAIN_LOOP_2_CS // Requires C_MAIN_LOOP, and even worse
-//                              // implementation, which only supports 2 CS
-//                              // lines.  Probably don't use.
+// #define DUMB_C_MAIN_LOOP_2_CS    // Requires C_MAIN_LOOP, and even worse
+//                                  // implementation, which only supports 2
+//                                  // CS lines.  Probably don't use.
+// #define RP_USE_CP 1  // Use the coprocessor instructions to set the data
+//                      // lines as inputs/outputs.  Slight less performant
+//                      // than SIO access.
 //
 // sdrr-gen also provides the rom images:
 //

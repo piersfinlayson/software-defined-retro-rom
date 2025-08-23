@@ -241,6 +241,10 @@
 #define SIO_GPIO_OE_SET     (*((volatile uint32_t *)(SIO_BASE + 0x38)))
 #define SIO_GPIO_OE_CLR     (*((volatile uint32_t *)(SIO_BASE + 0x40)))
 
+// SCB Registers
+#define SCB_CPACR           (*((volatile uint32_t *)(SCB_BASE + 0x88)))
+#define SCB_CPACR_CP0_FULL  (0b11 << 0)
+
 // Used by assembly
 #define VAL_SIO_GPIO_IN         (SIO_BASE + 0x04)
 #define VAL_SIO_GPIO_OUT        (SIO_BASE + 0x10)
@@ -251,6 +255,7 @@
 
 // Maximum number of used GPIOs - those exposed on the QFN60 RP2350A
 #define MAX_USED_GPIOS      30
+
 
 // Boot block structure
 typedef struct {

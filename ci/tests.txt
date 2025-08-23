@@ -125,3 +125,6 @@ bank-c64-char-f405rg:MCU=f405rg,HW_REV=f,CONFIG=config/bank-c64-char.mk
 bank-vic20-char-f405rg:MCU=f405rg,HW_REV=f,CONFIG=config/bank-vic20-char.mk
 bank-c64-char-fun-f405rg:MCU=f405rg,HW_REV=f,CONFIG=config/bank-c64-char-fun.mk
 bank-vic20-char-fun-f405rg:HW_REV=p24-a,MCU=rp2350,CONFIG=config/bank-vic20-char-fun.mk
+
+# Test RP2350 GPIO coprocessor support
+rp-use-cp-rp2350:EXTRA_C_FLAGS=-DRP_USE_CP=1,MCU=rp2350,HW_REV=p24-a,CONFIG=config/test-sdrr-0.mk

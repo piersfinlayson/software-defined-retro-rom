@@ -14,6 +14,7 @@ static void setup_usb_pll(void);
 static void setup_qmi(void);
 static void setup_vreg(void);
 static void setup_adc(void);
+static void setup_cp(void);
 static void final_checks(void);
 uint16_t get_temp(void);
 
@@ -51,6 +52,7 @@ void setup_clock(void) {
     setup_qmi();
     setup_vreg();
     setup_pll();
+    setup_cp();
     final_checks();
 }
 
@@ -302,6 +304,17 @@ void final_checks(void) {
 
         LOG("!!! Temperature sensor reading: 0x%03X", temp);
     }
+}
+
+void setup_cp(void) {
+#if defined(RP_USE_CP)
+    // Enable Coprocessor 0 to enable MCR instructions
+    SCB_CPACR &= ~(0b11 << 0);
+    SCB_CPACR |= SCB_CPACR_CP0_FULL;
+    __asm volatile ("dsb");
+    __asm volatile ("isb");
+    DEBUG("CP0 enabled");
+#endif // RP_USE_CP
 }
 
 void setup_mco(void) {
