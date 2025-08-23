@@ -22,6 +22,12 @@ Notes:
 - **Support**: Both boards are expected to be supported long-term
 - **Price Trend**: RP2350 is more expensive in small quantities but prices converge at larger volumes
 
+## Which One Should **You** Choose?
+
+If you don't have strong reasons to go with the STM32, go with the RP2350.  Get a few and expect you might fry one with a dodgy voltage regular/power supply.
+
+One ROM's support is already essentially equivalent and will only get better.
+
 ## RP2350
 
 The One ROM Pico uses the RP2350 MCU, A4 stepping or later.  This is now used by default by JLC's PCB assembly service.
