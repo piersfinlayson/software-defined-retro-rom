@@ -2,7 +2,7 @@
 
 All notables changes between versions are documented in this file.
 
-## v0.4.0 - 2025-??-??
+## v0.4.0 - 2025-08-24
 
 **The RP2350 release.**
 
@@ -26,11 +26,12 @@ Other notable changes:
   - Includes image select jumpers, status LED, overclocking.
   - Features not supported include: C main loop, MCO output.
   - For the gory details of supporting the RP2350, see [RP2350](docs/RP2350.md).
-- Added STM32F4 24-pin PCB rev G hardware configuration.
+- Added STM32F4 24-pin PCB rev G hardware configuration.  This adds a different programming header and one more image select jumper (so 5 in total, plus X1/2).
 - Added hardware and firmware configuration to specify whether the image select jumpers and X1/X2 pins are pulled high or low when the PCB jumper is closed, to allow for different PCB designs.
 - Added firmware support for up to 7 image select jumpers.
 - Change STM32 MCO (and MCO2) divider to be /5 (previous value was /4).  Makes it easier to measure the clock speed of an overclocked STM32F4.
-- Substantially refactored platform specific code to break out platform agnostic code - significant work to `sdrr/src/main.c`, `utils.c` and `rom_impl.c`. 
+- Substantially refactored platform specific code to break out platform agnostic code - significant work to `sdrr/src/main.c`, `utils.c` and `rom_impl.c`.
+- Tested overclocking and various STM32 clones.
 
 ### Fixes
 
