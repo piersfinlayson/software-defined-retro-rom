@@ -118,9 +118,20 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
                     }
                 } else {
                     // Bank switched set or single ROM set in RP2350 case
+                    uint sel_x1, sel_x2;
+                    if (!json_config->mcu.pins.x_jumper_pull) {
+                        // X1/X2 are pulled high by default, low by jumper, so
+                        // flip em
+                        sel_x1 = x1 ? 0 : 1;
+                        sel_x2 = x2 ? 0 : 1;
+                    } else {
+                        // X1/X2 are pulled low by default, high by jumper
+                        sel_x1 = x1;
+                        sel_x2 = x2;
+                    }
                     
-                    // CS1 state doesn't matter - X1/X2 select the bank (0-3)
-                    int bank = (x2 << 1) | x1;
+                    // CS1 state doesn't matter - X1/X2 selects the bank (0-3)
+                    int bank = (sel_x2 << 1) | sel_x1;
                     
                     // Wrap around if we have fewer ROMs than banks
                     active_rom = bank % rom_set[set_idx].rom_count;
