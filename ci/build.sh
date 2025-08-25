@@ -437,8 +437,12 @@ create_zips() {
     
     # Load MCU variants
     mapfile -t mcu_variants < <(load_mcu_variants)
-    
-    for mcu in "${mcu_variants[@]}"; do
+
+    for mcu_line in "${mcu_variants[@]}"; do
+        # Parse MCU name from variant line
+        mapfile -t parsed_mcu < <(parse_mcu_variant "$mcu_line")
+        local mcu="${parsed_mcu[0]}"
+        
         if [[ -d "${builds_dir}/${mcu}" ]]; then
             # Create firmware-only zip (just .elf files, renamed with config names)
             cd "${builds_dir}/${mcu}"
