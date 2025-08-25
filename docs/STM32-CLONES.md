@@ -18,19 +18,35 @@ For example:
 
 ## GigaDevices GD32F405RGT6
 
-This device has been tested, using One ROM hardware revision E, using a C64, as both kernal and character ROMs.
+This IC has been tested, primarily using:
+- hardware revision E
+- firmware v0.4.0
+- a C64, as character ROM
 
-Some differences were noted when originally tested, although seem to be have disappeared in later testing.  On the other hand, the STM32F405RGT6 has been found to be 20-30% less performant than the GD32F405RGT6, so the GD32F405RGT6 is recommended, despite the potential issues below.
+Key differences from the STM32F405RGT6:
+- Much slower boot - 150ms vs 2-3ms.  This may be due to the IC preloading first 512KB of flash to RAM before executing it from this RAM.  This may be GigaDevice's alternative to STM's Art Accelerator.
+- Only the first half (512KB) of flash is available for code execution - see previous bullet for likely explanation.  A larger firmware image hasn't been tested, but in the One ROM firmware code lives at the start of the firmware, so this is unlikely to cause a problem, even with images beyond 512KB in size.
+- 15-20% higher performance Hz for Hz.  It is equivalent Hz for Hz to the non F405 STMs - the STM32F405 is around 20% slower than these.
+- Much high overclock potential.  It has been overclocked, stably for severals hours, to 400MHz.  It gets quite warm at this speed, but is much cooler at 300MHz.
+- No requirement for capacitors on the VCAP pins.  (They can be populated, but are not required.)
+- Around 10% cheaper (August 2025).
 
-Issues found during original tests:
-
-- Anomalous pin behaviour on reset.  Status LED comes on immediately at "half" brightness on, then brightens, probably when the LED is actually turned on by the firmware.  On the STM32 the LED stays off until fully booted, then turns on.  This suggests the pins are in a different state to the STM32 on boot, but is unlikely to affect operation in practice.
-- Longer startup time.  The GD32F405 takes significantly longer to boot than the STM32F405.  The precise time has not been measured - perhaps 0.5-0.75s, which is much more than the ~1-3ms of the STM32F405.  This is _unlikely_ to be long enough to cause an issue in a device with a long reset delay, and didn't cause an issue with the C64 being tested.
-- Higher minimum clock speed.  The GD32F405 needed to be clocked at a minimum 81MHz to replace the C64 kernal ROM, vs the STM32F405's 79MHz.  This might just be normal variation between silicon, although the STM32F405 claims its internal oscillator is factory trimmed to within 1% at 25C, and the variation here is around 2.5%.
+If your application can stomach the much slower boot time (it is fine for a C64 for axample), then this is a good alternative to the STM32F405RGT6.
 
 ## Geehy APM32F405RGT6
 
-Currently untested.
+This device has bene tested, primarily using:
+- hardware revision F
+- firmware v0.4.0
+- a C64, as character ROM
+
+Key differences from the STM32F405RGT6:
+- Marginally faster boot time - roughly 1.8ms.
+- Sam performance Hz for Hz.  I.e. slower than non F405's Hz for Hz.
+- Lower overclock.  Seems stable at 190MHz, but unstable at 200MHz.
+- Around 20% cheaper (August 2025).
+
+This is a good alternative to the STM32F405RGT6, if you are looking for a lower cost alternative, and overclock is not a priority.
 
 ## CKS CKS32F405RGT6
 

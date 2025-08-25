@@ -1,4 +1,4 @@
-// Vector table and reset handler.
+// One ROM - Vector table and reset handler.
 
 // Copyright (C) 2025 Piers Finlayson <piers@piers.rocks>
 //
@@ -70,6 +70,8 @@ void (* const g_pfnVectors[])(void) = {
     // appears to be 96 (F446), which is what's included here.  This means
     // that 0x080001C4 onwards is free, but we'll not use anything until
     // 0x08000200 to be safe.
+    // Note that the RP2350 has 52, so this is sufficient.  See datasheet
+    // S3.2 - Interrupts
 };
 
 //
@@ -135,16 +137,8 @@ void Reset_Handler(void) {
 void Default_Handler(void) {
     if (sdrr_info.status_led_enabled) {
         setup_status_led();
-        
-        if (sdrr_info.pins->status_port == PORT_B && sdrr_info.pins->status <= 15) {
-            while(1) {
-                GPIOB_BSRR = (1 << (15 + 16)); // LED on (PB15 low)
-                delay(50000);
-                GPIOB_BSRR = (1 << 15);        // LED off (PB15 high)  
-                delay(50000);
-            }
-        } else {
-            while (1);
+        while (1) {
+            blink_pattern(100000, 100000, 255);
         }
     }
 }

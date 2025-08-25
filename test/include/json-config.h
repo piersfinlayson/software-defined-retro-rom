@@ -19,12 +19,12 @@ typedef struct {
 } json_rom_config_t;
 
 typedef struct {
-    sdrr_stm_port_t data_port;
-    sdrr_stm_port_t addr_port;
-    sdrr_stm_port_t cs_port;
-    sdrr_stm_port_t sel_port;
-    sdrr_stm_port_t status_port;
-} stm_ports_t;
+    sdrr_mcu_port_t data_port;
+    sdrr_mcu_port_t addr_port;
+    sdrr_mcu_port_t cs_port;
+    sdrr_mcu_port_t sel_port;
+    sdrr_mcu_port_t status_port;
+} mcu_ports_t;
 
 typedef struct {
     uint8_t pin_2364;
@@ -40,20 +40,22 @@ typedef struct {
     cs_config_t cs3;
     uint8_t x1;
     uint8_t x2;
-    uint8_t sel[4];
+    uint8_t x_jumper_pull;
+    uint8_t sel[7];
+    uint8_t sel_jumper_pull;
     uint8_t status;
-} stm_pins_t;
+} mcu_pins_t;
 
 typedef struct {
     char family[MAX_FAMILY_LEN];
-    stm_ports_t ports;
-    stm_pins_t pins;
-} stm_config_t;
+    mcu_ports_t ports;
+    mcu_pins_t pins;
+} mcu_config_t;
 
 typedef struct {
     char *description;
     json_rom_config_t rom;
-    stm_config_t stm;
+    mcu_config_t mcu;
 } json_config_t;
 
 #endif // JSON_CONFIG_H

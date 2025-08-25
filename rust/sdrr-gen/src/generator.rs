@@ -10,7 +10,7 @@ use std::io::Write;
 use std::path::Path;
 use strum::IntoEnumIterator;
 
-use sdrr_common::{CsLogic, RomType};
+use sdrr_common::{CsLogic, McuFamily, RomType};
 
 use crate::config::Config;
 use crate::file::{OutType, out_filename};
@@ -40,6 +40,7 @@ pub fn generate_files(config: &Config, rom_sets: &[RomSet]) -> Result<()> {
             }
             OutType::GenMk => generate_makefile_fragment(&filename, config)?,
             OutType::LinkerLd => generate_linker_script(&filename, config)?,
+            OutType::PlatformBootBlockLd => generate_platform_ld_script(&filename, config)?,
         }
     }
     Ok(())
@@ -230,7 +231,11 @@ fn generate_roms_implementation_file(
         let num_roms = rom_set.roms.len();
         writeln!(file, "#define ROM_SET_{}_ROM_COUNT  {}", ii, num_roms)?;
         if num_roms == 1 {
-            writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE", ii)?;
+            match config.mcu_variant.family() {
+                McuFamily::Rp2350 => writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE_RP235X", ii)?,
+                McuFamily::Stm32F4 => writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_IMAGE_SIZE_STM32F4", ii)?,
+            }
+            
         } else {
             writeln!(file, "#define ROM_SET_{}_DATA_SIZE  ROM_SET_IMAGE_SIZE", ii)?;
         }
@@ -320,7 +325,10 @@ fn generate_roms_implementation_file(
     for rom_set in rom_sets {
         // Determine image size based on number of ROMs in the set
         let image_size = if rom_set.roms.len() == 1 {
-            16384
+            match config.hw.mcu.family {
+                McuFamily::Stm32F4 => 16384,
+                McuFamily::Rp2350 => 65536,
+            }
         } else {
             // Multi-ROM/banked sets: combined 64KB image
             65536
@@ -382,6 +390,7 @@ fn generate_roms_implementation_file(
             write!(file, "0x{:02x}, ", byte)?;
         }
 
+        writeln!(file)?;
         writeln!(file, "}};")?;
         writeln!(file)?;
     }
@@ -408,17 +417,17 @@ fn generate_sdrr_config_header(filename: &Path, config: &Config) -> Result<()> {
     writeln!(file, "// Hardware configuration")?;
     writeln!(file, "//")?;
 
-    // STM32 variant
+    // MCU variant
     writeln!(file)?;
-    writeln!(file, "// STM32 variant")?;
-    writeln!(file, "{}", config.stm_variant.define_var_fam())?;
-    writeln!(file, "{}", config.stm_variant.define_var_sub_fam())?;
-    writeln!(file, "{}", config.stm_variant.define_var_str())?;
-    writeln!(file, "{}", config.stm_variant.define_flash_size_bytes())?;
-    writeln!(file, "{}", config.stm_variant.define_flash_size_kb())?;
-    writeln!(file, "{}", config.stm_variant.define_ram_size_bytes())?;
-    writeln!(file, "{}", config.stm_variant.define_ram_size_kb())?;
-    if let Some(ccm_ram_kb) = config.stm_variant.ccm_ram_kb() {
+    writeln!(file, "// MCU variant")?;
+    writeln!(file, "{}", config.mcu_variant.define_var_fam())?;
+    writeln!(file, "{}", config.mcu_variant.define_var_sub_fam())?;
+    writeln!(file, "{}", config.mcu_variant.define_var_str())?;
+    writeln!(file, "{}", config.mcu_variant.define_flash_size_bytes())?;
+    writeln!(file, "{}", config.mcu_variant.define_flash_size_kb())?;
+    writeln!(file, "{}", config.mcu_variant.define_ram_size_bytes())?;
+    writeln!(file, "{}", config.mcu_variant.define_ram_size_kb())?;
+    if let Some(ccm_ram_kb) = config.mcu_variant.ccm_ram_kb() {
         writeln!(file, "#define CCM_RAM_BASE 0x10000000")?;
         writeln!(file, "#define CCM_RAM_SIZE {}", ccm_ram_kb*1024)?;
         writeln!(file, "#define CCM_RAM_SIZE_KB {}", ccm_ram_kb)?;
@@ -470,7 +479,7 @@ fn generate_sdrr_config_header(filename: &Path, config: &Config) -> Result<()> {
     writeln!(file)?;
     writeln!(file, "// PLL configuration")?;
     if let Some(pll_defines) = config
-        .stm_variant
+        .mcu_variant
         .generate_pll_defines(config.freq, config.overclock)
     {
         writeln!(file, "{}", pll_defines)?;
@@ -607,6 +616,7 @@ fn generate_sdrr_config_implementation(
     writeln!(file, "#include \"sdrr_config.h\"")?;
     writeln!(file, "#include \"config_base.h\"")?;
     writeln!(file, "#include \"roms.h\"")?;
+    writeln!(file, "#include \"SEGGER_RTT.h\"")?;
     writeln!(file)?;
 
     let hw = &config.hw;
@@ -622,7 +632,7 @@ fn generate_sdrr_config_implementation(
     writeln!(file, "    .rom_pins = {},", hw.rom.pins.quantity)?;
     writeln!(file, "    .reserved1 = {{0, 0}},")?;
 
-    let data_pins = hw.stm.pins.data.clone();
+    let data_pins = hw.mcu.pins.data.clone();
     let data_pins_str = data_pins
         .iter()
         .map(|v| v.to_string())
@@ -630,7 +640,7 @@ fn generate_sdrr_config_implementation(
         .join(", ");
     writeln!(file, "    .data = {{ {} }},", data_pins_str)?;
 
-    let mut addr_pins = hw.stm.pins.addr.clone();
+    let mut addr_pins = hw.mcu.pins.addr.clone();
     addr_pins.resize(16, 255);
     let addr_pins_str = addr_pins
         .iter()
@@ -650,21 +660,37 @@ fn generate_sdrr_config_implementation(
     writeln!(file, "    .x2 = {},", hw.pin_x2())?;
     writeln!(file, "    .ce_23128 = {},", hw.pin_ce(&RomType::Rom23128))?;
     writeln!(file, "    .oe_23128 = {},", hw.pin_oe(&RomType::Rom23128))?;
-    writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0, 0}},")?;
+    writeln!(file, "    .x_jumper_pull = {},", hw.x_jumper_pull())?;
+    writeln!(file, "    .reserved3 = {{0, 0, 0, 0, 0}},")?;
     writeln!(
         file,
-        "    .sel = {{ {}, {}, {}, {} }},",
+        "    .sel = {{ {}, {}, {}, {}, {}, {}, {} }},",
         hw.pin_sel(0),
         hw.pin_sel(1),
         hw.pin_sel(2),
-        hw.pin_sel(3)
+        hw.pin_sel(3),
+        hw.pin_sel(4),
+        hw.pin_sel(5),
+        hw.pin_sel(6),
     )?;
-    writeln!(file, "    .reserved4 = {{0, 0, 0, 0}},")?;
+    writeln!(file, "    .sel_jumper_pull = {},", hw.sel_jumper_pull())?;
     writeln!(file, "    .status = {},", hw.pin_status())?;
     writeln!(file, "    .reserved5 = {{0, 0, 0}},")?;
 
     writeln!(file, "}};")?;
     writeln!(file)?;
+
+    // Extra info structure, introduced in v0.4.0
+    writeln!(file, "// Extra info")?;
+    writeln!(file, "static const sdrr_extra_info_t sdrr_extra_info = {{")?;
+    writeln!(file, "    .rtt = &_SEGGER_RTT,")?;
+    writeln!(file, "    ._post = {{")?;
+    for _ in 0..31 {
+        writeln!(file, "        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,")?;
+    }
+    writeln!(file, "        0xff, 0xff, 0xff, 0xff, ")?;
+    writeln!(file, "    }},")?;
+    writeln!(file, "}};")?;
 
     // Hardware revision string
     writeln!(file, "// Hardware revision string - {}", hw.description)?;
@@ -698,12 +724,12 @@ fn generate_sdrr_config_implementation(
     // Hardware revision
     writeln!(file, "    .hw_rev = sdrr_hw_rev,")?;
 
-    // STM32 info
-    writeln!(file, "    .stm_line = {},", config.stm_variant.line_enum())?;
+    // MCU info
+    writeln!(file, "    .mcu_line = {},", config.mcu_variant.line_enum())?;
     writeln!(
         file,
-        "    .stm_storage = {},",
-        config.stm_variant.storage_enum()
+        "    .mcu_storage = {},",
+        config.mcu_variant.storage_enum()
     )?;
 
     // Frequency and overclock
@@ -759,6 +785,7 @@ fn generate_sdrr_config_implementation(
 
     // Boot configuration - reserved for future use, set to 0xff
     writeln!(file, "    .boot_config = {{0xff, 0xff, 0xff, 0xff}},")?;
+    writeln!(file, "    .extra = &sdrr_extra_info,")?;
 
     writeln!(file, "}};")?;
 
@@ -768,14 +795,14 @@ fn generate_sdrr_config_implementation(
 fn generate_makefile_fragment(filename: &Path, config: &Config) -> Result<()> {
     let mut file = create_file(&config.output_dir, filename, FileType::Makefile)?;
 
-    // STM32 variant
-    writeln!(file, "# STM32 variant")?;
-    writeln!(file, "VARIANT={}", config.stm_variant.makefile_var())?;
+    // MCU variant
+    writeln!(file, "# MCU variant")?;
+    writeln!(file, "VARIANT={}", config.mcu_variant.makefile_var())?;
 
     // probe-rs chip-id
     writeln!(file)?;
     writeln!(file, "# probe-rs Chip ID")?;
-    writeln!(file, "PROBE_RS_CHIP_ID={}", config.stm_variant.chip_id())?;
+    writeln!(file, "PROBE_RS_CHIP_ID={}", config.mcu_variant.chip_id())?;
 
     writeln!(file)?;
 
@@ -785,19 +812,32 @@ fn generate_makefile_fragment(filename: &Path, config: &Config) -> Result<()> {
 fn generate_linker_script(filename: &Path, config: &Config) -> Result<()> {
     let mut file = create_file(&config.output_dir, filename, FileType::Linker)?;
 
+    writeln!(file, "INCLUDE \"common_vars.ld\"")?;
+    writeln!(file)?;
     writeln!(file, "MEMORY")?;
     writeln!(file, "{{")?;
-    writeln!(
-        file,
-        "    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = {}K",
-        config.stm_variant.flash_storage_kb()
-    )?;
+    match config.mcu_variant.family() {
+        McuFamily::Rp2350 => {
+            writeln!(
+                file,
+                "    FLASH (rx) : ORIGIN = 0x10000000, LENGTH = {}K",
+                config.mcu_variant.flash_storage_kb()
+            )?;
+        }
+        McuFamily::Stm32F4 => {
+            writeln!(
+                file,
+                "    FLASH (rx) : ORIGIN = 0x08000000, LENGTH = {}K",
+                config.mcu_variant.flash_storage_kb()
+            )?;
+        }
+    }
     writeln!(
         file,
         "    RAM (xrw)  : ORIGIN = 0x20000000, LENGTH = {}K",
-        config.stm_variant.ram_kb()
+        config.mcu_variant.ram_kb()
     )?;
-    if let Some(ccm_ram_kb) = config.stm_variant.ccm_ram_kb() {
+    if let Some(ccm_ram_kb) = config.mcu_variant.ccm_ram_kb() {
         writeln!(
             file,
             "    CCMRAM (rw): ORIGIN = 0x10000000, LENGTH = {}K",
@@ -806,13 +846,44 @@ fn generate_linker_script(filename: &Path, config: &Config) -> Result<()> {
     }
     writeln!(file, "}}")?;
     writeln!(file)?;
-    if config.stm_variant.ram_kb() > 72 {
+
+    match config.mcu_variant.family() {
+        McuFamily::Rp2350 => {
+            writeln!(file, "_Ram_Rom_Image_Start = ORIGIN(RAM) + 0x10000;")?;
+        }
+        McuFamily::Stm32F4 => {
+            writeln!(file, "_Ram_Rom_Image_Start = ORIGIN(RAM) + _Sdrr_Runtime_Info_Size;")?;
+        }
+    }
+    if config.mcu_variant.ram_kb() > 72 {
         writeln!(file, "_Ram_Rom_Image_Size = 0x10000;  /* 64 KB */")?;
     } else {
         writeln!(file, "_Ram_Rom_Image_Size = 0x04000;  /* 16 KB */")?;
     }
     writeln!(file)?;
-    writeln!(file, "INCLUDE stm32f-common.ld")?;
+    writeln!(file, "INCLUDE \"common.ld\"")?;
+
+    Ok(())
+}
+
+fn generate_platform_ld_script(filename: &Path, config: &Config) -> Result<()> {
+    let mut file = create_file(&config.output_dir, filename, FileType::Linker)?;
+    match config.mcu_variant.family() {
+        McuFamily::Rp2350 => {
+            writeln!(file, "/* RP2350 specific linker script */")?;
+            writeln!(file, ".rp2350_block :")?;
+            writeln!(file, "{{")?;
+            writeln!(file, "    . = ALIGN(4);")?;
+            writeln!(file, "    KEEP(*(.rp2350_block))")?;
+            writeln!(file, "    . = ALIGN(4);")?;
+            writeln!(file, "}} >FLASH")?;
+        }
+        McuFamily::Stm32F4 => {
+            writeln!(file, "/* STM32F4 specific linker script */")?;
+            writeln!(file)?;
+            writeln!(file, "/* Intentionally empty */")?;
+        }
+    } 
 
     Ok(())
 }

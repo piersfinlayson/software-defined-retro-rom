@@ -7,7 +7,7 @@
 #include "include.h"
 
 // Metadata strings to include in the binary
-const char stm_variant[] = STM_VARIANT;
+const char mcu_variant[] = MCU_VARIANT;
 const char license[] = "MIT License";
 const char project_url[] = "https://piers.rocks/u/one";
 const char copyright[] = "Copyright (c) 2025";

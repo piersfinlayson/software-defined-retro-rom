@@ -10,7 +10,7 @@
 use crate::config::{RomInSet, SizeHandling};
 use anyhow::{Context, Result};
 use sdrr_common::hardware::HwConfig;
-use sdrr_common::{CsLogic, RomType};
+use sdrr_common::{CsLogic, RomType, McuFamily};
 use std::fs;
 use std::path::Path;
 
@@ -198,18 +198,37 @@ impl RomSet {
     pub fn get_byte(&self, address: usize, hw: &HwConfig) -> u8 {
         let phys_pin_to_data_map = hw.get_phys_pin_to_data_map();
 
-        // Hard-coded assumption that X1/X2 (if present) are pins 14/15 for
-        // single ROM sets and banked ROM sets.
+        // Hard-coded assumption that X1/X2 (STM32F4) are pins 14/15 for
+        // single ROM sets and banked ROM sets.  However, for RP2350 they may
+        // be other pins.
         if (self.roms.len() == 1) || (self.is_banked) {
             let (rom_index, masked_address) = if !self.is_banked {
-                assert!(address < 16384, "Address out of bounds for single ROM set");
+                match hw.mcu.family {
+                    McuFamily::Rp2350 => {
+                        // Single ROM set: uses entire 64KB space
+                        assert!(address < 65536, "Address out of bounds for RP235X single ROM set");
+                    }
+                    McuFamily::Stm32F4 => {
+                        // Single ROM set: uses entire 64KB space
+                        assert!(address < 16384, "Address out of bounds for STM32F4 single ROM set");
+                    }
+                }
                 (0, address)
             } else {
-                // Banked mode: use top 2 bits (14,15) to select ROM
+                // Banked mode: use X1/X2 to select ROM
                 assert!(address < 65536, "Address out of bounds for banked ROM set");
-                let bank = (address >> 14) & 3; // Get bank
+                let x1_pin = hw.pin_x1();
+                let x2_pin = hw.pin_x2();
+                let bank = if hw.x_jumper_pull() == 1 {
+                    ((address >> x1_pin) & 1) | (((address >> x2_pin) & 1) << 1)
+                } else {
+                    // Invert the logic if the jumpers pull to GND
+                    (!((address >> x1_pin)) & 1) | ((!((address >> x2_pin) & 1)) << 1)
+
+                };  
+                let mask = !(1 << x1_pin) & !(1 << x2_pin);
+                let masked_address = address & mask;
                 let rom_index = bank % self.roms.len(); // Wrap around
-                let masked_address = address & 0x3FFF; // Remove top 2 bits
                 (rom_index, masked_address)
             };
 

@@ -29,9 +29,10 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
         uint8_t num_roms = rom_set[set_idx].rom_count;
         sdrr_serve_t serve = rom_set[set_idx].serve;
 
-        // Single ROM sets are handled in the if.  Both multi-ROM and bank
-        // switched sets are handled in the else.
-        if (num_roms == 1) {
+        // Single ROM sets for STM32F4 are handled in the if - as a 16KB image.
+        // Both multi-ROM and bank switched sets, and single ROM sets for
+        // RP2350, are handled in the else.
+        if ((num_roms == 1) && (strcmp(json_config->mcu.family, "rp2350"))) {
             int loaded_rom_idx = overall_rom_idx;
             printf("- Single ROM set\n");
             printf("  - Testing ROM %d in set %d\n", 0, set_idx);
@@ -116,10 +117,21 @@ int validate_all_rom_sets(json_config_t *json_config, loaded_rom_t *loaded_roms,
                         }
                     }
                 } else {
-                    // Bank switched set
+                    // Bank switched set or single ROM set in RP2350 case
+                    uint sel_x1, sel_x2;
+                    if (!json_config->mcu.pins.x_jumper_pull) {
+                        // X1/X2 are pulled high by default, low by jumper, so
+                        // flip em
+                        sel_x1 = x1 ? 0 : 1;
+                        sel_x2 = x2 ? 0 : 1;
+                    } else {
+                        // X1/X2 are pulled low by default, high by jumper
+                        sel_x1 = x1;
+                        sel_x2 = x2;
+                    }
                     
-                    // CS1 state doesn't matter - X1/X2 select the bank (0-3)
-                    int bank = (x2 << 1) | x1;
+                    // CS1 state doesn't matter - X1/X2 selects the bank (0-3)
+                    int bank = (sel_x2 << 1) | sel_x1;
                     
                     // Wrap around if we have fewer ROMs than banks
                     active_rom = bank % rom_set[set_idx].rom_count;

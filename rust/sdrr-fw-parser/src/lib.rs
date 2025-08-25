@@ -36,8 +36,8 @@ use esp_println as _;
 
 /// Maximum SDRR firmware versions supported by this version of`sdrr-fw-parser`
 pub const MAX_VERSION_MAJOR: u16 = 0;
-pub const MAX_VERSION_MINOR: u16 = 3;
-pub const MAX_VERSION_PATCH: u16 = 1;
+pub const MAX_VERSION_MINOR: u16 = 4;
+pub const MAX_VERSION_PATCH: u16 = 0;
 
 // lib.rs - Public API and core traits
 pub mod info;
@@ -53,10 +53,10 @@ use core::fmt;
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
 
-pub use info::{Sdrr, SdrrInfo, SdrrPins, SdrrRomInfo, SdrrRomSet, SdrrRuntimeInfo};
+pub use info::{Sdrr, SdrrInfo, SdrrPins, SdrrRomInfo, SdrrRomSet, SdrrRuntimeInfo, SdrrExtraInfo};
 pub use types::{
-    SdrrAddress, SdrrCsSet, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrStmPort,
-    StmLine, StmStorage,
+    SdrrAddress, SdrrCsSet, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrMcuPort,
+    McuLine, McuStorage,
 };
 
 use crate::parsing::{parse_and_validate_header, parse_and_validate_runtime_info, SdrrInfoHeader, SdrrRuntimeInfoHeader};
@@ -148,6 +148,11 @@ pub trait Reader {
         addr: u32,
         buf: &mut [u8],
     ) -> impl core::future::Future<Output = Result<(), Self::Error>> + Send;
+
+    /// Updates the reader's base address if it is later detected that it needs
+    /// to change.
+    fn update_base_address(&mut self, new_base: u32);
+
 }
 
 /// Parser for Software Defined Retro ROM (SDRR) firmware images.
@@ -376,6 +381,14 @@ impl<R: Reader> Parser<R> {
         // Parse and validate header using the helper
         let header = self.retrieve_header().await?;
 
+        // Update our base address based on the header - before this we don't
+        // need to have the correct base_flash_address set.  Base RAM is the
+        // same.
+        if header.stm_line == McuLine::Rp2350 {
+            self.base_flash_address = 0x10000000; // RP2350 flash base address
+            self.reader.update_base_address(self.base_flash_address);
+        }
+
         let mut parse_errors = Vec::new();
 
         // Parse strings with error collection
@@ -391,6 +404,21 @@ impl<R: Reader> Parser<R> {
             Ok(s) => Some(s),
             Err(e) => {
                 parse_errors.push(ParseError::new("Hardware Revision", e));
+                None
+            }
+        };
+
+        // Parse extra info
+        let extra_info = match parsing::read_extra_info(
+            &mut self.reader,
+            header.extra_ptr,
+            self.base_flash_address,
+        )
+        .await
+        {
+            Ok(info) => Some(info),
+            Err(e) => {
+                parse_errors.push(ParseError::new("Extra Info", e));
                 None
             }
         };
@@ -421,7 +449,7 @@ impl<R: Reader> Parser<R> {
                     None
                 }
             };
-
+ 
         Ok(SdrrInfo {
             major_version: header.major_version,
             minor_version: header.minor_version,
@@ -446,6 +474,7 @@ impl<R: Reader> Parser<R> {
             pins,
             boot_config: header.boot_config,
             parse_errors,
+            extra_info,
         })
     }
 
@@ -479,7 +508,7 @@ impl<R: Reader> Parser<R> {
             self.reader
                 .read(addr, &mut buf[..chunk_size])
                 .await
-                .map_err(|_| format!("Failed to read string at 0x{:08X}", ptr))?;
+                .map_err(|_| format!("Failed to read string at 0x{ptr:08X}"))?;
 
             if let Some(null_pos) = buf[..chunk_size].iter().position(|&b| b == 0) {
                 result.extend_from_slice(&buf[..null_pos]);

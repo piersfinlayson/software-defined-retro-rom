@@ -4,6 +4,8 @@
 
 The most flexible ROM replacement for your retro computer. It is highly configurable and low-cost.  Get them fabbed at JLC for under $5 each in a quantity of 10 or more.
 
+Based on a Raspberry Pi RP2350 or STM32F4 microcontroller.
+
 One ROM emulates any system's 2364, 2332 and 2316 ROMs, with any chip select configuration, and can serve different images to multiple ROM sockets simultaneously.
 
 Replaces failed ROMs in Commodore 64s, VIC-20s, PETs, disk drives.
@@ -12,7 +14,7 @@ One ROM was formerly known as Software Defined Retro ROM (SDRR).
 
 ## Key Features
 
-💰 Based on **[$2 microcontroller](docs/STM32-SELECTION.md)**.
+💰 Based on sub-$2 microcontrollers.  [**Choose from Raspberry Pi or STM flavours**]((docs/MCU-SELECTION.md)).
 
 ⚡ **[Fast](docs/STM32-SELECTION.md)** enough for PETs, VIC-20s, C64s, 1541s, IEEE drives, etc. Support faster systems with higher end microcontroller.
 
@@ -44,18 +46,16 @@ One ROM was formerly known as Software Defined Retro ROM (SDRR).
 
 ## Introduction
 
-The video below provides an introduction to the Software Defined Retro ROM:
+The video below provides an introduction to One ROM:
 
 [![Video Title](https://img.youtube.com/vi/Jhe4LF5LrZ8/maxresdefault.jpg)](https://youtu.be/Jhe4LF5LrZ8)
 
 ## Hardware
 
-This is the STM32F4 24-pin version, hardware revison G1.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
+This is the RP2350 24-pin version, hardware revison A.  See [sdrr-pcb](sdrr-pcb/README.md) for the hardware designs and documentation.
 
 <div style="display: flex; justify-content: center; gap: 20px;">
-  <a href="docs/images/sdrr-24-pin-side.png">
-    <img src="docs/images/sdrr-24-pin-side.png" alt="One ROM STM32F4 24 pin side on" width="400">
-  </a>
+  <img src="docs/images/one-rom-24-pin-rp2350-rev-a-side.png" alt="One ROM RP2350 24 pin rev A side on" width="400">
 </div>
 
 ## Quick Start
@@ -104,7 +104,7 @@ For configuration options, see [Configuration](docs/CONFIGURATION.md) and the [M
 | [Installation](INSTALL.md) | Installation of dependencies. |
 | [Programming](docs/PROGRAMMING.md) | How to program One ROM. |
 | [Available Configurations](config/README.md#available-configurations) | Various pre-collated ROM collection configurations. |
-| [STM32 Selection](docs/STM32-SELECTION.md) | How to select the appropriate STM32 variant for your application. |
+| [MCU Selection](docs/MCU-SELECTION.md) | How to select the appropriate MCU for your application. |
 | [Image Selection](docs/IMAGE-SELECTION.md) | How to tell One ROM which of the installed ROM images to serve. |
 | [Image Sets](docs/MULTI-ROM-SETS.md) | How to use a single One ROM to support multiple ROMs simultaneously or to dynamically switch between images. |
 | [Configuration](docs/CONFIGURATION.md) | One ROM configuration options. |

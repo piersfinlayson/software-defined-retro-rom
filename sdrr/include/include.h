@@ -14,8 +14,8 @@
 // If you are not using sdrr-gen, you must define configuration options
 // manually.  Exmaples are given here:
 //
-// #define STM_VARIANT "F103R8"
-// #define STM_FLASH_SIZE 65536
+// #define MCU_VARIANT "F103R8"
+// #define MCU_FLASH_SIZE 65536
 // #define MCO2 1 // Enable MCO2 (microcontroller clock output) on PC9
 // #define BOOT_LOGGING 1  // Enable boot logging
 // #define DEBUG_LOGGING 1  // Enable more verbose logging
@@ -27,9 +27,12 @@
 //                          // that support CCM RAM
 // #define C_MAIN_LOOP 1    // Disable assembly main loop, use less performant
 //                          // C main loop
-// define DUMB_C_MAIN_LOOP_2_CS // Requires C_MAIN_LOOP, and even worse
-//                              // implementation, which only supports 2 CS
-//                              // lines.  Probably don't use.
+// #define DUMB_C_MAIN_LOOP_2_CS    // Requires C_MAIN_LOOP, and even worse
+//                                  // implementation, which only supports 2
+//                                  // CS lines.  Probably don't use.
+// #define RP_USE_CP 1  // Use the coprocessor instructions to set the data
+//                      // lines as inputs/outputs.  Slight less performant
+//                      // than SIO access.
 //
 // sdrr-gen also provides the rom images:
 //
@@ -79,7 +82,7 @@ extern const sdrr_info_t sdrr_info;
 #error "TIMER_TEST and EXECUTE_FROM_RAM are mutually exclusive"
 #endif // TIMER_TEST/TOGGLE_PA4
 
-#if ((ROM_IMAGE_SIZE * SDRR_NUM_IMAGES) + (16 * 1024)) > STM_FLASH_SIZE
+#if ((ROM_IMAGE_SIZE * SDRR_NUM_IMAGES) + (16 * 1024)) > MCU_FLASH_SIZE
 // Reserving 16KB for SDRR code size
 // The linker would throw an error if the image size is too large, but this is
 // from graceful.
@@ -97,6 +100,14 @@ extern const sdrr_info_t sdrr_info;
 #if defined(DEBUG_LOGGING) && !defined(BOOT_LOGGING)
 #error "DEBUG_LOGGING requires BOOT_LOGGING to be defined"
 #endif // DEBUG_LOGGING/BOOT_LOGGING
+
+#if !defined(SWD) && defined(RP235X)
+#error "SWD being disabled is not supported on RP235X"
+#endif // !defined(SWD) && defined(RP235X)
+
+#if defined(MCO) && defined(RP235X)
+#error "MCO is not supported on RP235X"
+#endif // !defined(SWD) && defined(RP235X)
 
 //
 // Set up clocking configuration for the internal and external oscillators
@@ -143,5 +154,18 @@ extern const sdrr_info_t sdrr_info;
 
 // Struct used to hold the runtime information for SDRR
 extern sdrr_runtime_info_t sdrr_runtime_info;
+
+// Linker variables, used by log_init()
+extern uint32_t _flash_start;
+extern uint32_t _flash_end;
+extern uint32_t _ram_size;
+
+#if defined(STM32F4)
+#include "stm32f4_inlines.h"
+#endif // STM32F4
+
+#if defined(RP235X)
+#include "rp235x_inlines.h"
+#endif // RP235X
 
 #endif // SDRR_INCLUDE_H

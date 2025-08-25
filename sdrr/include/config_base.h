@@ -16,8 +16,9 @@ typedef enum {
     F411 = 0x0002,
     F446 = 0x0003,
     F401BC = 0x0004,  // Only 64KB RAM
-    STM_LINE_FORCE_UINT16 = 0xFFFF,
-} stm_line_t;
+    RP2350_LINE = 0x0005,
+    MCU_LINE_FORCE_UINT16 = 0xFFFF,
+} mcu_line_t;
 
 typedef enum {
     STORAGE_8 = 0x00,
@@ -27,32 +28,37 @@ typedef enum {
     STORAGE_E = 0x04,
     STORAGE_F = 0x05,
     STORAGE_G = 0x06,
-    STM_STORAGE_FORFCE_UINT16 = 0xFFFF,
-} stm_storage_t;
+    STORAGE_2MB = 0x07,
+    MCU_STORAGE_FORFCE_UINT16 = 0xFFFF,
+} mcu_storage_t;
 
 // Only ports A-D are exposed on the 64-pin STM32F4s.
+// RP2350 has port (bank) 0.
 typedef enum {
     PORT_NONE = 0x00,
     PORT_A    = 0x01,
     PORT_B    = 0x02,
     PORT_C    = 0x03,
     PORT_D    = 0x04,
-} sdrr_stm_port_t;
+    PORT_0    = 0x05,  // RP2350
+} sdrr_mcu_port_t;
 
 // Pin allocations
 //
 // All pin numbers are physical pins - allocated from the configured STM32F4
-// port.  Valid numbers are 0-15.  255 indicates a particular pin is present.
-// The index into the array is ROM Ax or Dx number.
+// port.  Valid numbers are 0-15 on the STM32, 0-29 on the RP2350.
+// 255 indicates a particular pin is present.
+// The index into the array is ROM Address x or Data x number.
+#define INVALID_PIN  255
 typedef struct {
-    // SDRR STM32 pin port locations
+    // SDRR MCU pin port locations
     // Offset: 0
     // 8 x 1 byte = 8 bytes
-    sdrr_stm_port_t data_port;  // Data lines
-    sdrr_stm_port_t addr_port;  // Address lines
-    sdrr_stm_port_t cs_port;    // Chip select/enable lines
-    sdrr_stm_port_t sel_port;   // Image select jumpers
-    sdrr_stm_port_t status_port; // Status LED
+    sdrr_mcu_port_t data_port;  // Data lines
+    sdrr_mcu_port_t addr_port;  // Address lines
+    sdrr_mcu_port_t cs_port;    // Chip select/enable lines
+    sdrr_mcu_port_t sel_port;   // Image select jumpers
+    sdrr_mcu_port_t status_port; // Status LED
     uint8_t rom_pins;           // Number of pins this ROM is emulating 
     uint8_t reserved1[2];
 
@@ -68,6 +74,11 @@ typedef struct {
     uint8_t reserved2[4];
 
     // Chip select lines for supported variants
+    //
+    // x_jumper_pull is the direction of pull from the X1/X2 jumper on the
+    // board.  It is 1 if that jumper closing pulls it high, and 0 if it pulls
+    // it low.
+    //
     // Offset: 36
     // 16 x 1 byte = 16 bytes
     uint8_t cs1_2364;
@@ -80,13 +91,27 @@ typedef struct {
     uint8_t x2;
     uint8_t ce_23128;
     uint8_t oe_23128;
-    uint8_t reserved3[6];
+    uint8_t x_jumper_pull;
+    uint8_t reserved3[5];
 
     // Image select lines
+    //
+    // Sel jumper pull is the direction of pull-up or pull-down when closing
+    // the jumper on this board type.  If 1, closing the jumper pulls it up.
+    // This is used by One ROM to decide what type of its own pulls to apply
+    // (the opposite).  Closing is always interpreted as a 1 by One ROM.
+    //
+    // Unused image select pins are set to 255.
+    //
+    // The order of pins in this array is significant - [0] is bit 0 of the
+    // interpreted value, [1] bit 1, etc.  If a pin is missing (255) mid
+    // array, the _next_ entry will be missing bit.
+    //
     // Offset: 52
-    // 8 x 4 bytes = 8 bytes
-    uint8_t sel[4];
-    uint8_t reserved4[4];
+    // 8 bytes
+#define MAX_IMG_SEL_PINS 7
+    uint8_t sel[MAX_IMG_SEL_PINS];
+    uint8_t sel_jumper_pull;
 
     // Status LED line
     // Offset: 60
@@ -99,6 +124,15 @@ typedef struct {
 
 // Forward declarations
 struct sdrr_rom_set_t;
+
+// Extra information stored in flash
+typedef struct {
+    // Pointer to RTT control block
+    const void *rtt;
+
+    // Padding to make 256 bytes long
+    uint8_t _post[252];
+} sdrr_extra_info_t;
 
 // Main SDRR information data structure
 typedef struct {
@@ -130,11 +164,11 @@ typedef struct {
     // 4 bytes
     const char* hw_rev;
 
-    // STM32 product line
+    // MCU product line
     // Offset: 28
     // 2 x 2 bytes = 4 bytes
-    const stm_line_t stm_line;
-    const stm_storage_t stm_storage;
+    const mcu_line_t mcu_line;
+    const mcu_storage_t mcu_storage;
 
     // Target frequency in MHz
     // Offset: 32
@@ -190,7 +224,17 @@ typedef struct {
     // 4 bytes
     const uint8_t boot_config[4];
 
-    // Length: 56
+    // 56 bytes to here
+
+    // v0.4.0 beyond here
+    
+    // Pointer to RTT control block
+    const sdrr_extra_info_t *extra;
+
+    // 4 further bytes
+    uint8_t _post[4];
+
+    // Length: 64
 } sdrr_info_t;
 
 // ROM image sizes by type (F1 family)
@@ -199,7 +243,8 @@ typedef struct {
 #define ROM_IMAGE_SIZE_2364  8192
 
 // Maximum ROM image size (F4 family uses a single size for all ROM types)
-#define ROM_IMAGE_SIZE  16384
+#define ROM_IMAGE_SIZE_STM32F4  16384
+#define ROM_IMAGE_SIZE_RP235X   65536
 
 // ROM image size for sets of more than 1 ROM image
 #define ROM_SET_IMAGE_SIZE  65536
@@ -238,6 +283,7 @@ typedef enum {
     // multiple ROM images on hardware revision F.
     SERVE_ADDR_ON_ANY_CS,
 } sdrr_serve_t;
+#define SERVE_DEFAULT_1_ROM  SERVE_ADDR_ON_CS
 
 // ROM information structure
 typedef struct {
@@ -336,7 +382,7 @@ typedef struct sdrr_runtime_info_t {
     // 4 bytes
     void *rom_table;
 
-    // Length of the ROM table SDRR is servig in bytes.
+    // Length of the ROM table SDRR is serving in bytes.
     // Initialized to 0.
     // Offset: 16
     // 4 bytes

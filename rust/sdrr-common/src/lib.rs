@@ -7,4 +7,4 @@ pub mod hardware;
 mod sdrr_types;
 
 pub use hardware::HwConfig;
-pub use sdrr_types::{CsLogic, RomType, ServeAlg, StmFamily, StmProcessor, StmVariant};
+pub use sdrr_types::{CsLogic, RomType, ServeAlg, McuFamily, McuProcessor, McuVariant};

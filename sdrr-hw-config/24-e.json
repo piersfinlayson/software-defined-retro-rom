@@ -1,11 +1,11 @@
 {
-  "description": "SDRR 24-pin rev e",
+  "description": "One ROM STM32F4 24-pin rev E",
   "rom": {
     "pins": {
       "quantity": 24
     }
   },
-  "stm": {
+  "mcu": {
     "family": "f4",
     "ports": {
         "data_port": "A",
@@ -29,7 +29,9 @@
         "cs3": {
         "2316": 9
         },
+        "x_jumper_pull": 1,
         "sel": [0, 1, 2, 7],
+        "sel_jumper_pull": 1,
         "status": 15
     }
   }

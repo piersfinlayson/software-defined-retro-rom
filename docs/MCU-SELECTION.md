@@ -1,10 +1,48 @@
-# STM32 Selection
+# MCU Selection
+
+Your most important choice is between a Raspbery Pi RP2350-based One ROM, or an STM32F4-based One ROM.  Both have roughly equivalent support in the firmware.
+
+| Feature | RP2350 | STM32F4 |
+|---------|--------|---------|
+| **Firmware** | Support just added but already mostly complete | More mature firmware |
+| **Price Each (5 units)** | $9 | $6.50 |
+| **Price Each (20 units)** | $4.50 | $3.25 |
+| **Performance** | Roughly per STM32, shows more overclocking headroom | Roughly per RP2350, but has slight edge |
+| **Image Select Jumpers** | 3 | 5 |
+| **Bank/Set Pins** | 2 | 2 |
+| **Flash Size** | 2MB | 128KB-1MB |
+| **Physical Size** | 2316/2332/2364 footprint | Same |
+| **Future Enhancements** | May utilize dual cores for additional features in future updates | Expected to be supported for foreseeable future |
+
+Notes:
+- **Price**: Approximate Assembled price, each, from JLCPCB, August 2025, not including tax and shipping.
+- **Image Select Jumpers**: More jumpers allow more images to be selected between at boot time
+- **Bank/Set Pins**: Allow dynamic switching between images at runtime, or serving multiple ROM sockets at once
+- **Storage Impact**: Flash size impacts ROM image storage capacity and multi-ROM set usage
+- **Support**: Both boards are expected to be supported long-term
+- **Price Trend**: RP2350 is more expensive in small quantities but prices converge at larger volumes
+
+## Which One Should **You** Choose?
+
+If you don't have strong reasons to go with the STM32, go with the RP2350.  Get a few and expect you might fry one one day with a dodgy voltage regular/power supply.
+
+One ROM's support is already essentially equivalent and will only get better.
+
+## RP2350
+
+The One ROM Pico uses the RP2350 MCU, A4 stepping or later.  This is now (August 2025) used by default by JLC's PCB assembly service.
+
+See [RP2350](docs/RP2350.md) for more details about the RP2350 support, including some earlier performance results.
+
+## STM32
+
+The One ROM STM uses the STM32F4 family of MCUs.  This section aims to help you choose the right one for your needs.
 
 All performance figures in this document are based on testing genuine STM32 parts.  For a discussion of clones, see [STM32-Clones](/docs/STM32-CLONES.md).
 
 If you'd like an unsupported STM32 variant supported, please raise an issue via GitHub or [add it yourself](docs/STM32-SELECTION.md#supporting-other-variants) and submit a PR.
 
-## Supported Microcontrollers
+### Supported Microcontrollers
 
 The following table provides details about the supported STM32 and clone microcontrollers:
 
@@ -33,7 +71,7 @@ The F401 may require a small overclock for some systems, such as running the C64
 
 There are also cheap [clones available](/docs/STM32-CLONES.md), with a clone F405 coming in at around the same price as a genuine F411 (from LCSC).  The GD32F405RGT6 has been tested, and is a recommended MCU.
 
-## Clock Speed Requirements
+### Clock Speed Requirements
 
 Ideally, you should not specify the `FREQ` build variable, which will cause the STM32 variant you choose to run at its maximum clock speed.
 
@@ -65,13 +103,13 @@ When running multiple One ROMs in a single system, you may find you have to run 
 
 When all CS lines on a ROM are active low, the serving algorithm is slightly quicker, and hence slower clock speeds are acceptable.
 
-## ROM Image Capacity
+### ROM Image Capacity
 
 Each ROM image consumes 16KB of flash (irrespective of the ROM type - see [Technical Details](/docs/TECHNICAL-DETAILS.md) for why), so the maximum number of ROM images that can be stored is limited by the flash size for smaller variants.  The One ROM firmware itself consumes between 16-32KB of flash.  The rest of the flash can be used for images, up to a maximum of 16, which is limited by the number of select jumpers on the PCB, which in turn is limited by the phyical size of the original ROM footprint.
 
 If you are using multi-ROM sets (of up to 3 images), each set consumes 64KB of flash, again irrespective of the image types.
 
-## Supporting Other Variants
+### Supporting Other Variants
 
 If you have a different variant, the easiest way to support it is to choose a version above which is of the same or higher power than your chosen variant, and select that version.
 
@@ -94,7 +132,7 @@ If you want to add support for another variant:
   - Add it to [`/sdrr/src/utils.c`](/sdrr/src/utils.c) - `log_init` function.
   - Add any support specifically for this STM32 variant - grep for "STM32F411" and "STM32F405" for examples of variant specific code.
 
-## STM32F4 Family Comparisons
+### STM32F4 Family Comparisons
 
 For completeness, all of the STM32F4xxR variants are compared in the following table.  All of these variants proivde the Cortex-M4F core.
 

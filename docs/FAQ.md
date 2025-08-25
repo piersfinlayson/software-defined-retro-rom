@@ -55,23 +55,6 @@ Use F405 or F446 if unsure - they supports all target systems.
 
 See the [STM32 Selection](/docs/STM32-SELECTION.md) section for more details.
 
-**Q: Why didn't you use a Raspberry Pi Pico/RP2040 or other microcontroller?**
-
-A: The one sentence answer to this is that no other microcontroller had all of the required performance, 5V tolerant GPIOs and low cost.
-
-In the case of the Raspberry Pi Pico/RP2040, its GPIOs are not 5V tolerant, and it would have required level shifters.  It also does not have internal flash (although a subsequent RP2350 model does).  This would have significantly increased the cost and complexity of the design, and almost certainly led to either 4 layer PCBs, or a larger PCB footprint, or both.  This is sad, because otherwise the RP2040/RP2350 would be a great fit for this project - it has a high clock speed, dual cores, enough RAM and a sufficient number of GPIOs.  Its PIO capability could probably have been put to great use.
-
-There is a more detailed explanation of the STM32 choice in [Hardware Selection](/docs/TECHNICAL-DETAILS.md#hardware-selection).
-
-Update 29 July 2025.  Raspberry Pi announced 5V tolerance in the A4 stepping (version) of the RP2350.  This makes a RP2350 version of the One ROM more feasible, but there are still issues:
-- The RP2350 A4 is tolerant up to 5.5V.  However, the original chips in retro machines, and the STM32F4 are tolerant to 7V.  Voltages about 5.5V in old machines with questionable voltage regulators re not unheard of, and could lead to a dead RP2350.
-- An external flash chip is still required, as it seems that the RP2354 (which built-in flash) is not yet 5V tolerant.
-- 5V tolerance is limited to GPIOs 0-25 (this is sufficient for One ROM).
-- An external oscillator is still required, as are other components in addition to the STM32F4 - such as more substantial power circuitry.  This continues makes a single sided layout challenging.
-- The RP2350 is not really hand solderable.
-
-If someone builds an RP2350 version of the One ROM a software port should be relatively easy!
-
 **Q: Why are you using the STM32's internal oscillator - doesn't that make it unstable?**
 
 A: An internal oscillator was one of the microcontroller selection criteria, in order to simplify the design, and reduce the PCB footprint and BOM cost.  The STM32F4 runs stably off its internal oscillator, although its accuracy is not as good as from an external crystal.  A precisely accurate clock is not required for this application - it primarily requires raw speed.

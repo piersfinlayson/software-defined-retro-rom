@@ -10,8 +10,8 @@ use deku::prelude::*;
 
 use crate::{ParseError, Parser, Reader};
 use crate::{
-    SdrrAddress, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrStmPort, StmLine,
-    StmStorage,
+    SdrrAddress, SdrrCsState, SdrrLogicalAddress, SdrrRomType, SdrrServe, SdrrMcuPort, McuLine,
+    McuStorage,
 };
 
 #[cfg(not(feature = "std"))]
@@ -51,8 +51,8 @@ pub struct SdrrInfo {
     pub patch_version: u16,
     pub build_number: u16,
     pub commit: [u8; 8],
-    pub stm_line: StmLine,
-    pub stm_storage: StmStorage,
+    pub stm_line: McuLine,
+    pub stm_storage: McuStorage,
     pub freq: u16,
     pub overclock: bool,
     pub swd_enabled: bool,
@@ -73,6 +73,9 @@ pub struct SdrrInfo {
 
     /// Parse errors encountered during parsing
     pub parse_errors: Vec<ParseError>,
+
+    /// Extra information
+    pub extra_info: Option<SdrrExtraInfo>,
 }
 
 impl SdrrInfo {
@@ -304,6 +307,15 @@ impl SdrrInfo {
     }
 }
 
+/// Extra information about this One ROM
+///
+/// Reflects `sdrr_extra_info` from `sdrr/include/config_base.h`
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct SdrrExtraInfo {
+    /// Pointer to the RTT control block in RAM
+    pub rtt_ptr: u32,
+}
+
 /// Information about a set of ROMs in an SDRR firmware
 ///
 /// If individual ROMs are being servd, there is a set for each ROM image.
@@ -316,7 +328,7 @@ impl SdrrInfo {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SdrrRomSet {
     /// Pointer to the ROM image data in the firmware.
-    pub(crate) data_ptr: u32,
+    pub data_ptr: u32,
 
     /// The size of the ROM image data in bytes.
     ///
@@ -369,11 +381,11 @@ pub struct SdrrRomInfo {
 /// Reflects `sdrr_pins_t` from `sdrr/include/config_base.h`
 #[derive(Debug, DekuRead, DekuWrite, serde::Serialize, serde::Deserialize)]
 pub struct SdrrPins {
-    pub data_port: SdrrStmPort,
-    pub addr_port: SdrrStmPort,
-    pub cs_port: SdrrStmPort,
-    pub sel_port: SdrrStmPort,
-    pub status_port: SdrrStmPort,
+    pub data_port: SdrrMcuPort,
+    pub addr_port: SdrrMcuPort,
+    pub cs_port: SdrrMcuPort,
+    pub sel_port: SdrrMcuPort,
+    pub status_port: SdrrMcuPort,
     pub rom_pins: u8,
     #[deku(pad_bytes_before = "2")]
     #[deku(count = "8")]
@@ -391,12 +403,17 @@ pub struct SdrrPins {
     pub x2: u8,
     pub ce_23128: u8,
     pub oe_23128: u8,
-    #[deku(pad_bytes_before = "6")]
+    pub x_jumper_pull: u8,
+    #[deku(pad_bytes_before = "5")]
     pub sel0: u8,
     pub sel1: u8,
     pub sel2: u8,
     pub sel3: u8,
-    #[deku(pad_bytes_before = "4")]
+    pub sel4: u8,
+    pub sel5: u8,
+    pub sel6: u8,
+    pub sel_jumper_pull: u8,
+
     #[deku(pad_bytes_after = "3")]
     pub status: u8,
 }

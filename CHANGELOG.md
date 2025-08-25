@@ -2,6 +2,45 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.4.0 - 2025-08-24
+
+**The RP2350 release.**
+
+This version contains the first RP2350 PCB revision, and mostly complete firmware support.
+
+Should you use the new RP2350 hardware revision A?  Only limited testing of the RP2350 One ROM has been done so far, but it has generally performed well.
+
+There is one outstanding, known issue - when using the RP2350 One ROM a character ROM on a PAL VIC-20 occasionally the machine boots to a black screen background - that is the machine boots to BASIC and shows the expected text, but the screen is black, not white.  This may be a boot timing issue - that perhaps One ROM RP2350 is not booting fast enough for the VIC chip, which is getting corrupted somehow.  This issue does not appear on a C64 (which has a different video bus architecture).
+
+You may want to order and test small quantities of RP2350 based boards for now, as there is some risk of a hardware design issue coming to light.  However, the hardware appears solid in early testing, so it is likely most issues can be overcome by firmware changes - and it is expected that the RP2350 revision A will continue to be supported in future releases, even should another variant be released.
+
+Other notable changes:
+
+- Instead of building with `STM=<mcu variant> make`, you now need to use `MCU`:
+
+  ```bash
+  MCU=<mcu_variant> make
+  ```
+
+### Changes
+
+- Added RP2350 support.
+  - Hardware rev A.
+  - Includes single ROM images, dynamically bank switched, and multi-ROM sets.
+  - Includes image select jumpers, status LED, overclocking.
+  - Features not supported include: C main loop, MCO output.
+  - For the gory details of supporting the RP2350, see [RP2350](docs/RP2350.md).
+- Added STM32F4 24-pin PCB rev G hardware configuration.  This adds a different programming header and one more image select jumper (so 5 in total, plus X1/2).
+- Added hardware and firmware configuration to specify whether the image select jumpers and X1/X2 pins are pulled high or low when the PCB jumper is closed, to allow for different PCB designs.
+- Added firmware support for up to 7 image select jumpers.
+- Change STM32 MCO (and MCO2) divider to be /5 (previous value was /4).  Makes it easier to measure the clock speed of an overclocked STM32F4.
+- Substantially refactored platform specific code to break out platform agnostic code - significant work to `sdrr/src/main.c`, `utils.c` and `rom_impl.c`.
+- Tested overclocking and various STM32 clones.
+
+### Fixes
+
+- It is likely that the 4th image select pin on revs E/F didn't work properly - this has been fixed.
+
 ## v0.3.1 - 2025-08-16
 
 The project has been renamed One ROM (To Rule Them All).
@@ -24,7 +63,7 @@ This release is a few odds and ends including some hardware improvements:
 - Validated STM32F446RCT6 (STM32F446RET6 highly likely to work as well).  Successfully tested as C64 char ROM, and verified clock speed of 180MHz (via MCO1 showing 45MHz = SYSCLK/4).  Also overclocked to 300MHz, ran stably.
 - Added **unverified** hardware revision 24-g.
 
-## Fixes
+### Fixes
 
 - Explicitly prevent COUNT_ROM_ACCESS and C_MAIN_LOOP being configured together, as they are incompatible.
 - Fixed ability to run main loop from RAM (this tends to be slower than from flash, so isn't recommended).

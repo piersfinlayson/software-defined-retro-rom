@@ -1,11 +1,11 @@
 {
-  "description": "SDRR 28-pin rev a",
+  "description": "One ROM STM32F4 28-pin rev A",
   "rom": {
     "pins": {
       "quantity": 28
     }
   },
-  "stm": {
+  "mcu": {
     "family": "f4",
     "ports": {
         "data_port": "A",
@@ -23,7 +23,9 @@
         "oe": {
         "23128": 14
         },
+        "x_jumper_pull": 1,
         "sel": [4, 5, 6, 7],
+        "sel_jumper_pull": 1,
         "status": 15
     }
   }

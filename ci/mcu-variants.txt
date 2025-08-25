@@ -2,6 +2,7 @@
 # Add new variants here, one per line
 # Lines starting with # are ignored
 
+rp2350:HW_REV=p24-a
 f401rb
 f401rc
 f401re

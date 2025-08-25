@@ -113,6 +113,10 @@
 #define VAL_GPIOC_PUPDR   (GPIOC_BASE + GPIO_PUPDR_OFFSET)
 #define VAL_RCC_AHB1ENR   (RCC_BASE + RCC_AHB1ENR_OFFSET)
 
+#define GPIO_PULL_MASK    0b11
+#define GPIO_PU_BITS      0b01
+#define GPIO_PD_BITS      0b10
+
 // RCC mask definitions
 #define RCC_CR_RSVD_RO_MASK     (0b1111 << 28) |     \
                                 (0b1 << 27) |        \
@@ -204,6 +208,9 @@
 #define IDCODE_F411XCE  0x431
 #define IDCODE_F42_43   0x419
 #define IDCODE_F446     0x421
+
+#define MAX_PORT_PINS   16
+#define MAX_USED_GPIOS  MAX_PORT_PINS
 
 // Flash size - in KB
 #define FLASH_SIZE      (*(volatile uint16_t *)(0x1FFF7A22))
