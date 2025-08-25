@@ -2,6 +2,14 @@
 
 All notables changes between versions are documented in this file.
 
+## v0.4.1 - 2025-08-??
+
+### Changes
+
+### Fixes
+
+- #8 - reduce severity of VOS not ready warning, as it appears to be benign.
+
 ## v0.4.0 - 2025-08-24
 
 **The RP2350 release.**
