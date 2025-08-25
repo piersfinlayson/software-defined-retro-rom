@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# build.sh - Build all MC2 variant and config combinations for SDRR project
+# build.sh - Build all MCU variant and config combinations for One ROM project
 #
 # This script automates building all combinations of MCU variants and configuration
 # files for the software-defined-retro-rom project. It supports both CI builds
@@ -106,6 +106,31 @@ load_mcu_variants() {
     fi
     
     printf '%s\n' "${variants[@]}"
+}
+
+#
+# Parse MCU variant line to extract MCU name and environment variables
+# Args: mcu_variant_line (format: "mcu_name" or "mcu_name:VAR1=val1,VAR2=val2")
+# Returns: Prints "mcu_name" on first line, then env vars on subsequent lines
+#
+parse_mcu_variant() {
+    local variant_line="$1"
+    
+    if [[ "$variant_line" =~ : ]]; then
+        # Parse MCU name and env vars
+        IFS=':' read -r mcu_name env_vars <<< "$variant_line"
+        echo "$mcu_name"
+        
+        if [[ -n "$env_vars" ]]; then
+            IFS=',' read -ra var_pairs <<< "$env_vars"
+            for var_pair in "${var_pairs[@]}"; do
+                echo "$var_pair"
+            done
+        fi
+    else
+        # Just MCU name, no env vars
+        echo "$variant_line"
+    fi
 }
 
 #
@@ -238,11 +263,19 @@ load_tests() {
 # Returns: 0 on success, 1 on failure
 #
 build_combination() {
-    local mcu="$1"
+    local mcu_line="$1"
     local config="$2"
     local config_file="config/${config}.mk"
     
+    # Parse MCU variant line
+    mapfile -t parsed < <(parse_mcu_variant "$mcu_line")
+    local mcu="${parsed[0]}"
+    local env_vars=("${parsed[@]:1}")
+    
     echo "Building MCU=${mcu} CONFIG=${config_file}"
+    if [[ ${#env_vars[@]} -gt 0 ]]; then
+        echo "  with env vars: ${env_vars[*]}"
+    fi
     
     # Clean firmware and generated files, but preserve Rust generator to avoid rebuild
     make clean-firmware-build clean-gen > /dev/null 2>&1 || true
@@ -254,7 +287,15 @@ build_combination() {
 
     while [[ $attempt -le $max_attempts ]]; do
         echo "    - Attempt $attempt: Building MCU=${mcu} CONFIG=${config_file}"
-        if MCU="$mcu" CONFIG="$config_file" make > /dev/null; then
+        
+        # Build make command with env vars
+        local make_cmd="MCU=\"$mcu\" CONFIG=\"$config_file\""
+        for env_var in "${env_vars[@]}"; do
+            make_cmd="$env_var $make_cmd"
+        done
+        make_cmd="$make_cmd make"
+        
+        if eval "$make_cmd" > /dev/null; then
             success=1
             break
         else
@@ -577,7 +618,11 @@ main() {
         local blacklisted_skips=0
         local size_incompatible_skips=0
         
-        for mcu in "${mcu_variants[@]}"; do
+        for mcu_line in "${mcu_variants[@]}"; do
+            # Parse MCU name from variant line
+            mapfile -t parsed_mcu < <(parse_mcu_variant "$mcu_line")
+            local mcu="${parsed_mcu[0]}"
+            
             for config in "${configs[@]}"; do
                 total_combinations=$((total_combinations + 1))
                 
@@ -596,7 +641,7 @@ main() {
                 fi
                 
                 # Attempt to build this combination
-                if build_combination "$mcu" "$config"; then
+                if build_combination "$mcu_line" "$config"; then
                     # Build succeeded, organize the output files
                     organize_files "$mcu" "$config" "$target_dir"
                     successful_builds=$((successful_builds + 1))
