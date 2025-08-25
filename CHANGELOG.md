@@ -6,6 +6,9 @@ All notables changes between versions are documented in this file.
 
 ### Changes
 
+- Move STM32F4 hardware rev G to verified.
+- Add KiCad design files for RP2350 rev A and STM32F4 rev G.
+
 ### Fixes
 
 - #8 - reduce severity of VOS not ready warning, as it appears to be benign.

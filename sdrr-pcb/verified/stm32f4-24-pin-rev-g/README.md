@@ -1,8 +1,8 @@
-# STM32F4 24 Pin Rev F
+# STM32F4 24 Pin Rev G
 
-23xx (STM32F4 24 pin) ROM replacement SDRR PCB.
+One ROM 23xx (STM32F4 24 pin) ROM replacement PCB.
 
-**Unverified**
+**Partially Verified**: Has been verified with STM32F411.  Has not been verified with STM32F405 (although electrically very similar to rev F so highly likely to work).
 
 Electrically similar to the [STM32F4 24 Pin Rev F2](../../verified/stm32f4-24-pin-rev-f2/README.md) board, but with some minor changes to layout:
 - A new 2x3 programming header is on the bottom of the PCB - between pins 12 and 13.  This provides compatibility with the 1x3 SWD header on the Pico/Pico 2s.
@@ -33,6 +33,7 @@ There is a single set of gerbers, one CPL/POS file and multiple BOM files, one f
 
 - [Schematic](sdrr-24-pin-rev-g1-schematic.pdf)
 - [Fab Files](fab/) - unverified
+- [KiCad Design Files](kicad/)
 - [Errata](#errata)
 - [Notes](#notes)
 - [Changelog](#changelog)

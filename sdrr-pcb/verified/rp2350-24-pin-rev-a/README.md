@@ -15,6 +15,7 @@ This is the first RP2350 revision, supported by v0.4.0 of the firmware.  While t
 - [Schematic](one-rom-24-pin-rp2350-rev-a-schematic.pdf)
 - [Fab Notes](one-rom-24-pin-rp2350-rev-a-fab-notes.pdf)
 - [Fab Files](fab/)
+- [KiCad Design Files](kicad/)
 - [Errata](#errata)
 - [Notes](#notes)
 - [Changelog](#changelog)
