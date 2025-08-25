@@ -7,7 +7,7 @@ Contains configuration files for various sample ROM collections.
 Use these as follows to build and flash One ROM firmware with your chosen collection of ROM images and configuration:
 
 ```bash
-STM=f411re CONFIG=config/1541.mk make run
+MCU=f411re CONFIG=config/1541.mk make run
 ```
 
 Replace `f411re` with your [target STM32 variant](/README.md#supported-stm32-microcontrollers) and `1541.mk` with the desired [configuration file](#available-configurations).

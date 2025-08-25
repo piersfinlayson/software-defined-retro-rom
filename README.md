@@ -71,21 +71,26 @@ Use [Airfrog](https://piers.rocks/u/airfrog) or your favourite STM32 programmer 
 
 ### Build Yourself
 
-Once you have the project cloned, and the required [dependencies](INSTALL.md) installed, you can build and flash an One ROM image using the following commands - replace `f411re` with your [target STM32 variant](#supported-stm32-microcontrollers), and [`config/c64.mk`](/config/c64.mk) with the [configuration](config/README.md#available-configurations) you want to use.
+Once you have the project cloned, and the required [dependencies](INSTALL.md) installed, you can build and flash an One ROM image using the following commands - replace `f411re` with your [target MCU variant](docs/MCU-SELECTION.md), and [`config/c64.mk`](/config/c64.mk) with the [configuration](config/README.md#available-configurations) you want to use.
 
 ```bash
-# C64
-STM=f411re CONFIG=config/c64.mk make run
+# C64 using RP2350
+HW_REV=p24-a MCU=rp2350 CONFIG=config/c64.mk make run
 ```
 
 ```bash
-# VIC-20 (PAL)
-STM=f411re CONFIG=config/vic20-pal.mk make run
+# C64 using F411RE
+MCU=f411re CONFIG=config/c64.mk make run
 ```
 
 ```bash
-# PET 40 column 50Hz
-STM=f411re CONFIG=config/pet-4-40-50.mk make run
+# VIC-20 (PAL) using F411RE
+MCU=f411re CONFIG=config/vic20-pal.mk make run
+```
+
+```bash
+# PET 40 column 50Hz using F411RE
+MCU=f411re CONFIG=config/pet-4-40-50.mk make run
 ```
 
 This will download the desired ROM images automatically, generate the required firmware, and flash it to One ROM.
@@ -130,11 +135,15 @@ If you have an [Airfrog](https://piers.rocks/u/airfrog), you can use it to inspe
 
 If you'd like a hand, raise an issue on the [GitHub issues page](https://github.com/piersfinlayson/software-defined-retro-rom/issues).  Please provide:
 
-- your build configuration
-- the output from `make info-detail`
+- the MCU you are using and the PCB type/revision
+- the retro system you are trying to One ROM with
 - any logging from One ROM
-- the STM32 variant you are using and the PCB type/revision
-- the retro system you are trying to One ROM with.
+- ideally, the firmware image, if you are happy to share.
+
+If you have built the firmware yourself, rather than using a pre-built release image, also provide:
+
+- your build configuration
+- the output from `make info-detail`.
 
 ## License
 

@@ -3,7 +3,7 @@
 The instructions in [Quick Start](/README.md#quick-start) show you how to flash the One ROM device using `make run`, for example:
 
 ```bash
-STM=f411re CONFIG=config/c64.mk make run
+MCU=f411re CONFIG=config/c64.mk make run
 ```
 
 ## Programmer

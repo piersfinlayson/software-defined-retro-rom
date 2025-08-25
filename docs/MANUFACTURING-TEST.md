@@ -38,7 +38,7 @@ Replace `f411re` and `24-f` with the appropriate STM32 device and hardware revis
 
 ```bash
 # From the root of the One ROM repository
-STM=f411re HW_REV=24-f CONFIG=config/c64-no-destestmax.mk make
+MCU=f411re HW_REV=24-f CONFIG=config/c64-no-destestmax.mk make
 ```
 
 Install in your C64's kernel ROM socket, with no jumpers installed, and boot the C64.  If the C64 boots up normally, your One ROM works.

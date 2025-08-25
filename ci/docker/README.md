@@ -19,7 +19,7 @@ Either build via the [`sdrr` container](#building-sdrr-via-sdrr-container) or us
 docker run --name sdrr-builder piersfinlayson/sdrr-build:latest sh -c '
 git clone https://github.com/piersfinlayson/software-defined-retro-rom.git && \
 cd software-defined-retro-rom && \
-STM=f401re HW_REV=24-f CONFIG=config/vic20-pal.mk make test info-detail
+MCU=f401re HW_REV=24-f CONFIG=config/vic20-pal.mk make test info-detail
 '
 docker cp sdrr-builder:/home/build/software-defined-retro-rom/sdrr/build/sdrr-stm32f401re.elf /tmp/
 docker rm sdrr-builder
@@ -55,7 +55,7 @@ To use non-default build configuration, pass in build arguments.  For example:
 
 ```bash
 docker build \
-    --build-arg STM=f401re \
+    --build-arg MCU=f401re \
     --build-arg CONFIG=vic20-pal.mk \
     --build-arg HW_REV=24-f \
     -f ci/docker/Dockerfile \

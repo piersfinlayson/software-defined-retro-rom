@@ -10,6 +10,7 @@ All notables changes between versions are documented in this file.
 
 - #8 - reduce severity of VOS not ready warning, as it appears to be benign.
 - Include RP2350 images in github release.
+- Add RP2350 build commands to README.md and generally update the docs to refer to One ROM/RP2350.
 
 ## v0.4.0 - 2025-08-24
 

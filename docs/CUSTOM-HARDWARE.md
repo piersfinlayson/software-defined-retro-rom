@@ -44,8 +44,8 @@ No firmware changes are required, so long as you follow the requirements above. 
 From the root of the One ROM repository, run:
 
 ```bash
-STM=f411re HW_REV=piers.rocks-24pin-rev-a BOOT_LOGGING=1 make       # Replace f411re with your STM model
-STM=f411re HW_REV=piers.rocks-24pin-rev-a BOOT_LOGGING=1 make test
+MCU=f411re HW_REV=piers.rocks-24pin-rev-a BOOT_LOGGING=1 make       # Replace f411re with your STM model
+MCU=f411re HW_REV=piers.rocks-24pin-rev-a BOOT_LOGGING=1 make test
 ```
 
 Examine the build logs to ensure your configuration has been detected correctly.
@@ -57,7 +57,7 @@ It is **strongly recommended** to run the tests with `make test` after building 
 Flash the firmware to your hardware, using an SWD programmer with RTT support:
 
 ```bash
-STM=f411re HW_REV=piers.rocks-24pin-rev-a BOOT_LOGGING=1 make run
+MCU=f411re HW_REV=piers.rocks-24pin-rev-a BOOT_LOGGING=1 make run
 ```
 
 Check the logs indicate a successful boot and the device is serving the image.

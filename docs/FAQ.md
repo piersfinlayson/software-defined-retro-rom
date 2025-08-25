@@ -4,7 +4,7 @@
 
 **Q: What exactly is One ROM?**
 
-A: One ROM is a ROM replacement solution that uses a cheap STM32F4 microcontroller to emulate failed or missing ROMs in retro computers. It is easily reprogrammed, can store up to 16 different ROM images and switch between them using jumpers, eliminating the need for expensive EEPROM programmers or multiple physical ROM chips.
+A: One ROM is a ROM replacement solution that uses a cheap RP2350 or STM32F4 microcontroller to emulate failed or missing ROMs in retro computers. It is easily reprogrammed, can store up to 16 different ROM images and switch between them using jumpers, eliminating the need for expensive EEPROM programmers or multiple physical ROM chips.
 
 **Q: What is Software Defined Retro ROM (SDRR)?**
 
@@ -21,50 +21,57 @@ A: One ROM offers several advantages:
 - Can support all required chip select line behaviours without any hardware changes.
 - Is faster to build and program (just `make run` vs complex xEPROM procedures).
 - Makes it easy to download and combine ROM images from various sources - no need to build combination ROM images by hand.
+- Have various advanced features, such as boot time and dynamic image selection, and the ability to serve multi ROM sockets from a single ROM. 
 
 **Q: What ROM types does One ROM support?**
 
-A: One ROM emulates 2364 (8KB), 2332 (4KB), and 2316 (2KB) ROMs commonly used in Commodore systems, disk drives, and other retro computers.
+A: One ROM currently emulates 2364 (8KB), 2332 (4KB), and 2316 (2KB) ROMs commonly used in Commodore systems, disk drives, and other retro computers.
 
 The original ROMs had mask programmable chip select behaviour, which meant they could be either low or high when selected. One ROM can emulate this by configuring the chip select lines in software, allowing it to work with any system that uses these ROM types - and can support multiple images with different chip select configurations in a single firmware build.
 
 ## Hardware Compatibility
 
-**Q: Which STM32 variants are supported?**
+**Q: Which MCU variants are supported?**
 
 A: Currently supported variants include:
 
+- Raspberry Pi RP2350 (A4 stepping, 150Mhz max clock, 8 ROM images)
 - STM32F401RBT6/RCT6/RET6 (84MHz max clock, 6-16 ROM images)
 - STM32F411RCT6/RET6 (100MHz max clock, 14-16 ROM images)  
 - STM32F405RGT6 (168MHz max clock, 16 ROM images)
 - STM32F446RCT6/RETx (180MHz max clock, 16 ROM images)
 
-The F405/F446 are recommended for maximum compatibility as they runs fastest and supports the maximum number of target systems.
+The RP2350/F405/F446 are recommended for maximum compatibility as they runs fastest and supports the maximum number of target systems.
 
-See the [Supported STM32 Microcontrollers](/README.md#supported-stm32-microcontrollers) section for more details.
+Note all MCUs are overclockable.
+
+See [Supported Microcontrollers](/docs/MCU-SELECTION.md) for more details.
 
 **Q: What retro systems work with One ROM?**
 
-A: Tested systems include Commodore PETs, VIC-20s, C64s, 1541 drives, and IEEE-488 drives. The F405 variant running at 168MHz should support virtually any system using compatible ROM types, including faster 2MHz systems.
+A: Tested systems include Commodore PETs, VIC-20s, C64s, TI-99, 1541 drives, and IEEE-488 drives. The F405 variant running at 168MHz should support virtually any system using compatible ROM types, including faster 2MHz systems.
 
-**Q: How do I know which STM32 variant I need?**
+If One ROM **doesn't** work in your system, replacing a 2364, 2332 or 2316, we want to hear about it!  Please [raise an issue](/README.md#debugging).
+
+**Q: How do I know which MCU variant I need?**
 
 A: Choose based on your target system's timing requirements. PETs need 26MHz minimum, VIC-20s need 37MHz, C64 kernals need 75MHz, and C64 character ROMs need 98MHz.
 
-Use F405 or F446 if unsure - they supports all target systems.
+Use RP2350, F405 or F446 if unsure - they support all target systems.
 
-See the [STM32 Selection](/docs/STM32-SELECTION.md) section for more details.
+See [MCU Selection](/docs/MCU-SELECTION.md) for more details.
 
 **Q: Why are you using the STM32's internal oscillator - doesn't that make it unstable?**
 
 A: An internal oscillator was one of the microcontroller selection criteria, in order to simplify the design, and reduce the PCB footprint and BOM cost.  The STM32F4 runs stably off its internal oscillator, although its accuracy is not as good as from an external crystal.  A precisely accurate clock is not required for this application - it primarily requires raw speed.
 
-**Q: Why can't I find the STM32F4 for$2?**
+**Q: Why can't I find the MCU for $2?**
 
 A: You need to look at Chinese sites including [aliexpress.com](https://www.aliexpress.com) and [LCSC](https://www.lcsc.com), JLC PCB's component supplier ARM.
 
 As of July 2025:
 
+- LCSC wanted $1.74 for a single RP2350.
 - LCSC had STM32F401 for $1.93 in quantities of 1 - good enough for PET, VIC-20 and C64 single ROMs
 - LCSC had STM32F411 for $2.69 in quantities of 1 - also good enough for C64 multi-ROM sets
 - aliexpress had STM32F405 for $3.08 in quantities of 1 - faster than the F401/F411
@@ -74,7 +81,7 @@ The aliexpress seller referred to above was also offering free shipping when buy
 
 One ROM is extremely flexible in the STM32F4xxR variants it supports, so you can choose the cheapest one that meets your requirements.
 
-**Q: Are clones just as good as the real deal STM32?**
+**Q: Are STM32 clones just as good as the real deal STM32?**
 
 A: Mostly, but not entirely.  The GigaDevices GD32F405 may take longer to boot than the STM32F405, but generally appears more performantSee [STM32 Clones](/docs/STM32-CLONES.md) for more details.
 
@@ -85,7 +92,7 @@ A: Mostly, but not entirely.  The GigaDevices GD32F405 may take longer to boot t
 A: You need:
 
 - One ROM PCB
-- a supported STM32F4 microcontroller
+- a supported microcontroller
 - some other components (voltage regulator, LED, resistors and capacitors)
 - ARM GNU toolchain, Rust, probe-rs
 - and an SWD programmer (ST-Link, Pi Debug Probe, or programmed Pi Pico).
@@ -94,13 +101,17 @@ See the [Installation Guide](INSTALL.md) for detailed setup instructions.
 
 **Q: How difficult is the PCB assembly?**
 
-A: Medium difficulty - some experience with surface mount soldering is recommended.
+A: Depends on the board.
+
+STM32 - Medium difficulty - some experience with surface mount soldering is recommended.
 
 The rev D PCB uses a combination of 0402 and 0603 components.
 
 Rev E/F PCBs uses all 0603 components, so are easier to solder.
 
 All variants use an STM32 LQFP64 package, which requires soldering as it is close to other components.
+
+RP2350 - High difficulty.  Recommend getting these assembled.
 
 **Q: Can I use a Raspberry Pi Pico as a programmer?**
 
@@ -112,10 +123,10 @@ See the [Pi Pico Programmer Guide](/docs/PI-PICO-PROGRAMMER.md) for detailed ins
 
 **Q: How do I flash firmware to One ROM?**
 
-A: Connect your programmer's CLK, DIO, and GND lines to One ROM, then run:
+A: Connect your programmer's CLK, DIO, and GND lines to One ROM, then run a command like this:
 
 ```bash
-STM=f411re CONFIG=config/c64.mk make run
+MCU=f411re CONFIG=config/c64.mk make run
 ```
 
 This automatically downloads ROMs, generates firmware, and flashes the device.
@@ -130,9 +141,13 @@ A: Yes! You can flash in-situ with the system powered on. The system may crash d
 
 **Q: What if I have flashing problems?**
 
-A: Install the BOOT0 jumper and power cycle to force bootloader mode, then reflash. Alternatively, enable the `BOOTLOADER` config option to enter bootloader mode when all image select jumpers are closed.
+A:
+
+STM32: Jump the BOOT0 pin to 3.3V and power cycle to force bootloader mode, then reflash. Alternatively, enable the `BOOTLOADER` config option to enter bootloader mode when all image select jumpers are closed.
 
 See the [Programming Guide](/docs/PROGRAMMING.md) for more details.
+
+RP2350: Jump the BOOT pin to GND and power cycle to force bootloader mode, then reflash.
 
 **Q: How can I see what platform in my firmware image is for?**
 
@@ -174,7 +189,7 @@ Or create your own [config file](/config/).
 
 A: Perhaps - raise an issue on the [GitHub issues page](https://github.com/piersfinlayson/software-defined-retro-rom/issues).
 
-One ROM is very busy serving ROM images, so has few spare cycles for additional features.  However, it can be augmented by a co-processor such as [Airfrog](https://piers.rocks/u/airfrog) to provide additional functionality, such as remote access and control, or telemetry.
+One ROM is very busy serving ROM images, so has few spare cycles for additional features.  However, it can be augmented by a co-processor such as [Airfrog](https://piers.rocks/u/airfrog) to provide additional functionality, such as remote access and control, or telemetry.  The RP2350 is likely to get additional features, on-board, due to its second core.
 
 **Q: Why does One ROM store all ROM images as 16KB in flash?**
 
@@ -192,9 +207,9 @@ See [Technical Details](/docs/TECHNICAL-DETAILS.md) for more information.
 
 A: Interrupts would add latency that could cause the system to miss critical timing windows. The polling-based approach ensures consistent, predictable response times.  As One ROM does nothing other than serve flash, a tight main loop with no interrupts is sufficient **and** optimal.
 
-**Q: Isn't the STM32 a 3.3V device? How does it work in 5V systems?**
+**Q: Isn't the RP2350/STM32 a 3.3V device? How does it work in 5V systems?**
 
-A: Most of the GPIO pins on the STM32F4xx are 5V tolerant, and the maximum and minimum input and output voltage levels are compatible with the main target retro driving ICs (such as the 6502, VIC and VIC-II) chips.  Care is taken to ensure that only 5V tolerant GPIOs are used, including setting the drive strength on the STM32 to stay within the required output levels.
+A: Most of the GPIO pins on the RP2350/STM32F4xx are 5V tolerant, and the maximum and minimum input and output voltage levels are compatible with the main target retro driving ICs (such as the 6502, VIC and VIC-II) chips.  Care is taken to ensure that only 5V tolerant GPIOs are used, including setting the drive strength on the STM32 to stay within the required output levels.
 
 There's a detailed analysis in [Voltage Levels](/docs/VOLTAGE-LEVELS.md).
 
@@ -219,7 +234,7 @@ See [Build System](/docs/BUILD-SYSTEM.md) for more details on how the build syst
 
 ## Troubleshooting
 
-**Q: How do I debug SDRR issues?**
+**Q: How do I debug One ROM issues?**
 
 A: Enable boot logging (default) to see startup information via SWD/RTT. This shows hardware info, ROM configurations, frequency settings, and which image is loaded. Boot logging adds ~1.5ms to startup time.
 
@@ -247,7 +262,7 @@ A: In small quantities, expect around $5 per device.  The STM32F4 costs around $
 
 **Q: Where can I get the PCB?**
 
-A: Order the latest revision from [OSH Park](https://oshpark.com) using the provided link for your chosen revision in the [`sdrr-pcb`](/sdrr-pcb/README.md), or manufacture using the open-source design files.
+A: Order the latest revision from [OSH Park](https://oshpark.com) using the provided link for your chosen revision in the [`sdrr-pcb`](/sdrr-pcb/README.md), or manufacture using the open-source design files.  We use JLC PCB to assemble our One ROMs, and are very happy with their service.
 
 **Q: Is One ROM open source?**
 

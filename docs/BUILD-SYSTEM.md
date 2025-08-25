@@ -37,7 +37,7 @@ The build process involves six main components:
 
 ```bash
 # User can override via config file or command line
-CONFIG=config/c64.mk STM=f411re make run
+CONFIG=config/c64.mk MCU=f411re make run
 
 # Makefile processes ROM_CONFIGS like:
 ROM_CONFIGS=file=kernel.rom,type=2364,cs1=0 file=basic.rom,type=2364,cs1=0

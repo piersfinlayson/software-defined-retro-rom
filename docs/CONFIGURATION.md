@@ -6,12 +6,12 @@ You can either pass options on the command line, or specify them in a config fil
 
 ```bash
 # Specify ROM images on the command line
-STM=f411re HW_REV=e ROM_CONFIGS=file=images/test/0_63_8192.rom,type=2364,cs1=0 make run
+MCU=f411re HW_REV=e ROM_CONFIGS=file=images/test/0_63_8192.rom,type=2364,cs1=0 make run
 ```
 
 ```bash
 # Or use a pre-built config file
-STM=f405rg CONFIG=config/c64.mk make run
+MCU=f405rg CONFIG=config/c64.mk make run
 ```
 
 ## Mandatory Configuration
@@ -21,7 +21,7 @@ STM=f405rg CONFIG=config/c64.mk make run
 Defines your STM32 variant, for example:
 
 ```bash
-STM=f446re
+MCU=f446re
 ```
 
 See [Supported STM32 Microcontrollers](/README.md#supported-stm32-microcontrollers) for the list of supported variants.
@@ -155,7 +155,7 @@ There are some additional options that can be compiled in/out based on "hidden" 
 For example this disables loading the ROM table to the STM32F405's CCM RAM, instead loading it to (normal) RAM (SRAM):
 
 ```bash
-EXTRA_C_FLAGS=-DDISABLE_CCM=1 STM=f405rg make
+EXTRA_C_FLAGS=-DDISABLE_CCM=1 MCU=f405rg make
 ```
 
 See [`include.h`](../sdrr/include/include.h) for more information on available options.  These may be have left in a non-compiling state - raise an issue if you have problems.
