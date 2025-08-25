@@ -8,7 +8,11 @@ All notables changes between versions are documented in this file.
 
 This version contains the first RP2350 PCB revision, and mostly complete firmware support.
 
-Should you use the new RP2350 hardware revision A?  Only limited testing of the RP2350 One ROM has been done so far, but it has performed well.  You may want to order and test small quantities of RP2350 based boards for now, as there is some risk of a design issue coming to light.  However, the hardware appears solid in early testing, so it is likely most issues can be overcome by firmware changes - and it is expected that the RP2350 revision A will continue to be supported in future releases, even should another variant be released.
+Should you use the new RP2350 hardware revision A?  Only limited testing of the RP2350 One ROM has been done so far, but it has generally performed well.
+
+There is one outstanding, known issue - when using the RP2350 One ROM a character ROM on a PAL VIC-20 occasionally the machine boots to a black screen background - that is the machine boots to BASIC and shows the expected text, but the screen is black, not white.  This may be a boot timing issue - that perhaps One ROM RP2350 is not booting fast enough for the VIC chip, which is getting corrupted somehow.  This issue does not appear on a C64 (which has a different video bus architecture).
+
+You may want to order and test small quantities of RP2350 based boards for now, as there is some risk of a hardware design issue coming to light.  However, the hardware appears solid in early testing, so it is likely most issues can be overcome by firmware changes - and it is expected that the RP2350 revision A will continue to be supported in future releases, even should another variant be released.
 
 Other notable changes:
 
