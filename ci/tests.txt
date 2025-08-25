@@ -36,7 +36,7 @@ no-boot-logging-rp2350:BOOT_LOGGING=0,HW_REV=p24-a,MCU=rp2350,CONFIG=config/test
 no-boot-logging-no-swd-f401rb:BOOT_LOGGING=0,SWD=0,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 
 # PCB revisions
-pcb-rev-d:HW_REV=24-d,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
+pcb-rev-d:HW_REV=24-d,STATUS_LED=0,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 pcb-rev-e:HW_REV=24-e,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 pcb-rev-f:HW_REV=24-f,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
 pcb-rev-g:HW_REV=24-g,MCU=f401rb,CONFIG=config/test-sdrr-0.mk
@@ -111,7 +111,7 @@ test-3p-ti994a-f411re:MCU=f411re,CONFIG=config/third-party/ti994a.mk
 test-3p-coco2-f411re:MCU=f411re,CONFIG=config/third-party/coco2.mk
 
 # Test old config set letters
-test-hw-rev-D:HW_REV=d,MCU=f411re,CONFIG=config/test-sdrr-0.mk
+test-hw-rev-D:HW_REV=d,STATUS_LED=0,MCU=f411re,CONFIG=config/test-sdrr-0.mk
 test-hw-rev-E:HW_REV=e,MCU=f411re,CONFIG=config/test-sdrr-0.mk
 test-hw-rev-F:HW_REV=f,MCU=f411re,CONFIG=config/test-sdrr-0.mk
 
