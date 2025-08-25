@@ -46,7 +46,7 @@ void setup_clock(void) {
                 }
             }
             if (!(PWR_CR & PWR_CSR_VOSRDY_MASK)) {
-                LOG("!!! VOS not ready - proceeding anyway");
+                LOG("VOS not ready - proceeding anyway - expected on F401/411/446");
             }
 
             // Now configure VOS scale mode
